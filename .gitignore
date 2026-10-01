@@ -1,0 +1,88 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ===== Node / Next.js =====
+node_modules/
+.pnp/
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.next/
+out/
+dist/
+build/
+.vercel/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Environnement =====
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+secrets/
+*.pem
+*.key
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Base de données =====
+*.sqlite3
+*.db
+*.sql
+!database/migrations/*.sql
+!database/seeds/*.sql
+!backend/alembic/versions/*.py
+
+# ===== Docker =====
+docker-compose.override.yml
+
+# ===== Modèles IA =====
+ia-service/models/*.pkl
+ia-service/models/*.h5
+ia-service/models/*.pt
+ia-service/models/*.onnx
+ia-service/models/*.joblib
+!ia-service/models/.gitkeep
+
+# ===== Données =====
+data/raw/
+data/private/
+*.csv
+!ia-service/tests/data/*.csv
+
+# ===== Python cache =====
+*.pyc
+*.pyo
