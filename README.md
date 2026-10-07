@@ -141,7 +141,7 @@ source venv/bin/activate  # Windows : venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
-# Frontend
+# Frontend (fonctionne sans backend grâce aux données simulées : voir frontend/README.md)
 cd frontend
 npm install
 npm run dev
