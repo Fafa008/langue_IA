@@ -197,7 +197,8 @@ pytest
 
 ```bash
 cd frontend
-npm test
+npm run check        # typecheck + lint + tests unitaires
+npm run test:e2e     # tests E2E Playwright (voir frontend/README.md)
 ```
 
 ### IA
