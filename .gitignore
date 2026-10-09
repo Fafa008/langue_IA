@@ -49,6 +49,8 @@ desktop.ini
 .env.local
 .env.*.local
 .env.development
+# Valeurs par défaut du frontend en développement (aucun secret) : versionnées
+!frontend/.env.development
 .env.production
 secrets/
 *.pem
