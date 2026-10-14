@@ -1,6 +1,7 @@
 import { validatePassword } from "@/lib/password";
 import type { FieldErrors } from "@/types/form";
 import type { ProfilFormValues } from "@/types/profil";
+import type { UtilisateurFormValues } from "@/types/utilisateur";
 import { compact, validateConfirmation, validateEmail, validateNomPersonne } from "./auth";
 
 /** Numéro malgache complet : 10 chiffres commençant par 0 (« 034 12 345 67 », « 020 22 123 45 »). */
@@ -35,5 +36,15 @@ export function validateProfil(values: ProfilFormValues): FieldErrors<ProfilForm
     motDePasseActuel: changePassword && !values.motDePasseActuel ? "Saisissez votre mot de passe actuel." : undefined,
     motDePasse: changePassword ? validateNouveauMotDePasse(values) : undefined,
     confirmation: changePassword ? validateConfirmation(values.motDePasse, values.confirmation) : undefined,
+  });
+}
+
+/** Modification par un administrateur (téléphone facultatif, comme dans le profil). */
+export function validateUtilisateur(values: UtilisateurFormValues): FieldErrors<UtilisateurFormValues> {
+  return compact<UtilisateurFormValues>({
+    prenom: validateNomPersonne(values.prenom, "prénom"),
+    nom: validateNomPersonne(values.nom, "nom"),
+    email: validateEmail(values.email),
+    telephone: validateTelephoneFacultatif(values.telephone),
   });
 }
