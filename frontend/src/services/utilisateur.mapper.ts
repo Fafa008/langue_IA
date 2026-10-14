@@ -1,5 +1,5 @@
 import { resoudreUrlPhoto } from "@/lib/photo";
-import type { Role, StatutUtilisateur, Utilisateur } from "@/types/utilisateur";
+import type { Apprenant, Role, StatutUtilisateur, Utilisateur } from "@/types/utilisateur";
 
 /* Format « Utilisateur » renvoyé par l'API (snake_case), partagé par les services auth et profil. */
 
@@ -26,4 +26,22 @@ export const toUtilisateur = (dto: UtilisateurDto): Utilisateur => ({
   statut: dto.statut,
   dateInscription: dto.date_inscription,
   photoUrl: resoudreUrlPhoto(dto.photo_url),
+});
+
+/** Classe Apprenant : Utilisateur + ses attributs propres. */
+export interface ApprenantDto extends UtilisateurDto {
+  role: "APPRENANT";
+  date_naissance: string | null;
+  pays: string | null;
+  ville: string | null;
+  objectif: string | null;
+}
+
+export const toApprenant = (dto: ApprenantDto): Apprenant => ({
+  ...toUtilisateur(dto),
+  role: "APPRENANT",
+  dateNaissance: dto.date_naissance,
+  pays: dto.pays,
+  ville: dto.ville,
+  objectif: dto.objectif,
 });
