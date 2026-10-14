@@ -287,10 +287,12 @@ test.describe("Actions sur un utilisateur", () => {
   /** Boutons d'action affichés sur la ligne d'un utilisateur. */
   const actions = (page: Page, nom: string) => page.getByRole("group", { name: `Actions pour ${nom}` });
 
-  test("chaque ligne affiche directement son action : Modifier", async ({ page }) => {
+  test("chaque ligne affiche directement ses actions : Modifier, et Désactiver ou Réactiver", async ({ page }) => {
     await page.goto(PAGE_URL);
 
-    await expect(actions(page, "Utilisateur01 RAKOTO").getByRole("button")).toHaveText(["Modifier"]);
+    await expect(actions(page, "Utilisateur01 RAKOTO").getByRole("button")).toHaveText(["Modifier", "Désactiver"]);
+    // Utilisateur05 est inactif
+    await expect(actions(page, "Utilisateur05 RABE").getByRole("button")).toHaveText(["Modifier", "Réactiver"]);
   });
 
   test("modifie un utilisateur depuis le formulaire prérempli", async ({ page }) => {
@@ -353,11 +355,44 @@ test.describe("Actions sur un utilisateur", () => {
     await expect(dialog.getByLabel("Adresse e-mail *")).toHaveAttribute("aria-invalid", "true");
   });
 
-  test("l'administrateur ne peut pas changer son propre rôle", async ({ page }) => {
+  test("désactive un compte après confirmation, puis le réactive", async ({ page }) => {
+    const patches = await mockModification(page, db);
+    await page.goto(PAGE_URL);
+
+    await actions(page, "Utilisateur01 RAKOTO").getByRole("button", { name: "Désactiver" }).click();
+    const dialog = page.getByRole("dialog", { name: "Désactiver le compte ?" });
+    await expect(dialog).toContainText("Utilisateur01 RAKOTO ne pourra plus se connecter.");
+    await dialog.getByRole("button", { name: "Désactiver" }).click();
+
+    await expect(page.getByRole("status").filter({ hasText: "Le compte de Utilisateur01 RAKOTO a été désactivé." })).toBeVisible();
+    await expect(rows(page).first()).toContainText("Inactif");
+    expect(patches).toEqual([{ idUser: 1, body: { statut: "INACTIF" } }]);
+
+    // Un compte inactif se réactive depuis la même ligne
+    await actions(page, "Utilisateur01 RAKOTO").getByRole("button", { name: "Réactiver" }).click();
+    await page.getByRole("dialog", { name: "Réactiver le compte ?" }).getByRole("button", { name: "Réactiver" }).click();
+
+    await expect(rows(page).first()).toContainText("Actif");
+    expect(patches.at(-1)).toEqual({ idUser: 1, body: { statut: "ACTIF" } });
+  });
+
+  test("Annuler la confirmation ne désactive pas le compte", async ({ page }) => {
+    const patches = await mockModification(page, db);
+    await page.goto(PAGE_URL);
+
+    await actions(page, "Utilisateur01 RAKOTO").getByRole("button", { name: "Désactiver" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Annuler" }).click();
+
+    await expect(page.getByRole("dialog")).toBeHidden();
+    expect(patches).toHaveLength(0);
+  });
+
+  test("l'administrateur ne peut ni se désactiver ni changer son propre rôle", async ({ page }) => {
     db.unshift(ADMIN);
     await page.goto(PAGE_URL);
 
     const ligne = actions(page, "Paul ADMIN");
+    await expect(ligne.getByRole("button", { name: "Désactiver" })).toBeDisabled();
 
     await ligne.getByRole("button", { name: "Modifier" }).click();
     await expect(page.getByRole("dialog").getByLabel("Rôle")).toBeDisabled();

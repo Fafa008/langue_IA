@@ -9,11 +9,12 @@ import { useUtilisateurs, useUtilisateursFiltres } from "@/hooks/useUtilisateurs
 import { getErrorMessage } from "@/lib/api-client";
 import { nombreDePages } from "@/lib/pagination";
 import type { Utilisateur } from "@/types/utilisateur";
+import ChangerStatutDialog from "./ChangerStatutDialog";
 import ModifierUtilisateurDialog from "./ModifierUtilisateurDialog";
 import UtilisateursFilters from "./UtilisateursFilters";
 import UtilisateursTable from "./UtilisateursTable";
 
-type ActionEnCours = { type: "modifier"; utilisateur: Utilisateur } | null;
+type ActionEnCours = { type: "modifier" | "statut"; utilisateur: Utilisateur } | null;
 
 const nomComplet = (u: Utilisateur) => `${u.prenom} ${u.nom}`;
 
@@ -52,6 +53,13 @@ export default function UtilisateursView() {
           onSaved={(u) => confirmer(`Les informations de ${nomComplet(u)} ont été mises à jour.`)}
         />
       )}
+      {action?.type === "statut" && (
+        <ChangerStatutDialog
+          utilisateur={action.utilisateur}
+          onClose={fermerAction}
+          onSaved={(u) => confirmer(`Le compte de ${nomComplet(u)} a été ${u.statut === "ACTIF" ? "réactivé" : "désactivé"}.`)}
+        />
+      )}
 
       <div className="mb-8 flex items-start gap-4">
         <UsersRound size={36} className="mt-1 shrink-0 text-primary" aria-hidden />
@@ -83,7 +91,9 @@ export default function UtilisateursView() {
           <div className={`transition-opacity ${liste.isPlaceholderData ? "opacity-60" : ""}`}>
             <UtilisateursTable
               utilisateurs={data.items}
+              idCourant={courant?.idUser}
               onModifier={(utilisateur) => setAction({ type: "modifier", utilisateur })}
+              onChangerStatut={(utilisateur) => setAction({ type: "statut", utilisateur })}
             />
           </div>
         )}

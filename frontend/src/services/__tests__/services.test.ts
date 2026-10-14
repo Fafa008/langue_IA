@@ -64,4 +64,10 @@ describe("utilisateursService.modifier", () => {
     expect(body).toEqual({ prenom: "Rova", role: "FORMATEUR", telephone: null });
     expect(modifie.role).toBe("FORMATEUR");
   });
+
+  it("désactive un compte avec { statut: INACTIF }", async () => {
+    const fetchMock = mockFetch({ body: { ...UTILISATEUR_DTO, statut: "INACTIF" } });
+    await expect(httpUtilisateursService.modifier(7, { statut: "INACTIF" })).resolves.toMatchObject({ statut: "INACTIF" });
+    expect(fetchCall(fetchMock).body).toEqual({ statut: "INACTIF" });
+  });
 });

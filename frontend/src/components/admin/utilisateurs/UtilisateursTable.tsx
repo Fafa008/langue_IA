@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react";
+import { Ban, Pencil, RotateCcw } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import ActionsLigne from "@/components/ui/ActionsLigne";
 import { formatDateCourte } from "@/lib/date";
@@ -10,10 +10,13 @@ const COLONNES = ["Utilisateur", "Rôle", "Statut", "Inscription"];
 
 interface UtilisateursTableProps {
   utilisateurs: Utilisateur[];
+  /** Administrateur connecté : il ne peut pas désactiver son propre compte. */
+  idCourant: number | undefined;
   onModifier: (utilisateur: Utilisateur) => void;
+  onChangerStatut: (utilisateur: Utilisateur) => void;
 }
 
-export default function UtilisateursTable({ utilisateurs, onModifier }: UtilisateursTableProps) {
+export default function UtilisateursTable({ utilisateurs, idCourant, onModifier, onChangerStatut }: UtilisateursTableProps) {
   return (
     // Défilement horizontal du tableau seul sur petit écran
     <div className="overflow-x-auto">
@@ -54,7 +57,19 @@ export default function UtilisateursTable({ utilisateurs, onModifier }: Utilisat
               <td className="px-4 py-3">
                 <ActionsLigne
                   label={`Actions pour ${u.prenom} ${u.nom}`}
-                  actions={[{ label: "Modifier", icon: Pencil, onSelect: () => onModifier(u) }]}
+                  actions={[
+                    { label: "Modifier", icon: Pencil, onSelect: () => onModifier(u) },
+                    u.statut === "ACTIF"
+                      ? {
+                          label: "Désactiver",
+                          icon: Ban,
+                          danger: true,
+                          onSelect: () => onChangerStatut(u),
+                          disabled: u.idUser === idCourant,
+                          title: "Vous ne pouvez pas désactiver votre propre compte.",
+                        }
+                      : { label: "Réactiver", icon: RotateCcw, onSelect: () => onChangerStatut(u) },
+                  ]}
                 />
               </td>
             </tr>
