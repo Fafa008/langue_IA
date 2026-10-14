@@ -25,7 +25,18 @@ export function formatEmail(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9._%+@-]/g, "");
 }
 
+/** E-mail envoyé à l'API : sans espaces autour et en minuscules. */
+export function normaliserEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 /** Retire les espaces en trop avant l'envoi : «  Rova   Marie » → « Rova Marie » */
 export function normaliserEspaces(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
+
+/** Initiales affichées à la place de la photo : « Finoana », « RASOLOFO » → « FR ». */
+export function initiales(prenom: string, nom: string): string {
+  return `${prenom.trim().charAt(0)}${nom.trim().charAt(0)}`.toLocaleUpperCase(LOCALE);
+}
+

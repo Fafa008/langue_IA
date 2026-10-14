@@ -11,6 +11,8 @@
 # ===== Build Next.js =====
 /.next/
 /.next-e2e/
+/.next-demo/
+/.next-build-check/
 /out/
 /build/
 next-env.d.ts
