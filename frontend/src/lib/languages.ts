@@ -13,3 +13,8 @@ export const LANGUES: (Langue & { flag: string })[] = [
 export function libelleLangue(code: CodeLangue): string {
   return LANGUES.find((l) => l.code === code)?.libelle ?? code;
 }
+
+/** Drapeau d'une langue connue (« FR » ou « fr »), sinon null (les initiales du code sont affichées). */
+export function drapeauLangue(code: string): string | null {
+  return LANGUES.find((l) => l.code === code.toLowerCase())?.flag ?? null;
+}

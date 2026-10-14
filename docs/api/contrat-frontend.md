@@ -230,3 +230,98 @@ Erreurs :
 Règles à appliquer aussi côté backend (le frontend les impose déjà dans l'interface) :
 - un administrateur ne peut ni désactiver son propre compte, ni changer son propre rôle ;
 - un compte `INACTIF` est refusé à la connexion (**403**).
+
+## Langues — rôle `ADMINISTRATEUR`
+
+### Objet `Langue`
+
+Colonnes de la table `Langue`, et ses niveaux ouverts : association **`Langue 0..* — 0..* Niveau`**, table
+`LangueNiveau(id_langue, id_niveau)` (voir [`docs/uml/evolutions.md`](../uml/evolutions.md)). Tous les niveaux ne
+sont pas ouverts pour toutes les langues (ex. HSK pour le mandarin, A1–C2 pour l'anglais).
+
+```json
+{
+  "id_langue": 3,
+  "code": "zh",
+  "libelle": "Mandarin",
+  "niveaux": [{ "id_niveau": 7, "code": "HSK 1", "libelle": "Mandarin – débutant" }]
+}
+```
+
+- `code` : code ISO 639 en minuscules (2 ou 3 lettres), unique. Le frontend l'affiche en majuscules.
+- `niveaux` : objets `Niveau` (dans n'importe quel ordre : le frontend les trie par code). Renvoyé par les routes
+  `/langues` ci-dessous ; les autres routes qui contiennent une langue (formules, tableau de bord) peuvent l'omettre.
+
+### `GET /langues`
+
+Mêmes paramètres de pagination que `GET /users` (`page`, `page_size`, `search`).
+`search` porte sur la désignation et le code.
+
+**200** :
+
+```json
+{ "items": [ /* Langue, avec niveaux */ ], "total": 12, "page": 1, "page_size": 10 }
+```
+
+### `POST /langues`
+
+```json
+{ "libelle": "Swahili", "code": "sw", "id_niveaux": [1, 2, 3] }
+```
+
+`id_niveaux` : niveaux ouverts, **au moins un** (le frontend l'impose). Le backend crée les lignes `LangueNiveau`.
+
+**201** : `Langue` avec `niveaux`. Erreurs : **409** code déjà utilisé, **422** niveau inconnu ou liste vide.
+
+### `PATCH /langues/{id_langue}`
+
+Modification partielle : seuls les champs envoyés (`libelle`, `code`, `id_niveaux`) sont changés.
+`id_niveaux` **remplace** entièrement la liste des niveaux ouverts (lignes `LangueNiveau` ajoutées ou supprimées).
+
+**200** : `Langue` à jour, avec `niveaux`. Erreurs : **409** code déjà utilisé, **404** langue inconnue,
+**422** niveau inconnu ou liste vide.
+
+À vérifier côté backend : retirer un niveau d'une langue ne doit pas rendre incohérents les `Parcours`, `Exercice`
+ou `TestDiagnostic` existants de cette langue à ce niveau (refuser avec **409**, ou les conserver : à décider).
+
+### `DELETE /langues/{id_langue}`
+
+**204** (les lignes `LangueNiveau` de la langue sont supprimées avec elle).
+Erreur : **409** si la langue est utilisée (`FormuleLangue`, `Parcours`).
+
+## Niveaux — rôle `ADMINISTRATEUR`
+
+### Objet `Niveau`
+
+Colonnes de la table `Niveau`. Un niveau est créé une fois, puis ouvert pour une ou plusieurs langues
+(`LangueNiveau`, depuis l'écran des langues).
+
+```json
+{ "id_niveau": 1, "code": "A1", "libelle": "Débutant" }
+```
+
+- `code` : 20 caractères au maximum, unique (« A1 », « HSK 3 »). Le frontend le met en majuscules.
+- `libelle` : obligatoire.
+
+### `GET /niveaux`
+
+**200** : liste complète, sans pagination : `[ /* Niveau */ ]`. Le frontend la trie par code.
+
+### `POST /niveaux`
+
+```json
+{ "code": "HSK 3", "libelle": "Mandarin – intermédiaire" }
+```
+
+**201** : `Niveau`. Erreur : **409** code déjà utilisé.
+
+### `PATCH /niveaux/{id_niveau}`
+
+Même corps que `POST` (code et libellé).
+
+**200** : `Niveau` à jour. Erreurs : **409** code déjà utilisé, **404** niveau inconnu.
+
+### `DELETE /niveaux/{id_niveau}`
+
+**204** : les lignes `LangueNiveau` du niveau sont supprimées avec lui (il disparaît des langues où il était ouvert).
+Erreur : **409** si le niveau est utilisé (`TestDiagnostic`, `Parcours`, `Exercice`).

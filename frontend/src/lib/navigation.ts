@@ -7,7 +7,6 @@ import {
   Globe,
   GraduationCap,
   House,
-  Layers,
   LayoutDashboard,
   Presentation,
   Settings,
@@ -24,6 +23,8 @@ export interface NavItem {
   icon: LucideIcon;
   /** Page pas encore développée : affichée « Bientôt », sans lien (évite une 404). */
   bientot?: true;
+  /** Autres pages où l'entrée est aussi mise en évidence (onglets d'une même page). */
+  aussiActifSur?: string[];
 }
 
 /** Page d'arrivée de chaque rôle après la connexion. */
@@ -57,8 +58,7 @@ const ADMINISTRATEUR: NavItem[] = [
   { label: "Ateliers", href: ROUTES.admin.ateliers, icon: CalendarDays, bientot: true },
   { label: "Réservations", href: ROUTES.admin.reservations, icon: CalendarCheck, bientot: true },
   { label: "Formations", href: ROUTES.admin.formations, icon: GraduationCap, bientot: true },
-  { label: "Langues", href: ROUTES.admin.langues, icon: Globe, bientot: true },
-  { label: "Niveaux", href: ROUTES.admin.niveaux, icon: Layers, bientot: true },
+  { label: "Langues et niveaux", href: ROUTES.admin.langues, icon: Globe, aussiActifSur: [ROUTES.admin.niveaux] },
   { label: "Rapports", href: ROUTES.admin.rapports, icon: FileBarChart, bientot: true },
   { label: "Paramètres", href: ROUTES.admin.parametres, icon: Settings, bientot: true },
 ];

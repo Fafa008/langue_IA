@@ -14,8 +14,8 @@ export default function AppSidebar() {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-surface/60 px-3 py-8 lg:flex">
       <nav aria-label="Espace personnel" className="flex flex-col gap-1.5">
-        {items.map(({ label, href, icon: Icon, bientot }) => {
-          const active = pathname === href;
+        {items.map(({ label, href, icon: Icon, bientot, aussiActifSur }) => {
+          const active = pathname === href || !!aussiActifSur?.includes(pathname);
           if (bientot) {
             return (
               <span key={href} aria-disabled className="flex cursor-default items-center gap-4 rounded-btn px-3 py-3 font-medium text-content-secondary">

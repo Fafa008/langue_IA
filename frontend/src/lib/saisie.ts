@@ -54,3 +54,8 @@ export function formatTelephone(value: string): string {
   chiffres = chiffres.slice(0, TELEPHONE_CHIFFRES);
   return [chiffres.slice(0, 3), chiffres.slice(3, 5), chiffres.slice(5, 8), chiffres.slice(8)].filter(Boolean).join(" ");
 }
+
+/** Code de langue : lettres uniquement, en majuscules, 3 au maximum (« fr » → « FR »). */
+export function formatCodeLangue(value: string): string {
+  return value.replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 3);
+}
