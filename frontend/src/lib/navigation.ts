@@ -37,7 +37,7 @@ const APPRENANT: NavItem[] = [
   { label: "Tableau de bord", href: ROUTES.apprenant.dashboard, icon: House },
   { label: "Mes cours", href: ROUTES.apprenant.mesCours, icon: BookOpen, bientot: true },
   { label: "Ateliers", href: ROUTES.apprenant.ateliers, icon: CalendarDays, bientot: true },
-  { label: "Mon profil", href: ROUTES.profil, icon: UserRound, bientot: true },
+  { label: "Mon profil", href: ROUTES.profil, icon: UserRound },
   { label: "Mes inscriptions", href: ROUTES.apprenant.mesInscriptions, icon: ClipboardList, bientot: true },
   { label: "Paramètres", href: ROUTES.apprenant.parametres, icon: Settings, bientot: true },
 ];
@@ -47,7 +47,7 @@ const FORMATEUR: NavItem[] = [
   { label: "Mes séances", href: ROUTES.formateur.seances, icon: Presentation, bientot: true },
   { label: "Ateliers", href: ROUTES.formateur.ateliers, icon: CalendarDays, bientot: true },
   { label: "Mes apprenants", href: ROUTES.formateur.apprenants, icon: UsersRound, bientot: true },
-  { label: "Mon profil", href: ROUTES.profil, icon: UserRound, bientot: true },
+  { label: "Mon profil", href: ROUTES.profil, icon: UserRound },
   { label: "Paramètres", href: ROUTES.formateur.parametres, icon: Settings, bientot: true },
 ];
 

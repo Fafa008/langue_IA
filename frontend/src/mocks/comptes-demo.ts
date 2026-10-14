@@ -19,10 +19,11 @@ const compte = (idUser: number, role: Role, prenom: string, nom: string, email: 
     prenom,
     nom,
     email,
-    telephone: "+261 34 00 000 0" + idUser,
+    telephone: `034 00 000 0${idUser}`,
     role,
     statut: "ACTIF",
     dateInscription: "2025-01-06T08:00:00Z",
+    photoUrl: null,
   },
 });
 

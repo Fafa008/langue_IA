@@ -40,3 +40,17 @@ export function initiales(prenom: string, nom: string): string {
   return `${prenom.trim().charAt(0)}${nom.trim().charAt(0)}`.toLocaleUpperCase(LOCALE);
 }
 
+/** Nombre de chiffres d'un numéro malgache au format local (« 034 12 345 67 »). */
+export const TELEPHONE_CHIFFRES = 10;
+
+/**
+ * Téléphone au format malgache « 030 00 000 00 » : seuls les chiffres sont gardés (une lettre tapée
+ * n'apparaît pas), groupés 3-2-3-2, 10 chiffres au plus. Un numéro international collé ou déjà
+ * enregistré (« +261 34 12 345 67 ») est ramené au format local (« 034 12 345 67 »).
+ */
+export function formatTelephone(value: string): string {
+  let chiffres = value.replace(/\D/g, "");
+  if (chiffres.startsWith("261") && chiffres.length > TELEPHONE_CHIFFRES) chiffres = `0${chiffres.slice(3)}`;
+  chiffres = chiffres.slice(0, TELEPHONE_CHIFFRES);
+  return [chiffres.slice(0, 3), chiffres.slice(3, 5), chiffres.slice(5, 8), chiffres.slice(8)].filter(Boolean).join(" ");
+}

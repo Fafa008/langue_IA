@@ -24,7 +24,7 @@ export function validateEmail(email: string): string | undefined {
 }
 
 /** `champ` complète les messages : « Le prénom est requis. » */
-function validateNomPersonne(value: string, champ: "prénom" | "nom"): string | undefined {
+export function validateNomPersonne(value: string, champ: "prénom" | "nom"): string | undefined {
   const nom = normaliserEspaces(value);
   if (!nom) return `Le ${champ} est requis.`;
   if (!NOM_PATTERN.test(nom)) return `Le ${champ} ne doit contenir que des lettres, espaces, tirets ou apostrophes.`;
@@ -56,13 +56,13 @@ export function validateFormule(
   return `La formule « ${formule.libelle} » ne couvre pas : ${nonCouvertes.map(libelleLangue).join(", ")}.`;
 }
 
-function validateConfirmation(password: string, confirm: string): string | undefined {
+export function validateConfirmation(password: string, confirm: string): string | undefined {
   if (!confirm) return "Veuillez confirmer le mot de passe.";
   if (confirm !== password) return "Les mots de passe ne correspondent pas.";
 }
 
 /** Retire les clés sans erreur pour que `Object.keys(errors).length` reflète la validité. */
-function compact<T>(errors: FieldErrors<T>): FieldErrors<T> {
+export function compact<T>(errors: FieldErrors<T>): FieldErrors<T> {
   return Object.fromEntries(Object.entries(errors).filter(([, v]) => v)) as FieldErrors<T>;
 }
 
