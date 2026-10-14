@@ -1,5 +1,5 @@
 import { formatTelephone, initiales } from "@/lib/saisie";
-import { validateProfil, validateTelephone } from "@/lib/validation/profil";
+import { validateProfil, validateTelephone, validateUtilisateur } from "@/lib/validation/profil";
 import type { ProfilFormValues } from "@/types/profil";
 
 const valid: ProfilFormValues = {

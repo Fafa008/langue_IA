@@ -30,3 +30,34 @@ export interface Apprenant extends Utilisateur {
   ville: string | null;
   objectif: string | null;
 }
+
+/** Critères de la liste des utilisateurs (administration). */
+export interface UtilisateursFiltres {
+  /** Recherche sur le nom, le prénom ou l'e-mail. */
+  recherche: string;
+  /** null : tous les rôles. */
+  role: Role | null;
+  /** Numéro de page, à partir de 1. */
+  page: number;
+  taille: number;
+}
+
+/** Modification d'un utilisateur par un administrateur : seuls les champs présents sont changés. */
+export interface ModificationUtilisateur {
+  prenom?: string;
+  nom?: string;
+  email?: string;
+  telephone?: string | null;
+  role?: Role;
+  statut?: StatutUtilisateur;
+}
+
+/** Valeurs du formulaire « Modifier l'utilisateur ». */
+export interface UtilisateurFormValues {
+  prenom: string;
+  nom: string;
+  email: string;
+  /** Facultatif : vide si l'utilisateur n'a pas renseigné de numéro. */
+  telephone: string;
+  role: Role;
+}
