@@ -8,7 +8,7 @@ export interface FieldControlProps {
 
 interface FormFieldProps {
   id: string;
-  label: string;
+  label: ReactNode;
   error?: string;
   hint?: ReactNode;
   className?: string;

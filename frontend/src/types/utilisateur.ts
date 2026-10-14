@@ -18,6 +18,8 @@ export interface Utilisateur {
   statut: StatutUtilisateur;
   /** Date ISO 8601 */
   dateInscription: string;
+  /** URL de la photo de profil, ou null : les initiales sont affichées à la place. */
+  photoUrl: string | null;
 }
 
 export interface Apprenant extends Utilisateur {

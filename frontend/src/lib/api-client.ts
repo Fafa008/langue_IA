@@ -7,6 +7,8 @@ import { API_URL } from "@/lib/env";
 
 /** Codes HTTP qui ont un sens métier pour l'application. */
 export const HTTP_STATUS = {
+  /** Donnée refusée par une règle métier (ex. mot de passe actuel incorrect dans le profil) */
+  BAD_REQUEST: 400,
   /** Identifiants incorrects, ou JWT absent / expiré */
   UNAUTHORIZED: 401,
   /** Compte inactif ou suspendu, ou droits insuffisants */
@@ -49,7 +51,7 @@ type QueryValue = string | number | boolean | null | undefined;
 
 export interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  /** Objet envoyé en JSON. */
+  /** Objet envoyé en JSON, ou FormData pour un envoi de fichier. */
   body?: unknown;
   /** Paramètres d'URL ; les valeurs vides (null, undefined, "") sont omises. */
   query?: Record<string, QueryValue>;
@@ -83,7 +85,9 @@ async function readErrorDetail(res: Response): Promise<string | undefined> {
 
 export async function apiRequest<T>(path: string, { method = "GET", body, query, auth = true }: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  // Un FormData (envoi de fichier) fixe lui-même son Content-Type multipart
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  if (body !== undefined && !isFormData) headers["Content-Type"] = "application/json";
   const token = auth ? authHandlers.getToken() : null;
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -94,7 +98,7 @@ export async function apiRequest<T>(path: string, { method = "GET", body, query,
     res = await fetch(buildUrl(path, query), {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
       signal: controller.signal,
     });
   } catch {

@@ -12,4 +12,8 @@ export const ENDPOINTS = {
     forgotPassword: `${API}/auth/forgot-password`,
     resetPassword: `${API}/auth/reset-password`,
   },
+  /** Profil de l'utilisateur connecté */
+  me: `${API}/users/me`,
+  /** Photo de profil de l'utilisateur connecté (envoi et suppression) */
+  mePhoto: `${API}/users/me/photo`,
 } as const;

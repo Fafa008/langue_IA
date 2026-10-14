@@ -1,11 +1,12 @@
 "use client";
-import { ChevronDown, LayoutDashboard, LogOut } from "lucide-react";
+import { ChevronDown, LayoutDashboard, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import Avatar from "@/components/ui/Avatar";
 import { useLogout } from "@/hooks/useAuth";
 import { useDismiss } from "@/hooks/useDismiss";
 import { ACCUEIL_PAR_ROLE } from "@/lib/navigation";
+import { ROUTES } from "@/lib/routes";
 import { ROLE_LABELS } from "@/lib/roles";
 import type { Utilisateur } from "@/types/utilisateur";
 
@@ -28,7 +29,7 @@ export default function UserMenu({ utilisateur }: { utilisateur: Utilisateur }) 
         aria-label="Menu du compte"
         className="flex items-center gap-3 rounded-full p-1 pr-2 transition-colors hover:bg-background"
       >
-        <Avatar prenom={utilisateur.prenom} nom={utilisateur.nom} size={44} />
+        <Avatar prenom={utilisateur.prenom} nom={utilisateur.nom} photoUrl={utilisateur.photoUrl} size={44} />
         <span className="hidden font-medium text-content sm:inline">{utilisateur.prenom}</span>
         <ChevronDown size={18} className={`text-content transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
       </button>
@@ -51,6 +52,15 @@ export default function UserMenu({ utilisateur }: { utilisateur: Utilisateur }) 
           >
             <LayoutDashboard size={18} aria-hidden />
             Mon espace
+          </Link>
+          <Link
+            role="menuitem"
+            href={ROUTES.profil}
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-2.5 text-content hover:bg-background hover:text-primary"
+          >
+            <UserRound size={18} aria-hidden />
+            Mon profil
           </Link>
           <button
             role="menuitem"
