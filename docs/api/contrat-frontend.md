@@ -214,6 +214,12 @@ Modifier les informations (bouton Modifier) :
 { "prenom": "Jean", "nom": "RAKOTO", "email": "jean@exemple.com", "telephone": null, "role": "FORMATEUR" }
 ```
 
+Désactiver ou réactiver un compte (boutons Désactiver / Réactiver, après confirmation) :
+
+```json
+{ "statut": "INACTIF" }
+```
+
 **200** : `Utilisateur` à jour.
 
 Erreurs :
@@ -222,4 +228,5 @@ Erreurs :
 - **403** : l'utilisateur connecté n'est pas administrateur.
 
 Règles à appliquer aussi côté backend (le frontend les impose déjà dans l'interface) :
-- un administrateur ne peut pas changer son propre rôle.
+- un administrateur ne peut ni désactiver son propre compte, ni changer son propre rôle ;
+- un compte `INACTIF` est refusé à la connexion (**403**).
