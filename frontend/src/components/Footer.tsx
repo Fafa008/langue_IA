@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Logo } from "./Header";
+import Logo from "@/components/ui/Logo";
 
 export default function Footer() {
   return (

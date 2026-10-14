@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api-client";
+import { ApiError, HTTP_STATUS, apiRequest } from "@/lib/api-client";
 import { API_MOCK } from "@/lib/env";
 import { authMock } from "@/mocks/auth.mock";
 import type {
@@ -8,31 +8,15 @@ import type {
   RegisterPayload,
   ResetPasswordPayload,
 } from "@/types/auth";
-import type { Apprenant, Role, StatutUtilisateur, Utilisateur } from "@/types/utilisateur";
+import type { Apprenant } from "@/types/utilisateur";
+import { ENDPOINTS } from "./endpoints";
+import { toUtilisateur, type UtilisateurDto } from "./utilisateur.mapper";
 
 /*
- * Seul fichier qui connaît le contrat de l'API d'authentification (FastAPI, snake_case).
+ * Seul fichier qui connaît le format de l'API d'authentification (FastAPI, snake_case).
  * Les noms de champs suivent le diagramme de classes (Utilisateur, Apprenant).
- * Si le backend change un endpoint ou un champ, c'est ici qu'on adapte.
+ * Routes publiques : auth: false (pas de JWT, un 401 veut dire « identifiants incorrects »).
  */
-
-const ENDPOINTS = {
-  login: "/api/v1/auth/login",
-  register: "/api/v1/auth/register",
-  forgotPassword: "/api/v1/auth/forgot-password",
-  resetPassword: "/api/v1/auth/reset-password",
-} as const;
-
-interface UtilisateurDto {
-  id_user: number;
-  nom: string;
-  prenom: string;
-  email: string;
-  telephone: string | null;
-  role: Role;
-  statut: StatutUtilisateur;
-  date_inscription: string;
-}
 
 interface ApprenantDto extends UtilisateurDto {
   role: "APPRENANT";
@@ -48,17 +32,6 @@ interface TokenResponseDto {
   utilisateur: UtilisateurDto;
 }
 
-const toUtilisateur = (dto: UtilisateurDto): Utilisateur => ({
-  idUser: dto.id_user,
-  nom: dto.nom,
-  prenom: dto.prenom,
-  email: dto.email,
-  telephone: dto.telephone,
-  role: dto.role,
-  statut: dto.statut,
-  dateInscription: dto.date_inscription,
-});
-
 const toApprenant = (dto: ApprenantDto): Apprenant => ({
   ...toUtilisateur(dto),
   role: "APPRENANT",
@@ -68,19 +41,24 @@ const toApprenant = (dto: ApprenantDto): Apprenant => ({
   objectif: dto.objectif,
 });
 
-const httpAuthService = {
+export const httpAuthService = {
   async login({ email, motDePasse }: LoginPayload): Promise<AuthSession> {
-    const dto = await apiRequest<TokenResponseDto>(ENDPOINTS.login, {
+    const dto = await apiRequest<TokenResponseDto>(ENDPOINTS.auth.login, {
       method: "POST",
+      auth: false,
       body: { email, mot_de_passe: motDePasse },
     });
-    return { accessToken: dto.access_token, utilisateur: toUtilisateur(dto.utilisateur) };
+    const utilisateur = toUtilisateur(dto.utilisateur);
+    // Le backend refuse un compte non actif (403) ; même règle si une réponse l'accepte quand même
+    if (utilisateur.statut !== "ACTIF") throw new ApiError(HTTP_STATUS.FORBIDDEN, "Compte non actif");
+    return { accessToken: dto.access_token, utilisateur };
   },
 
   /** Crée un Apprenant et son Abonnement à la formule choisie (201) ; il doit ensuite se connecter. */
   async register(payload: RegisterPayload): Promise<Apprenant> {
-    const dto = await apiRequest<ApprenantDto>(ENDPOINTS.register, {
+    const dto = await apiRequest<ApprenantDto>(ENDPOINTS.auth.register, {
       method: "POST",
+      auth: false,
       body: {
         prenom: payload.prenom,
         nom: payload.nom,
@@ -95,12 +73,13 @@ const httpAuthService = {
   },
 
   forgotPassword(payload: ForgotPasswordPayload): Promise<void> {
-    return apiRequest<void>(ENDPOINTS.forgotPassword, { method: "POST", body: payload });
+    return apiRequest<void>(ENDPOINTS.auth.forgotPassword, { method: "POST", auth: false, body: payload });
   },
 
   resetPassword({ token, motDePasse }: ResetPasswordPayload): Promise<void> {
-    return apiRequest<void>(ENDPOINTS.resetPassword, {
+    return apiRequest<void>(ENDPOINTS.auth.resetPassword, {
       method: "POST",
+      auth: false,
       body: { token, nouveau_mot_de_passe: motDePasse },
     });
   },

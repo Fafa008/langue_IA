@@ -1,6 +1,8 @@
 "use client";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { ACCUEIL_PAR_ROLE } from "@/lib/navigation";
 import { ROUTES } from "@/lib/routes";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth.store";
@@ -11,15 +13,22 @@ import type { LoginFormValues } from "@/types/auth";
  * et la navigation. Les composants n'utilisent que ces hooks.
  */
 
+/**
+ * Connexion : en cas de succès, le JWT est enregistré (localStorage si « Se souvenir de moi »,
+ * sinon sessionStorage) puis l'utilisateur est redirigé vers l'accueil de son espace, selon son rôle.
+ * Le cache est vidé avant : aucune donnée d'un compte précédent ne doit s'afficher.
+ */
 export function useLogin() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const setSession = useAuthStore((s) => s.setSession);
 
   return useMutation({
     mutationFn: ({ email, motDePasse }: LoginFormValues) => authService.login({ email, motDePasse }),
     onSuccess: (session, { seSouvenir }) => {
+      queryClient.removeQueries();
       setSession(session, seSouvenir);
-      router.push(ROUTES.afterLogin);
+      router.push(ACCUEIL_PAR_ROLE[session.utilisateur.role]);
     },
   });
 }
@@ -42,12 +51,15 @@ export function useResetPassword() {
   });
 }
 
+/** Déconnexion : la session et les données en cache (profil, listes…) sont effacées. */
 export function useLogout() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const clearSession = useAuthStore((s) => s.clearSession);
 
-  return () => {
+  return useCallback(() => {
     clearSession();
+    queryClient.removeQueries();
     router.push(ROUTES.login);
-  };
+  }, [clearSession, queryClient, router]);
 }
