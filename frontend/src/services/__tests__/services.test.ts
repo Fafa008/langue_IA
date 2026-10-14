@@ -1,6 +1,7 @@
 import { configureApiClient } from "@/lib/api-client";
 import { httpLanguesService } from "@/services/langues.service";
 import { httpNiveauxService } from "@/services/niveaux.service";
+import { httpTableauDeBordService } from "@/services/tableau-de-bord.service";
 import { httpUtilisateursService } from "@/services/utilisateurs.service";
 import { fetchCall, mockFetch } from "@/test/fetch-mock";
 
@@ -148,5 +149,80 @@ describe("niveauxService", () => {
     await httpNiveauxService.supprimer(9);
     const { url, init } = fetchCall(fetchMock);
     expect([url, init.method]).toEqual([`${API}/niveaux/9`, "DELETE"]);
+  });
+});
+
+describe("tableauDeBordService", () => {
+  it("consulterStatistiques : GET /admin/statistiques, avec les classes Apprenant, Langue, Abonnement et Formule", async () => {
+    const APPRENANT_DTO = { ...UTILISATEUR_DTO, date_naissance: "2000-05-01", pays: null, ville: "Antananarivo", objectif: null };
+    const LANGUE_DTO = { id_langue: 2, code: "en", libelle: "Anglais" };
+    const fetchMock = mockFetch({
+      body: {
+        totaux: { utilisateurs: 248, apprenants: 186, formateurs: 42, ateliers_programmes: 18 },
+        apprenants_par_langue: [{ langue: LANGUE_DTO, apprenants: 48 }],
+        dernieres_inscriptions: [
+          {
+            apprenant: APPRENANT_DTO,
+            langues: [LANGUE_DTO],
+            abonnement: {
+              id_abonnement: 12,
+              date_debut: "2026-10-01",
+              date_fin: "2027-01-01",
+              statut: "ACTIF",
+              quota_heures: 12,
+              quota_ateliers: 3,
+              formule: {
+                id_formule: 2,
+                libelle: "Luxe",
+                prix_mensuel: 100000,
+                duree_mois: 3,
+                quota_heures: 12,
+                quota_ateliers: 3,
+                langues: [{ code: "en", libelle: "Anglais" }],
+              },
+            },
+          },
+          { apprenant: { ...APPRENANT_DTO, id_user: 8 }, langues: [], abonnement: null },
+        ],
+      },
+    });
+
+    const stats = await httpTableauDeBordService.consulterStatistiques();
+
+    const { url, init, headers } = fetchCall(fetchMock);
+    expect([url, init.method]).toEqual([`${API}/admin/statistiques`, "GET"]);
+    expect(headers.Authorization).toBe("Bearer jwt-123");
+
+    const APPRENANT = { ...UTILISATEUR, dateNaissance: "2000-05-01", pays: null, ville: "Antananarivo", objectif: null };
+    const LANGUE = { idLangue: 2, code: "en", libelle: "Anglais" };
+    expect(stats).toEqual({
+      totaux: { utilisateurs: 248, apprenants: 186, formateurs: 42, ateliersProgrammes: 18 },
+      apprenantsParLangue: [{ langue: LANGUE, apprenants: 48 }],
+      dernieresInscriptions: [
+        {
+          apprenant: APPRENANT,
+          langues: [LANGUE],
+          abonnement: {
+            idAbonnement: 12,
+            dateDebut: "2026-10-01",
+            dateFin: "2027-01-01",
+            statut: "ACTIF",
+            quotaHeures: 12,
+            quotaAteliers: 3,
+            formule: { idFormule: 2, libelle: "Luxe", prixMensuel: 100000, dureeMois: 3, quotaHeures: 12, quotaAteliers: 3, langues: ["en"] },
+          },
+        },
+        { apprenant: { ...APPRENANT, idUser: 8 }, langues: [], abonnement: null },
+      ],
+    });
+  });
+
+  it("inscriptions : GET /admin/statistiques/inscriptions?jours=", async () => {
+    const fetchMock = mockFetch({ body: [{ date: "2026-10-14", nombre: 4 }] });
+
+    const points = await httpTableauDeBordService.inscriptions(7);
+
+    expect(fetchCall(fetchMock).url).toBe(`${API}/admin/statistiques/inscriptions?jours=7`);
+    expect(points).toEqual([{ date: "2026-10-14", nombre: 4 }]);
   });
 });

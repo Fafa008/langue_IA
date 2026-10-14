@@ -10,7 +10,7 @@ import type {
 } from "@/types/auth";
 import type { Apprenant } from "@/types/utilisateur";
 import { ENDPOINTS } from "./endpoints";
-import { toUtilisateur, type UtilisateurDto } from "./utilisateur.mapper";
+import { toApprenant, toUtilisateur, type ApprenantDto, type UtilisateurDto } from "./utilisateur.mapper";
 
 /*
  * Seul fichier qui connaît le format de l'API d'authentification (FastAPI, snake_case).
@@ -18,28 +18,11 @@ import { toUtilisateur, type UtilisateurDto } from "./utilisateur.mapper";
  * Routes publiques : auth: false (pas de JWT, un 401 veut dire « identifiants incorrects »).
  */
 
-interface ApprenantDto extends UtilisateurDto {
-  role: "APPRENANT";
-  date_naissance: string | null;
-  pays: string | null;
-  ville: string | null;
-  objectif: string | null;
-}
-
 interface TokenResponseDto {
   access_token: string;
   token_type: string;
   utilisateur: UtilisateurDto;
 }
-
-const toApprenant = (dto: ApprenantDto): Apprenant => ({
-  ...toUtilisateur(dto),
-  role: "APPRENANT",
-  dateNaissance: dto.date_naissance,
-  pays: dto.pays,
-  ville: dto.ville,
-  objectif: dto.objectif,
-});
 
 export const httpAuthService = {
   async login({ email, motDePasse }: LoginPayload): Promise<AuthSession> {

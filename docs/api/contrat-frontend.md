@@ -231,6 +231,62 @@ Règles à appliquer aussi côté backend (le frontend les impose déjà dans l'
 - un administrateur ne peut ni désactiver son propre compte, ni changer son propre rôle ;
 - un compte `INACTIF` est refusé à la connexion (**403**).
 
+### `GET /admin/statistiques`
+
+`Administrateur.consulterStatistiques()` : vue calculée, sans table propre. Elle ne contient **que des objets du
+diagramme de classes, au même format que les autres routes** (`Utilisateur`/Apprenant, `Langue`, Abonnement, `Formule`) :
+quand une classe évolue, on la change une seule fois pour toutes les routes.
+
+**200** :
+
+```json
+{
+  "totaux": { "utilisateurs": 248, "apprenants": 186, "formateurs": 42, "ateliers_programmes": 18 },
+  "apprenants_par_langue": [
+    { "langue": { /* Langue */ }, "apprenants": 71 }
+  ],
+  "dernieres_inscriptions": [
+    {
+      "apprenant": { /* Utilisateur + date_naissance, pays, ville, objectif */ },
+      "langues": [ /* Langue */ ],
+      "abonnement": {
+        "id_abonnement": 12,
+        "date_debut": "2026-10-01",
+        "date_fin": "2027-01-01",
+        "statut": "ACTIF",
+        "quota_heures": 12,
+        "quota_ateliers": 3,
+        "formule": { /* Formule, comme GET /formules */ }
+      }
+    }
+  ]
+}
+```
+
+- `totaux.utilisateurs` : toutes les lignes `Utilisateur`, quel que soit le statut ; `apprenants` / `formateurs` :
+  par `role` ; `ateliers_programmes` : `Atelier` dont `date_heure` est à venir et `statut` ≠ `ANNULE` (`StatutAtelier`).
+- `apprenants_par_langue` : nombre d'apprenants **distincts** par `Langue` suivie.
+  Un apprenant peut suivre plusieurs langues : la somme peut dépasser `totaux.apprenants`.
+  Le frontend calcule la part de chaque langue sur `totaux.apprenants` et trie par nombre décroissant.
+- `dernieres_inscriptions` : les **5** derniers **apprenants** (`date_inscription` décroissante), avec les `langues`
+  choisies à l'inscription (`langues` de `POST /auth/register`) et leur `Abonnement` (`statut` : `StatutAbonnement`
+  `ACTIF` | `EXPIRE` | `SUSPENDU`) avec sa `Formule`. `abonnement` vaut `null` si aucun abonnement n'existe.
+
+Erreur : **403** si l'utilisateur connecté n'est pas administrateur.
+
+### `GET /admin/statistiques/inscriptions`
+
+| Paramètre | Type | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `jours` | 7, 30 ou 90 | 30 | Période, aujourd'hui compris |
+
+**200** : un élément **par jour** de la période, du plus ancien au plus récent, y compris les jours sans inscription
+(`nombre: 0`) :
+
+```json
+[{ "date": "2026-10-13", "nombre": 6 }, { "date": "2026-10-14", "nombre": 4 }]
+```
+
 ## Langues — rôle `ADMINISTRATEUR`
 
 ### Objet `Langue`

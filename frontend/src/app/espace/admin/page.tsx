@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import TableauDeBord from "@/components/tableau-de-bord/TableauDeBord";
+import TableauDeBordAdmin from "@/components/admin/tableau-de-bord/TableauDeBordAdmin";
 
 export const metadata: Metadata = { title: "Tableau de bord – Digithèque" };
 
-export default function TableauDeBordPage() {
-  return <TableauDeBord />;
+export default function TableauDeBordAdminPage() {
+  return <TableauDeBordAdmin />;
 }
