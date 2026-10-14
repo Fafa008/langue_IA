@@ -20,4 +20,8 @@ export const ENDPOINTS = {
   /** Administration (rôle ADMINISTRATEUR) */
   users: `${API}/users`,
   user: (idUser: number) => `${API}/users/${idUser}`,
+  langues: `${API}/langues`,
+  langue: (idLangue: number) => `${API}/langues/${idLangue}`,
+  niveaux: `${API}/niveaux`,
+  niveau: (idNiveau: number) => `${API}/niveaux/${idNiveau}`,
 } as const;
