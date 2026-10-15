@@ -1,0 +1,15 @@
+# Fichiers exclus de l'image : environnements et caches Python, tests, secrets
+__pycache__
+*.py[cod]
+.venv
+venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+.env
+Dockerfile
+.dockerignore
+# Photos envoyées en local : elles vivent dans un volume, pas dans l'image
+media

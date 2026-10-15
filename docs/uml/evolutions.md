@@ -27,3 +27,21 @@ devrait utiliser un niveau ouvert pour cette langue (contrôle côté backend).
 
 **Pas de changement** : `Langue` n'a toujours ni statut ni énumération `StatutLangue` ; retirer une langue se fait
 par la suppression (refusée si elle est utilisée).
+
+## Association Apprenant — Langue (langues suivies) — proposition, à valider
+
+**Pourquoi** : à l'inscription, l'apprenant choisit ses langues (`langues` de `POST /auth/register`), et le tableau de
+bord compte les apprenants par langue. Le diagramme ne dit pas où ce choix est enregistré.
+
+**Proposition appliquée par le backend MVP** (paquetage Utilisateurs) :
+
+```
+Apprenant  0..* ──────── 0..*  Langue
+               « suit »
+```
+
+- Table d'association `ApprenantLangue(id_apprenant, id_langue)`, clé primaire composée.
+- Supprimée avec l'apprenant (cascade) ; une langue suivie ne peut pas être supprimée (RESTRICT).
+
+**Alternative** : passer par `Parcours` (« cible » une langue). L'association directe reste utile tant qu'aucun
+parcours n'est créé (l'apprenant vient de s'inscrire). À trancher avec l'équipe avant de reporter dans le diagramme.
