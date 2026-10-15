@@ -44,5 +44,12 @@ export function useForm<T extends object>({ initialValues, validate, onSubmit }:
     else focusFirstInvalidField(event.currentTarget);
   }
 
-  return { values, errors, setField, handleSubmit };
+  /** Revient aux valeurs données (ou initiales) et efface les erreurs. */
+  function reset(next: T = initialValues) {
+    setValues(next);
+    setErrors({});
+    setSubmitted(false);
+  }
+
+  return { values, errors, setField, handleSubmit, reset };
 }
