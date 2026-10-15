@@ -14,6 +14,7 @@ Ce guide explique comment travailler efficacement avec l'équipe.
 - [Pull Requests](#-pull-requests)
 - [Revue de code](#-revue-de-code)
 - [Tests](#-tests)
+- [Intégration et livraison continues](#-intégration-et-livraison-continues)
 - [Communication](#-communication)
 - [Questions](#-questions)
 
@@ -154,6 +155,7 @@ US-XX : [lien vers Trello]
 - **1 reviewer minimum** (2 pour l'IA)
 - **Délai de revue** : 24h maximum
 - **Pas de merge** sans approbation
+- **Pas de merge** si la CI est rouge (voir [Intégration et livraison continues](#-intégration-et-livraison-continues))
 - **Résoudre les conflits** avant la revue
 - **Supprimer la branche** après merge
 
@@ -189,15 +191,15 @@ Tous les tests doivent passer avant de créer une Pull Request.
 ### Backend
 
 ```bash
-cd backend
-pytest
+make test            # pytest dans Docker, sur une base PostgreSQL de test (voir backend/README.md)
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
-npm test
+npm run check        # typecheck + lint + tests unitaires
+npm run test:e2e     # tests E2E Playwright (voir frontend/README.md)
 ```
 
 ### IA
@@ -212,6 +214,53 @@ pytest
 - Tester les endpoints avec Swagger (`http://localhost:8000/docs`)
 - Tester les pages frontend
 - Vérifier les cas d'erreur
+
+---
+
+## 🤖 Intégration et livraison continues
+
+Les workflows GitHub Actions sont dans [`.github/workflows/`](.github/workflows/). Résultats : onglet **Actions**
+du dépôt, et directement dans chaque Pull Request.
+
+### CI — `ci.yml`
+
+Lancée sur **chaque Pull Request** (y compris une PR dont la base est une autre branche `feature/…`), sur chaque
+push vers `develop` et `main`, et à la main (Actions › CI › Run workflow). Un nouveau push annule l'exécution
+précédente de la même branche.
+
+| Job          | Vérifie                                                                | Équivalent local                                |
+| ------------ | ---------------------------------------------------------------------- | ----------------------------------------------- |
+| `frontend`   | typage, lint, tests Jest, build de production                          | `cd frontend && npm run check && npm run build` |
+| `e2e`        | tests Playwright (bureau et mobile)                                    | `cd frontend && npm run test:e2e`               |
+| `backend`    | ruff (lint et formatage), pytest sur PostgreSQL, **couverture ≥ 70 %** | `make test`                                     |
+| `ia-service` | installation des dépendances, chargement de l'application              | —                                               |
+| `docker`     | build des images, démarrage de toute la stack, réponse des services    | `make up`                                       |
+
+En cas d'échec : ouvrir le job en rouge pour lire l'erreur. Le job `e2e` joint les traces Playwright (artefact
+`playwright-traces`, à ouvrir avec `npx playwright show-trace`), le job `docker` affiche les journaux des conteneurs.
+
+### CD — `cd.yml`
+
+Sur chaque push vers `main` (merge d'une release) et sur chaque tag `vX.Y.Z`, publie les images de production sur le
+registre GitHub (onglet **Packages** du dépôt) :
+
+| Image                                  | Tags                                                       |
+| -------------------------------------- | ---------------------------------------------------------- |
+| `ghcr.io/fafa008/langue_ia-frontend`   | `latest` et `sha-<commit>` (main) ; `X.Y.Z` et `X.Y` (tag) |
+| `ghcr.io/fafa008/langue_ia-backend`    | idem                                                       |
+| `ghcr.io/fafa008/langue_ia-ia-service` | idem                                                       |
+
+- L'adresse de l'API intégrée au frontend vient de la variable de dépôt `NEXT_PUBLIC_API_URL`
+  (Settings › Secrets and variables › Actions › Variables) ; sans elle, `http://localhost:8000`.
+- Publier une version : `git tag v1.0.0 && git push origin v1.0.0`.
+- Le déploiement sur un serveur n'est pas encore automatisé : il suffira d'y lancer `docker compose pull && docker compose up -d`
+  avec ces images, une fois le serveur choisi.
+
+### Réglages GitHub conseillés (administrateur du dépôt)
+
+- **Settings › Branches** : protéger `develop` et `main` en exigeant les jobs `frontend`, `e2e`, `backend`,
+  `ia-service` et `docker` avant tout merge.
+- **Settings › Actions › General** : autoriser les workflows à écrire dans les packages (publication des images).
 
 ---
 

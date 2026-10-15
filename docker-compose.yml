@@ -1,0 +1,139 @@
+# ============================================================
+# CENTRE DE LANGUES IA — Stack complète (monorepo)
+# ============================================================
+#   docker compose up --build -d                                           # images de production
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up      # développement (rechargement à chaud)
+#
+# Les valeurs viennent du fichier .env (copie de .env.example). Sans .env, les valeurs par défaut
+# ci-dessous s'appliquent : elles suffisent en local, jamais en production (mots de passe).
+# Dans les conteneurs, les services se joignent par leur nom (db, redis, backend, ia-service) :
+# les adresses « localhost » du .env sont donc remplacées ici.
+# ============================================================
+
+name: centre-langues
+
+# Vérifie qu'un service FastAPI répond sur /health (utilisé par depends_on: service_healthy)
+x-healthcheck-python: &healthcheck-python
+  interval: 10s
+  timeout: 5s
+  retries: 10
+  start_period: 15s
+
+x-python-env: &python-env
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: ${POSTGRES_DB:-centre_langues}
+  POSTGRES_USER: ${POSTGRES_USER:-admin}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-centre_langues}
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  IA_SERVICE_URL: http://ia-service:8001
+  BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-centre_langues}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Pas de port publié : backend et service IA joignent la base par le réseau Docker (db:5432).
+    # Accès depuis la machine (pgAdmin, DBeaver) : docker-compose.dev.yml, ou `docker compose exec db psql`.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    # Pas de port publié : joignable par le réseau Docker (redis:6379)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      target: prod
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *python-env
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      # Comptes de démonstration (mot de passe Demo2026) : false en production
+      SEED_DEMO: ${SEED_DEMO:-true}
+    volumes:
+      # Photos de profil (servies sous /media), conservées d'un redémarrage à l'autre
+      - media_data:/srv/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      <<: *healthcheck-python
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+
+  ia-service:
+    build:
+      context: ./ia-service
+      target: prod
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *python-env
+    volumes:
+      # Modèles entraînés (*.pkl, *.joblib…) : non versionnés, déposés dans ia-service/models
+      - ./ia-service/models:/app/models:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "${IA_PORT:-8001}:8001"
+    healthcheck:
+      <<: *healthcheck-python
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"]
+
+  frontend:
+    build:
+      context: ./frontend
+      target: prod
+      # Intégrées au build (NEXT_PUBLIC_*) : reconstruire l'image après un changement
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        # false : le frontend appelle le backend ; true : données simulées (frontend/src/mocks)
+        NEXT_PUBLIC_API_MOCK: ${NEXT_PUBLIC_API_MOCK:-false}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
