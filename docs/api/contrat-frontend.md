@@ -381,3 +381,90 @@ Même corps que `POST` (code et libellé).
 
 **204** : les lignes `LangueNiveau` du niveau sont supprimées avec lui (il disparaît des langues où il était ouvert).
 Erreur : **409** si le niveau est utilisé (`TestDiagnostic`, `Parcours`, `Exercice`).
+
+## Formateurs — rôle `ADMINISTRATEUR`
+
+> Routes **à créer côté backend** : le frontend les appelle déjà, et utilise des données simulées en attendant
+> (`NEXT_PUBLIC_API_MOCK=true`).
+
+### Objet `Formateur`
+
+Un `Utilisateur` de rôle `FORMATEUR` (mêmes champs, voir plus haut), avec les colonnes de la table `Formateur` et
+ses langues enseignées (table `formateur_langue`) :
+
+```json
+{
+  "id_user": 2,
+  "prenom": "Hery",
+  "nom": "RANDRIA",
+  "email": "formateur@digitheque.mg",
+  "telephone": "034 12 345 67",
+  "role": "FORMATEUR",
+  "statut": "ACTIF",
+  "date_inscription": "2025-01-12T10:00:00Z",
+  "photo_url": null,
+  "type_contrat": "CDI",
+  "certifications": "DALF C2, habilitation examinateur DELF",
+  "langues_enseignees": [{ "id_langue": 1, "code": "fr", "libelle": "Français" }]
+}
+```
+
+- `type_contrat` : `CDI` | `CDD` | `VACATAIRE` | `PRESTATAIRE`, ou `null`. La colonne est un texte libre (50
+  caractères) : le frontend affiche « Non renseigné » pour toute autre valeur. À valider par l'équipe.
+- `certifications` : texte libre, 500 caractères au plus, ou `null`.
+- `langues_enseignees` : objets `Langue` **sans** `niveaux`, dans n'importe quel ordre (le frontend les trie).
+
+### `GET /formateurs`
+
+Mêmes paramètres que `GET /users` (`page`, `page_size`, `search`), plus :
+
+| Paramètre | Type | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `statut` | `ACTIF` \| `INACTIF` \| `SUSPENDU` | — | Filtre par statut |
+
+Seuls les utilisateurs de rôle `FORMATEUR` sont renvoyés, triés par nom puis prénom.
+
+**200** :
+
+```json
+{ "items": [ /* Formateur */ ], "total": 12, "page": 1, "page_size": 10 }
+```
+
+### `POST /formateurs`
+
+```json
+{
+  "prenom": "Lova",
+  "nom": "RABE",
+  "email": "lova.rabe@digitheque.mg",
+  "telephone": null,
+  "type_contrat": "CDD",
+  "certifications": null,
+  "id_langues": [3]
+}
+```
+
+Le backend crée l'`Utilisateur` (rôle `FORMATEUR`, statut `ACTIF`, **sans mot de passe utilisable**), la ligne
+`Formateur` et les lignes `formateur_langue`, puis envoie au formateur un e-mail avec un lien pour choisir son mot
+de passe (même jeton que `POST /auth/forgot-password`, page `/reset-password`).
+
+`id_langues` : **au moins une** langue (le frontend l'impose) ; `type_contrat` obligatoire.
+
+**201** : `Formateur`. Erreurs : **409** e-mail déjà utilisé, **422** langue inconnue ou liste vide.
+
+### `PATCH /formateurs/{id_user}`
+
+Modification partielle : seuls les champs envoyés sont changés (mêmes champs que `POST`).
+`id_langues` **remplace** entièrement la liste des langues enseignées.
+
+Désactiver ou réactiver le formateur (après confirmation) :
+
+```json
+{ "statut": "INACTIF" }
+```
+
+**200** : `Formateur` à jour. Erreurs : **409** e-mail déjà utilisé, **404** formateur inconnu (ou utilisateur
+d'un autre rôle), **422** langue inconnue ou liste vide.
+
+Pas de `DELETE` : un formateur est lié à ses ateliers (`Atelier.id_formateur`, `ON DELETE RESTRICT`), il est donc
+désactivé plutôt que supprimé. Un compte `INACTIF` est refusé à la connexion (**403**), comme pour tout utilisateur.

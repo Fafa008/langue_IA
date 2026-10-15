@@ -14,6 +14,18 @@ export function useLangues(filtres: LanguesFiltres) {
   });
 }
 
+/** Plus grande page acceptée par l'API : le catalogue tient sur une page. */
+const TOUTES = { recherche: "", page: 1, taille: 50 };
+
+/** Toutes les langues du catalogue, triées par désignation, pour les cocher dans un formulaire. */
+export function useLanguesChoix() {
+  return useQuery({
+    queryKey: queryKeys.languesChoix,
+    queryFn: () => languesService.lister(TOUTES),
+    select: (page) => [...page.items].sort((a, b) => a.libelle.localeCompare(b.libelle, "fr")),
+  });
+}
+
 /** Pas de critère à choix fermé : seulement la recherche et la pagination. */
 const CRITERES = {};
 
