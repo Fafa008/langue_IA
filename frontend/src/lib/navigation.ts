@@ -55,6 +55,7 @@ const FORMATEUR: NavItem[] = [
 const ADMINISTRATEUR: NavItem[] = [
   { label: "Tableau de bord", href: ROUTES.admin.dashboard, icon: LayoutDashboard },
   { label: "Utilisateurs", href: ROUTES.admin.utilisateurs, icon: UsersRound },
+  { label: "Formateurs", href: ROUTES.admin.formateurs, icon: Presentation },
   { label: "Ateliers", href: ROUTES.admin.ateliers, icon: CalendarDays, bientot: true },
   { label: "Réservations", href: ROUTES.admin.reservations, icon: CalendarCheck, bientot: true },
   { label: "Formations", href: ROUTES.admin.formations, icon: GraduationCap, bientot: true },

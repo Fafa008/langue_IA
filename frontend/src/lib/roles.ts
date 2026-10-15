@@ -15,6 +15,8 @@ export const STATUT_LABELS: Record<StatutUtilisateur, string> = {
   SUSPENDU: "Suspendu",
 };
 
+export const STATUTS = Object.keys(STATUT_LABELS) as StatutUtilisateur[];
+
 export const STATUT_ABONNEMENT_LABELS: Record<StatutAbonnement, string> = {
   ACTIF: "Actif",
   EXPIRE: "Expiré",
