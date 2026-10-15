@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #013c4a;
+  --color-primary-dark: #012f3a;
+  --color-background: #f8fafa;
+  --color-surface: #ffffff;
+  --color-text: #172126;
+  --color-text-secondary: #66757c;
+  --color-border: #dde5e7;
+  --color-success: #16a34a;
+  --color-error: #dc2626;
+  --color-warning: #f59e0b;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background font-sans text-body text-content antialiased;
+  }
+
+  h1 { @apply text-[1.75rem] leading-[2.125rem] font-bold text-primary md:text-h1; }
+  h2 { @apply text-[1.5rem] leading-[2rem] font-semibold text-primary md:text-h2; }
+  h3 { @apply text-h3 text-content; }
+  h4 { @apply text-h4 text-content; }
+
+  a { @apply transition-colors; }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+}
+
+@layer components {
+  /* Boutons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-btn px-6 py-3
+           text-body font-semibold transition-colors
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-dark;
+  }
+  .btn-secondary {
+    @apply btn border border-primary bg-surface text-primary hover:bg-background;
+  }
+
+  /* Champ de saisie */
+  .input {
+    @apply w-full rounded-btn border border-border bg-surface px-4 py-3
+           text-body text-content placeholder:text-content-secondary
+           focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
+  }
+  .input-error {
+    @apply border-error focus:border-error focus:ring-error;
+  }
+
+  /* Carte */
+  .card {
+    @apply rounded-card border border-border bg-surface p-6 shadow-card;
+  }
+
+  /* Messages */
+  .msg-success { @apply text-small font-medium text-success; }
+  .msg-error   { @apply text-small font-medium text-error; }
+  .msg-warning { @apply text-small font-medium text-warning; }
+
+  /* Libellé de section (ex : "NOS LANGUES") */
+  .eyebrow {
+    @apply text-small font-semibold uppercase tracking-widest text-primary;
+  }
+
+  /* Conteneur de page */
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-4 md:px-8;
+  }
+}
