@@ -1,0 +1,13 @@
+# Fichiers exclus de l'image : dépendances et builds locaux (reconstruits dans l'image), tests, secrets
+node_modules
+.next
+.next-*
+out
+test-results
+playwright-report
+coverage
+*.tsbuildinfo
+.env.local
+.env.*.local
+Dockerfile
+.dockerignore
