@@ -1,52 +1,40 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import {  Menu, X } from "lucide-react";
-import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
+import Logo from "@/components/ui/Logo";
+import UserMenu from "@/components/UserMenu";
+import { useSession } from "@/hooks/useSession";
+import { ROUTES } from "@/lib/routes";
 
-
+// Ancres de la page d'accueil : préfixées par « / » pour fonctionner depuis les autres pages
 const links = [
   { label: "Accueil", href: "/" },
-  { label: "À propos", href: "#apropos" },
-  { label: "Langues", href: "#langues" },
-  { label: "Ateliers", href: "#ateliers" },
-  { label: "Contact", href: "#contact" },
+  { label: "À propos", href: "/#apropos" },
+  { label: "Langues", href: "/#langues" },
+  { label: "Parcours", href: "/#ateliers" },
+  { label: "Contact", href: "/#contact" },
 ];
-
-
-export function Logo({ light = false }: { light?: boolean }) {
-  return (
-    <Link href="/" className="flex items-center">
-      <Image
-        src="/logo.jpg"
-        alt="Digithèque"
-        width={200}
-        height={48}
-        priority
-        className="h-10 w-auto md:h-12"
-      />
-      <span className={`text-xl font-bold ${light ? "text-white" : "text-primary"}`}>
-        Digithèque
-      </span>
-    </Link>
-  );
-}
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const { ready, utilisateur, isAuthenticated } = useSession();
+  const connected = isAuthenticated && utilisateur !== null;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur">
-      <div className="container-page flex h-20 items-center justify-between">
+    <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
+      <div className="container-page flex h-20 items-center justify-between gap-4">
         <Logo />
 
         <nav className="hidden items-center gap-8 lg:flex">
-          {links.map((l, i) => (
+          {links.map((l) => (
             <Link
               key={l.label}
               href={l.href}
               className={`py-2 text-body font-medium ${
-                i === 0
+                l.href === pathname
                   ? "border-b-2 border-primary text-primary"
                   : "text-content hover:text-primary"
               }`}
@@ -56,18 +44,24 @@ export default function Header() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 lg:flex">
-          <Link href="/login" className="btn-secondary">Se connecter</Link>
-          <Link href="/register" className="btn-primary">S&apos;inscrire</Link>
-        </div>
+        <div className="flex items-center gap-2">
+          {connected && <UserMenu utilisateur={utilisateur} />}
+          {/* Rien avant la lecture de la session, pour ne pas afficher brièvement les boutons de connexion */}
+          {ready && !connected && (
+            <div className="hidden items-center gap-3 lg:flex">
+              <Link href={ROUTES.login} className="btn-secondary">Se connecter</Link>
+              <Link href={ROUTES.register} className="btn-primary">S&apos;inscrire</Link>
+            </div>
+          )}
 
-        <button
-          className="lg:hidden"
-          aria-label="Menu"
-          onClick={() => setOpen(!open)}
-        >
-          {open ? <X /> : <Menu />}
-        </button>
+          <button
+            className="lg:hidden"
+            aria-label="Menu"
+            onClick={() => setOpen(!open)}
+          >
+            {open ? <X /> : <Menu />}
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -78,8 +72,12 @@ export default function Header() {
                 {l.label}
               </Link>
             ))}
-            <Link href="/login" className="btn-secondary">Se connecter</Link>
-            <Link href="/register" className="btn-primary">S&apos;inscrire</Link>
+            {ready && !connected && (
+              <>
+                <Link href={ROUTES.login} className="btn-secondary">Se connecter</Link>
+                <Link href={ROUTES.register} className="btn-primary">S&apos;inscrire</Link>
+              </>
+            )}
           </nav>
         </div>
       )}
