@@ -1,0 +1,46 @@
+# ============================================================
+# Surcharge de développement : sources montées, rechargement à chaud
+# ============================================================
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Une modification dans frontend/, backend/ ou ia-service/ est prise en compte sans reconstruire l'image.
+# Reconstruire seulement après un changement de package.json ou de requirements.txt.
+# ============================================================
+
+services:
+  # Base et cache ouverts sur la machine, en local uniquement (127.0.0.1), pour pgAdmin, DBeaver, redis-cli.
+  # Ports volontairement peu courants pour ne pas gêner un PostgreSQL ou un Redis déjà installé.
+  db:
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-55432}:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-56379}:6379"
+
+  backend:
+    build:
+      target: dev
+    volumes:
+      - ./backend:/app
+
+  ia-service:
+    build:
+      target: dev
+    volumes:
+      - ./ia-service:/app
+
+  frontend:
+    build:
+      target: dev
+    environment:
+      # En dev, lues à chaque démarrage de next dev (pas besoin de reconstruire l'image)
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_MOCK: ${NEXT_PUBLIC_API_MOCK:-false}
+      # Détection des modifications à travers le montage (Docker Desktop, WSL)
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./frontend:/app
+      # node_modules et .next restent ceux de l'image (Linux), pas ceux de la machine hôte
+      - /app/node_modules
+      - /app/.next
