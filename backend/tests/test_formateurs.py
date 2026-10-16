@@ -57,7 +57,11 @@ class TestListe:
         for i in range(12):
             creer_utilisateur(db, Role.FORMATEUR, email=f"f{i:02d}@exemple.com", nom=f"NOM{i:02d}")
         creer_utilisateur(
-            db, Role.FORMATEUR, email="helene@exemple.com", prenom="Hélène", nom="RAZAFY",
+            db,
+            Role.FORMATEUR,
+            email="helene@exemple.com",
+            prenom="Hélène",
+            nom="RAZAFY",
             statut=StatutUtilisateur.INACTIF,
         )
 
@@ -78,7 +82,10 @@ class TestCreation:
         assert reponse.status_code == 201
         corps = reponse.json()
         assert (corps["email"], corps["telephone"], corps["role"], corps["statut"]) == (
-            "lova.rabe@digitheque.mg", "034 12 345 67", "FORMATEUR", "ACTIF",
+            "lova.rabe@digitheque.mg",
+            "034 12 345 67",
+            "FORMATEUR",
+            "ACTIF",
         )
         assert (corps["type_contrat"], corps["certifications"]) == ("CDD", "DALF C1")
         assert sorted(lg["code"] for lg in corps["langues_enseignees"]) == ["fr", "zh"]
@@ -87,9 +94,12 @@ class TestCreation:
         [(destinataire, prenom, jeton)] = envoyes
         assert (destinataire, prenom) == ("lova.rabe@digitheque.mg", "Lova")
         assert lire_jeton(jeton, USAGE_REINITIALISATION)["sub"] == str(corps["id_user"])
-        assert client.post(
-            "/api/v1/auth/reset-password", json={"token": jeton, "nouveau_mot_de_passe": "Formateur2026"}
-        ).status_code == 204
+        assert (
+            client.post(
+                "/api/v1/auth/reset-password", json={"token": jeton, "nouveau_mot_de_passe": "Formateur2026"}
+            ).status_code
+            == 204
+        )
         login = client.post(
             "/api/v1/auth/login", json={"email": "lova.rabe@digitheque.mg", "mot_de_passe": "Formateur2026"}
         )
