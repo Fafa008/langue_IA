@@ -19,6 +19,7 @@ MOT_DE_PASSE_LONGUEUR_MIN = 8
 TELEPHONE_PATTERN = re.compile(r"^0\d{9}$")
 CODE_LANGUE_PATTERN = re.compile(r"^[a-z]{2,3}$")
 NIVEAU_CODE_MAX_LONGUEUR = 20
+CERTIFICATIONS_MAX_LONGUEUR = 500
 
 
 def erreur(message: str) -> PydanticCustomError:
@@ -120,3 +121,13 @@ def valider_libelle_requis(valeur: str) -> str:
     if not libelle:
         raise erreur("Le libellé est requis.")
     return libelle
+
+
+def valider_certifications(valeur: str | None) -> str | None:
+    """Texte libre facultatif : vide → null."""
+    if valeur is None or not valeur.strip():
+        return None
+    texte = valeur.strip()
+    if len(texte) > CERTIFICATIONS_MAX_LONGUEUR:
+        raise erreur(f"Les certifications ne doivent pas dépasser {CERTIFICATIONS_MAX_LONGUEUR} caractères.")
+    return texte
