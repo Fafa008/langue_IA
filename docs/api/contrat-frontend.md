@@ -384,8 +384,7 @@ Erreur : **409** si le niveau est utilisé (`TestDiagnostic`, `Parcours`, `Exerc
 
 ## Formateurs — rôle `ADMINISTRATEUR`
 
-> Routes **à créer côté backend** : le frontend les appelle déjà, et utilise des données simulées en attendant
-> (`NEXT_PUBLIC_API_MOCK=true`).
+> Routes implémentées dans `backend/app/api/routes/formateurs.py`.
 
 ### Objet `Formateur`
 
@@ -446,7 +445,8 @@ Seuls les utilisateurs de rôle `FORMATEUR` sont renvoyés, triés par nom puis 
 
 Le backend crée l'`Utilisateur` (rôle `FORMATEUR`, statut `ACTIF`, **sans mot de passe utilisable**), la ligne
 `Formateur` et les lignes `formateur_langue`, puis envoie au formateur un e-mail avec un lien pour choisir son mot
-de passe (même jeton que `POST /auth/forgot-password`, page `/reset-password`).
+de passe (même jeton que `POST /auth/forgot-password`, page `/reset-password`), valable 3 jours
+(`INVITATION_TOKEN_EXPIRE_MINUTES`, 4320 par défaut). Le lien ne sert qu'une fois.
 
 `id_langues` : **au moins une** langue (le frontend l'impose) ; `type_contrat` obligatoire.
 
