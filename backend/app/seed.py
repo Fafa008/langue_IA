@@ -114,7 +114,12 @@ def charger_comptes_demo(db: Session) -> None:
                     )
                 )
         elif role == Role.FORMATEUR:
-            utilisateur.formateur = Formateur(type_contrat="Vacataire")
+            enseignees = db.scalars(select(Langue).where(Langue.code.in_(["fr", "en"]))).all()
+            utilisateur.formateur = Formateur(
+                type_contrat="CDI",
+                certifications="DALF C2, habilitation examinateur DELF",
+                langues_enseignees=list(enseignees),
+            )
         else:
             utilisateur.administrateur = Administrateur(niveau_acces=3)
         db.add(utilisateur)

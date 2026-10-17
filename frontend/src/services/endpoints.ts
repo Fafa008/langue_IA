@@ -24,6 +24,8 @@ export const ENDPOINTS = {
   langue: (idLangue: number) => `${API}/langues/${idLangue}`,
   niveaux: `${API}/niveaux`,
   niveau: (idNiveau: number) => `${API}/niveaux/${idNiveau}`,
+  formateurs: `${API}/formateurs`,
+  formateur: (idUser: number) => `${API}/formateurs/${idUser}`,
   /** Tableau de bord de l'administrateur */
   admin: {
     statistiques: `${API}/admin/statistiques`,

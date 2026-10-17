@@ -41,8 +41,9 @@ def empreinte_mot_de_passe(hache: str) -> str:
     return hache[-12:]
 
 
-def creer_jeton_reinitialisation(id_user: int, hache_actuel: str) -> str:
-    duree = timedelta(minutes=get_settings().reset_token_expire_minutes)
+def creer_jeton_reinitialisation(id_user: int, hache_actuel: str, duree_minutes: int | None = None) -> str:
+    """Par défaut valable reset_token_expire_minutes ; plus longtemps pour l'invitation d'un formateur."""
+    duree = timedelta(minutes=duree_minutes or get_settings().reset_token_expire_minutes)
     claims = {"sub": str(id_user), "usage": USAGE_REINITIALISATION, "mdp": empreinte_mot_de_passe(hache_actuel)}
     return _creer_jeton(claims, duree)
 

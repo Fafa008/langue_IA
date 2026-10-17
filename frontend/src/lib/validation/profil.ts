@@ -14,7 +14,7 @@ export function validateTelephone(value: string): string | undefined {
 }
 
 /** Téléphone facultatif : son format n'est contrôlé que s'il est saisi. */
-const validateTelephoneFacultatif = (value: string) => (value.trim() ? validateTelephone(value) : undefined);
+export const validateTelephoneFacultatif =(value: string) => (value.trim() ? validateTelephone(value) : undefined);
 
 /**
  * Les mots de passe ne sont contrôlés que si l'utilisateur veut en changer (un des trois champs est rempli) :

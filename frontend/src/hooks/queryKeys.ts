@@ -1,3 +1,4 @@
+import type { FormateursFiltres } from "@/types/formateur";
 import type { LanguesFiltres } from "@/types/langue";
 import type { PeriodeInscriptions } from "@/types/tableau-de-bord";
 import type { UtilisateursFiltres } from "@/types/utilisateur";
@@ -11,6 +12,10 @@ export const queryKeys = {
   languesToutes: ["langues"] as const,
   langues: (filtres: LanguesFiltres) => ["langues", filtres] as const,
   niveaux: ["niveaux"] as const,
+  formateursTous: ["formateurs"] as const,
+  formateurs: (filtres: FormateursFiltres) => ["formateurs", filtres] as const,
+  /** Toutes les langues, pour les choisir dans un formulaire. */
+  languesChoix: ["langues", "choix"] as const,
   statistiquesAdmin: ["statistiques-admin"] as const,
   inscriptions: (jours: PeriodeInscriptions) => ["inscriptions", jours] as const,
 };

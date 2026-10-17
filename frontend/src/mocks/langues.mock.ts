@@ -39,6 +39,10 @@ const avecNiveaux = (langue: LangueGeree): LangueAvecNiveaux => ({
   niveaux: niveauxParIds(NIVEAUX_PAR_LANGUE.get(langue.idLangue) ?? []),
 });
 
+/** Langues du catalogue simulé, dans l'ordre des identifiants donnés (inconnus ignorés). */
+export const languesParIds = (ids: number[]): LangueGeree[] =>
+  ids.flatMap((id) => LANGUES.filter((l) => l.idLangue === id));
+
 let prochainId = LANGUES.length + 1;
 
 const normaliser = (texte: string) => texte.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
