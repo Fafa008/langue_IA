@@ -26,6 +26,7 @@ export const ROUTES = {
   admin: {
     dashboard: `${ESPACE}/admin`,
     utilisateurs: `${ESPACE}/admin/utilisateurs`,
+    formateurs: `${ESPACE}/admin/formateurs`,
     ateliers: `${ESPACE}/admin/ateliers`,
     reservations: `${ESPACE}/admin/reservations`,
     formations: `${ESPACE}/admin/formations`,

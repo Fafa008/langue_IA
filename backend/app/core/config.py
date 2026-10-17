@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 1440
     # Durée de validité du lien « mot de passe oublié »
     reset_token_expire_minutes: int = 60
+    # Durée de validité du lien envoyé à un formateur créé par l'administrateur (3 jours)
+    invitation_token_expire_minutes: int = 4320
 
     # Origines autorisées (frontend), séparées par des virgules dans le .env
     backend_cors_origins: str = "http://localhost:3000"

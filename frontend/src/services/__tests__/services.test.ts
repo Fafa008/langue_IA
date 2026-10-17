@@ -1,4 +1,5 @@
 import { configureApiClient } from "@/lib/api-client";
+import { httpFormateursService } from "@/services/formateurs.service";
 import { httpLanguesService } from "@/services/langues.service";
 import { httpNiveauxService } from "@/services/niveaux.service";
 import { httpTableauDeBordService } from "@/services/tableau-de-bord.service";
@@ -117,6 +118,81 @@ describe("languesService", () => {
     await httpLanguesService.supprimer(3);
     const { url, init } = fetchCall(fetchMock);
     expect([url, init.method]).toEqual([`${API}/langues/3`, "DELETE"]);
+  });
+});
+
+describe("formateursService", () => {
+  // Utilisateur de rôle FORMATEUR + table Formateur + langues enseignées (FormateurLangue)
+  const FORMATEUR_DTO = {
+    ...UTILISATEUR_DTO,
+    role: "FORMATEUR",
+    type_contrat: "CDD",
+    certifications: null,
+    langues_enseignees: [
+      { id_langue: 3, code: "zh", libelle: "Mandarin" },
+      { id_langue: 2, code: "en", libelle: "Anglais" },
+    ],
+  };
+  const FORMATEUR = {
+    ...UTILISATEUR,
+    role: "FORMATEUR",
+    typeContrat: "CDD",
+    certifications: null,
+    // Triées par désignation
+    languesEnseignees: [
+      { idLangue: 2, code: "en", libelle: "Anglais" },
+      { idLangue: 3, code: "zh", libelle: "Mandarin" },
+    ],
+  };
+
+  it("lister : GET /formateurs avec pagination, recherche et statut", async () => {
+    const fetchMock = mockFetch({ body: { items: [FORMATEUR_DTO], total: 12, page: 2, page_size: 10 } });
+    await expect(httpFormateursService.lister({ recherche: " rova ", statut: "INACTIF", page: 2, taille: 10 })).resolves.toEqual({
+      items: [FORMATEUR],
+      total: 12,
+      page: 2,
+      taille: 10,
+    });
+    expect(fetchCall(fetchMock).url).toBe(`${API}/formateurs?page=2&page_size=10&search=rova&statut=INACTIF`);
+  });
+
+  it("lister : un type de contrat inconnu est ramené à null", async () => {
+    mockFetch({ body: { items: [{ ...FORMATEUR_DTO, type_contrat: "Stage" }], total: 1, page: 1, page_size: 10 } });
+    const { items } = await httpFormateursService.lister({ recherche: "", statut: null, page: 1, taille: 10 });
+    expect(items[0].typeContrat).toBeNull();
+  });
+
+  it("creer : POST /formateurs en snake_case, langues par identifiant (id_langues)", async () => {
+    const fetchMock = mockFetch({ status: 201, body: FORMATEUR_DTO });
+    await expect(
+      httpFormateursService.creer({
+        prenom: "Rova",
+        nom: "RAKOTO",
+        email: "rova@exemple.com",
+        telephone: null,
+        typeContrat: "CDD",
+        certifications: null,
+        idLangues: [3, 2],
+      }),
+    ).resolves.toEqual(FORMATEUR);
+    const { url, init, body } = fetchCall(fetchMock);
+    expect([url, init.method]).toEqual([`${API}/formateurs`, "POST"]);
+    expect(body).toEqual({
+      prenom: "Rova",
+      nom: "RAKOTO",
+      email: "rova@exemple.com",
+      telephone: null,
+      type_contrat: "CDD",
+      certifications: null,
+      id_langues: [3, 2],
+    });
+  });
+
+  it("modifier : PATCH /formateurs/{id} avec les seuls champs fournis (désactivation)", async () => {
+    const fetchMock = mockFetch({ body: { ...FORMATEUR_DTO, statut: "INACTIF" } });
+    await expect(httpFormateursService.modifier(7, { statut: "INACTIF" })).resolves.toMatchObject({ statut: "INACTIF" });
+    const { url, init, body } = fetchCall(fetchMock);
+    expect([url, init.method, body]).toEqual([`${API}/formateurs/7`, "PATCH", { statut: "INACTIF" }]);
   });
 });
 
