@@ -39,15 +39,15 @@ def modifier_permissions_role(
     id_role: int, donnees: RolePermissionsUpdate, db: DbSession, _admin: GestionRoles
 ) -> RoleOut:
     db.scalars(select(RoleRBAC.id_role).order_by(RoleRBAC.id_role).with_for_update()).all()
-    role = db.scalar(
-        select(RoleRBAC).options(selectinload(RoleRBAC.permissions)).where(RoleRBAC.id_role == id_role)
-    )
+    role = db.scalar(select(RoleRBAC).options(selectinload(RoleRBAC.permissions)).where(RoleRBAC.id_role == id_role))
     if role is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Rôle introuvable.")
 
     codes = donnees.permissions
     if len(codes) != len(set(codes)):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Une permission ne peut apparaître qu'une seule fois.")
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "Une permission ne peut apparaître qu'une seule fois."
+        )
     permissions = list(db.scalars(select(Permission).where(Permission.code.in_(codes))).all()) if codes else []
     if len(permissions) != len(codes):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Une ou plusieurs permissions sont inconnues.")
@@ -60,9 +60,7 @@ def modifier_permissions_role(
             .limit(1)
         )
         if autre_gestionnaire is None:
-            raise HTTPException(
-                status.HTTP_409_CONFLICT, "Au moins un rôle doit conserver la permission roles:manage."
-            )
+            raise HTTPException(status.HTTP_409_CONFLICT, "Au moins un rôle doit conserver la permission roles:manage.")
 
     role.permissions = permissions
     db.commit()

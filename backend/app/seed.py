@@ -118,9 +118,7 @@ def charger_roles_et_permissions(db: Session) -> None:
 
     db.flush()
     for role_code in nouveaux_roles:
-        roles_existants[role_code].permissions = [
-            permissions_existantes[code] for code in DROITS_PAR_ROLE[role_code]
-        ]
+        roles_existants[role_code].permissions = [permissions_existantes[code] for code in DROITS_PAR_ROLE[role_code]]
     db.commit()
 
 

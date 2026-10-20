@@ -72,7 +72,9 @@ def lister_formateurs(
 
 @router.post("", response_model=FormateurOut, status_code=status.HTTP_201_CREATED)
 def creer_formateur(
-    donnees: FormateurCreate, db: DbSession, _admin: Annotated[Utilisateur, Depends(permission_requise("trainers:manage"))]
+    donnees: FormateurCreate,
+    db: DbSession,
+    _admin: Annotated[Utilisateur, Depends(permission_requise("trainers:manage"))],
 ) -> FormateurOut:
     """Le compte est créé sans mot de passe connu : le formateur reçoit un lien pour choisir le sien."""
     _verifier_email_libre(db, donnees.email)
