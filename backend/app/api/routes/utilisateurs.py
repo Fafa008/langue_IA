@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 
-from app.api.deps import AdministrateurConnecte, DbSession, Pagination
+from app.api.deps import DbSession, Pagination, permission_requise
 from app.models import Administrateur, Apprenant, Formateur, Role, StatutUtilisateur, Utilisateur
 from app.schemas.utilisateurs import PageUtilisateurs, UtilisateurAdminUpdate, UtilisateurOut
 from app.services.recherche import contient
@@ -26,7 +26,7 @@ def _assurer_specialisation(utilisateur: Utilisateur, role: Role) -> None:
 @router.get("", response_model=PageUtilisateurs)
 def lister_utilisateurs(
     db: DbSession,
-    _admin: AdministrateurConnecte,
+    _admin: Annotated[Utilisateur, Depends(permission_requise("users:read"))],
     pagination: Annotated[Pagination, Depends()],
     search: Annotated[str | None, Query(description="Nom, prénom ou e-mail")] = None,
     role: Role | None = None,
@@ -55,7 +55,10 @@ def lister_utilisateurs(
 
 @router.patch("/{id_user}", response_model=UtilisateurOut)
 def modifier_utilisateur(
-    id_user: int, donnees: UtilisateurAdminUpdate, db: DbSession, admin: AdministrateurConnecte
+    id_user: int,
+    donnees: UtilisateurAdminUpdate,
+    db: DbSession,
+    admin: Annotated[Utilisateur, Depends(permission_requise("users:manage"))],
 ) -> Utilisateur:
     utilisateur = db.get(Utilisateur, id_user)
     if utilisateur is None:

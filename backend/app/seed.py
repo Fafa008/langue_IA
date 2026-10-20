@@ -23,11 +23,15 @@ from app.models import (
     Formule,
     Langue,
     Niveau,
+    Permission,
     Role,
+    RoleRBAC,
     StatutAbonnement,
     StatutUtilisateur,
     Utilisateur,
 )
+from app.models.enums import CODES
+from app.models.roles import DROITS_PAR_ROLE, PERMISSIONS_INITIALES
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +90,40 @@ def charger_referentiel(db: Session) -> None:
     db.commit()
 
 
+def charger_roles_et_permissions(db: Session) -> None:
+    """Crée les rôles RBAC de base sans réinitialiser les permissions configurées."""
+    roles_existants = {role.code: role for role in db.scalars(select(RoleRBAC))}
+    nouveaux_roles: set[str] = set()
+    for role in Role:
+        if role.value not in roles_existants:
+            role_rbac = RoleRBAC(
+                id_role=CODES[Role][role],
+                code=role.value,
+                libelle={
+                    Role.APPRENANT: "Apprenant",
+                    Role.FORMATEUR: "Formateur",
+                    Role.ADMINISTRATEUR: "Administrateur",
+                }[role],
+            )
+            db.add(role_rbac)
+            roles_existants[role.value] = role_rbac
+            nouveaux_roles.add(role.value)
+
+    permissions_existantes = {permission.code: permission for permission in db.scalars(select(Permission))}
+    for code, description in PERMISSIONS_INITIALES:
+        if code not in permissions_existantes:
+            permission = Permission(code=code, description=description)
+            db.add(permission)
+            permissions_existantes[code] = permission
+
+    db.flush()
+    for role_code in nouveaux_roles:
+        roles_existants[role_code].permissions = [
+            permissions_existantes[code] for code in DROITS_PAR_ROLE[role_code]
+        ]
+    db.commit()
+
+
 def charger_comptes_demo(db: Session) -> None:
     for role, prenom, nom, email in COMPTES_DEMO:
         if db.scalar(select(Utilisateur.id_user).where(Utilisateur.email == email)) is not None:
@@ -129,6 +167,7 @@ def charger_comptes_demo(db: Session) -> None:
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     with SessionLocal() as db:
+        charger_roles_et_permissions(db)
         charger_referentiel(db)
         logger.info("Référentiel chargé : langues, niveaux, formules.")
         if os.getenv("SEED_DEMO", "false").lower() == "true":

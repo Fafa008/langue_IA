@@ -8,12 +8,13 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import AdministrateurConnecte, DbSession, Pagination
-from app.models import Langue, Niveau
+from app.api.deps import DbSession, Pagination, permission_requise
+from app.models import Langue, Niveau, Utilisateur
 from app.schemas.pedagogie import LangueAvecNiveauxOut, LangueCreate, LangueUpdate, NiveauIn, NiveauOut, PageLangues
 from app.services.recherche import contient
 
 router = APIRouter(tags=["langues et niveaux"])
+GestionPedagogie = Annotated[Utilisateur, Depends(permission_requise("pedagogy:manage"))]
 
 
 def _niveaux(db: Session, ids: list[int]) -> list[Niveau]:
@@ -43,7 +44,7 @@ def _code_niveau_libre(db: Session, code: str, id_niveau: int | None = None) -> 
 @router.get("/langues", response_model=PageLangues)
 def lister_langues(
     db: DbSession,
-    _admin: AdministrateurConnecte,
+    _admin: GestionPedagogie,
     pagination: Annotated[Pagination, Depends()],
     search: Annotated[str | None, Query(description="Désignation ou code")] = None,
 ) -> PageLangues:
@@ -61,7 +62,7 @@ def lister_langues(
 
 
 @router.post("/langues", response_model=LangueAvecNiveauxOut, status_code=status.HTTP_201_CREATED)
-def creer_langue(donnees: LangueCreate, db: DbSession, _admin: AdministrateurConnecte) -> Langue:
+def creer_langue(donnees: LangueCreate, db: DbSession, _admin: GestionPedagogie) -> Langue:
     _code_langue_libre(db, donnees.code)
     langue = Langue(code=donnees.code, libelle=donnees.libelle, niveaux=_niveaux(db, donnees.id_niveaux))
     db.add(langue)
@@ -70,7 +71,7 @@ def creer_langue(donnees: LangueCreate, db: DbSession, _admin: AdministrateurCon
 
 
 @router.patch("/langues/{id_langue}", response_model=LangueAvecNiveauxOut)
-def modifier_langue(id_langue: int, donnees: LangueUpdate, db: DbSession, _admin: AdministrateurConnecte) -> Langue:
+def modifier_langue(id_langue: int, donnees: LangueUpdate, db: DbSession, _admin: GestionPedagogie) -> Langue:
     langue = db.get(Langue, id_langue)
     if langue is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Langue introuvable.")
@@ -87,7 +88,7 @@ def modifier_langue(id_langue: int, donnees: LangueUpdate, db: DbSession, _admin
 
 
 @router.delete("/langues/{id_langue}", status_code=status.HTTP_204_NO_CONTENT)
-def supprimer_langue(id_langue: int, db: DbSession, _admin: AdministrateurConnecte) -> Response:
+def supprimer_langue(id_langue: int, db: DbSession, _admin: GestionPedagogie) -> Response:
     langue = db.get(Langue, id_langue)
     if langue is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Langue introuvable.")
@@ -108,12 +109,12 @@ def supprimer_langue(id_langue: int, db: DbSession, _admin: AdministrateurConnec
 
 
 @router.get("/niveaux", response_model=list[NiveauOut])
-def lister_niveaux(db: DbSession, _admin: AdministrateurConnecte) -> Sequence[Niveau]:
+def lister_niveaux(db: DbSession, _admin: GestionPedagogie) -> Sequence[Niveau]:
     return db.scalars(select(Niveau).order_by(Niveau.code)).all()
 
 
 @router.post("/niveaux", response_model=NiveauOut, status_code=status.HTTP_201_CREATED)
-def creer_niveau(donnees: NiveauIn, db: DbSession, _admin: AdministrateurConnecte) -> Niveau:
+def creer_niveau(donnees: NiveauIn, db: DbSession, _admin: GestionPedagogie) -> Niveau:
     _code_niveau_libre(db, donnees.code)
     niveau = Niveau(code=donnees.code, libelle=donnees.libelle)
     db.add(niveau)
@@ -122,7 +123,7 @@ def creer_niveau(donnees: NiveauIn, db: DbSession, _admin: AdministrateurConnect
 
 
 @router.patch("/niveaux/{id_niveau}", response_model=NiveauOut)
-def modifier_niveau(id_niveau: int, donnees: NiveauIn, db: DbSession, _admin: AdministrateurConnecte) -> Niveau:
+def modifier_niveau(id_niveau: int, donnees: NiveauIn, db: DbSession, _admin: GestionPedagogie) -> Niveau:
     niveau = db.get(Niveau, id_niveau)
     if niveau is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Niveau introuvable.")
@@ -133,7 +134,7 @@ def modifier_niveau(id_niveau: int, donnees: NiveauIn, db: DbSession, _admin: Ad
 
 
 @router.delete("/niveaux/{id_niveau}", status_code=status.HTTP_204_NO_CONTENT)
-def supprimer_niveau(id_niveau: int, db: DbSession, _admin: AdministrateurConnecte) -> Response:
+def supprimer_niveau(id_niveau: int, _admin: GestionPedagogie, db: DbSession) -> Response:
     """Les lignes LangueNiveau sont supprimées en cascade ; 409 si un autre objet utilise le niveau."""
     niveau = db.get(Niveau, id_niveau)
     if niveau is None:

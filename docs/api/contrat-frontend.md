@@ -16,7 +16,7 @@ Tant qu'une route n'existe pas côté backend, le frontend utilise des données 
 | Format | JSON, champs en `snake_case` ; dates en ISO 8601 (`2025-01-12T10:00:00Z`, ou `AAAA-MM-JJ` pour une date seule) |
 | Authentification | En-tête `Authorization: Bearer <access_token>` sur toutes les routes, sauf celles marquées **publique** |
 | JWT | Le frontend lit seulement le champ `exp` (date d'expiration) ; il ne vérifie pas la signature |
-| CORS | Autoriser l'origine du frontend (`http://localhost:3000` en développement), les en-têtes `Content-Type` et `Authorization`, et les méthodes `GET, POST, PATCH, DELETE, OPTIONS` |
+| CORS | Autoriser l'origine du frontend (`http://localhost:3000` en développement), les en-têtes `Content-Type` et `Authorization`, et les méthodes `GET, POST, PUT, PATCH, DELETE, OPTIONS` |
 | Erreurs | Format FastAPI : `{ "detail": "message" }`, ou la liste de validation par défaut (422) |
 
 ### Codes d'erreur interprétés par le frontend
@@ -93,6 +93,46 @@ Crée un apprenant et son abonnement à la formule choisie. L'apprenant doit ens
 **201** : `Utilisateur` + `date_naissance`, `pays`, `ville`, `objectif` (nullables).
 Erreur : **409** e-mail déjà utilisé.
 Codes de langue : `fr`, `en`, `zh`, `it`, `de`.
+
+## Rôles et permissions
+
+Ces routes sont réservées aux utilisateurs dont le rôle possède la permission `roles:manage`.
+
+### `GET /roles`
+
+**200** : liste des trois rôles configurés avec leurs permissions effectives.
+
+```json
+[
+  {
+    "id_role": 1,
+    "code": "APPRENANT",
+    "libelle": "Apprenant",
+    "permissions": ["profile:read", "profile:write"]
+  }
+]
+```
+
+### `GET /roles/permissions`
+
+**200** : catalogue des permissions que le backend applique aux routes. Chaque élément contient `code` et
+`description`.
+
+### `PUT /roles/{id_role}/permissions`
+
+Remplace la liste complète des permissions d'un rôle. Exemple :
+
+```json
+{ "permissions": ["profile:read", "profile:write", "users:read"] }
+```
+
+**200** : rôle mis à jour, avec sa liste de permissions. Erreurs : **404** rôle inconnu, **409** si la modification
+retire la dernière permission `roles:manage`, **422** si une permission est inconnue ou répétée. Au moins un rôle
+doit conserver `roles:manage`.
+
+Les rôles existants et leurs codes (`APPRENANT`, `FORMATEUR`, `ADMINISTRATEUR`) restent stables. Les permissions
+effectivement contrôlées sont `profile:read`, `profile:write`, `users:read`, `users:manage`, `trainers:read`,
+`trainers:manage`, `pedagogy:manage`, `stats:read` et `roles:manage`.
 
 ### `POST /auth/forgot-password` — publique
 
