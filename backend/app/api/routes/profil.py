@@ -2,25 +2,27 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 
-from app.api.deps import DbSession, UtilisateurConnecte
+from app.api.deps import DbSession, permission_requise
 from app.core.security import hacher_mot_de_passe, verifier_mot_de_passe
 from app.models import Utilisateur
 from app.schemas.utilisateurs import ProfilUpdate, UtilisateurOut
 from app.services import photos
 
 router = APIRouter(prefix="/users/me", tags=["profil"])
+LectureProfil = Annotated[Utilisateur, Depends(permission_requise("profile:read"))]
+ModificationProfil = Annotated[Utilisateur, Depends(permission_requise("profile:write"))]
 
 
 @router.get("", response_model=UtilisateurOut)
-def lire_profil(utilisateur: UtilisateurConnecte) -> Utilisateur:
+def lire_profil(utilisateur: LectureProfil) -> Utilisateur:
     return utilisateur
 
 
 @router.patch("", response_model=UtilisateurOut)
-def modifier_profil(donnees: ProfilUpdate, utilisateur: UtilisateurConnecte, db: DbSession) -> Utilisateur:
+def modifier_profil(donnees: ProfilUpdate, utilisateur: ModificationProfil, db: DbSession) -> Utilisateur:
     """Tout est vérifié avant d'écrire : en cas d'erreur, rien n'est modifié."""
     champs = donnees.model_dump(exclude_unset=True)
 
@@ -54,7 +56,7 @@ def modifier_profil(donnees: ProfilUpdate, utilisateur: UtilisateurConnecte, db:
 @router.post("/photo", response_model=UtilisateurOut)
 async def envoyer_photo(
     photo: Annotated[UploadFile, File(description="JPEG, PNG ou WebP, 2 Mo au plus")],
-    utilisateur: UtilisateurConnecte,
+    utilisateur: ModificationProfil,
     db: DbSession,
 ) -> Utilisateur:
     ancienne = utilisateur.photo_url
@@ -65,7 +67,7 @@ async def envoyer_photo(
 
 
 @router.delete("/photo", response_model=UtilisateurOut)
-def supprimer_photo(utilisateur: UtilisateurConnecte, db: DbSession) -> Utilisateur:
+def supprimer_photo(utilisateur: ModificationProfil, db: DbSession) -> Utilisateur:
     ancienne = utilisateur.photo_url
     utilisateur.photo_url = None
     db.commit()
