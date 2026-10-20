@@ -40,9 +40,7 @@ class Utilisateur(Base):
     # Hachage bcrypt, jamais renvoyé par l'API
     mot_de_passe: Mapped[str] = mapped_column(String(255))
     telephone: Mapped[str | None] = mapped_column(String(20))
-    role: Mapped[Role] = mapped_column(
-        EnumEntier(Role), ForeignKey("roles.id_role", ondelete="RESTRICT"), index=True
-    )
+    role: Mapped[Role] = mapped_column(EnumEntier(Role), ForeignKey("roles.id_role", ondelete="RESTRICT"), index=True)
     statut: Mapped[StatutUtilisateur] = mapped_column(EnumEntier(StatutUtilisateur), default=StatutUtilisateur.ACTIF)
     date_inscription: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     # Chemin servi sous /media (« /media/photos/7-1700000000.jpg ») ou URL complète ; null sans photo
