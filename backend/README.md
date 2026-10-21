@@ -46,11 +46,20 @@ Toutes sous `/api/v1`. Le détail des requêtes, réponses et erreurs est dans l
 | Authentification   | `POST /auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password` | public         |
 | Formules           | `GET /formules`                                                                       | public         |
 | Profil             | `GET` / `PATCH /users/me`, `POST` / `DELETE /users/me/photo`                          | connecté       |
+| Rôles et permissions | `GET /roles`, `GET /roles/permissions`, `PUT /roles/{id_role}/permissions`           | permission `roles:manage` |
 | Utilisateurs       | `GET /users`, `PATCH /users/{id_user}`                                                | administrateur |
 | Tableau de bord    | `GET /admin/statistiques`, `GET /admin/statistiques/inscriptions`                     | administrateur |
 | Langues et niveaux | `GET` / `POST /langues`, `PATCH` / `DELETE /langues/{id}`, idem `/niveaux`            | administrateur |
 
 Hors préfixe : `GET /health` (supervision) et `GET /media/photos/…` (photos de profil, lecture publique).
+
+### RBAC
+
+Les rôles `APPRENANT`, `FORMATEUR` et `ADMINISTRATEUR` sont conservés avec leurs codes historiques. Les tables
+`roles`, `permissions` et `role_permission` associent ces rôles à des permissions vérifiées à chaque requête par
+la dépendance FastAPI `permission_requise` (équivalent fonctionnel de `@PreAuthorize`). L'administrateur peut
+consulter le catalogue et remplacer la liste de permissions d'un rôle via `PUT /api/v1/roles/{id_role}/permissions`.
+Le catalogue des permissions est défini par le backend et au moins un rôle doit toujours garder `roles:manage`.
 
 ## Structure
 
@@ -77,7 +86,8 @@ backend/
 ## Choix à connaître
 
 - **Rôles et statuts en entiers** (SMALLINT), exposés en texte par l'API. Les codes sont dans
-  `app/models/enums.py` : ne jamais en changer un, seulement en ajouter.
+  `app/models/enums.py` : ne jamais en changer un, seulement en ajouter. Les rôles référencés dans `roles` sont
+  associés aux permissions contrôlées sur chaque route.
 - **Spécialisations** : `apprenant`, `formateur` et `administrateur` ont chacune leur table, liée à `utilisateur`
   par `id_user`. Un changement de rôle crée la ligne du nouveau rôle et conserve les anciennes.
 - **Suppression d'une langue ou d'un niveau** : refusée (409) dès qu'un objet l'utilise, grâce aux clés étrangères

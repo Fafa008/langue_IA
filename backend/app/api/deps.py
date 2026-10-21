@@ -1,14 +1,16 @@
 """Dépendances communes aux routes : session, utilisateur connecté, contrôle du rôle."""
 
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import USAGE_ACCES, lire_jeton
-from app.models import Role, StatutUtilisateur, Utilisateur
+from app.models import Permission, RoleRBAC, StatutUtilisateur, Utilisateur, role_permission
 
 DbSession = Annotated[Session, Depends(get_db)]
 
@@ -39,13 +41,25 @@ def utilisateur_connecte(
 UtilisateurConnecte = Annotated[Utilisateur, Depends(utilisateur_connecte)]
 
 
-def administrateur_connecte(utilisateur: UtilisateurConnecte) -> Utilisateur:
-    if utilisateur.role != Role.ADMINISTRATEUR:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Accès réservé aux administrateurs.")
-    return utilisateur
+def permission_requise(code_permission: str) -> Callable[..., Utilisateur]:
+    """Dépendance FastAPI équivalente à @PreAuthorize pour les permissions RBAC."""
 
+    def verifier_permission(db: DbSession, utilisateur: UtilisateurConnecte) -> Utilisateur:
+        autorise = db.scalar(
+            select(
+                exists().where(
+                    RoleRBAC.code == utilisateur.role.value,
+                    role_permission.c.id_role == RoleRBAC.id_role,
+                    role_permission.c.id_permission == Permission.id_permission,
+                    Permission.code == code_permission,
+                )
+            )
+        )
+        if not autorise:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Droits insuffisants.")
+        return utilisateur
 
-AdministrateurConnecte = Annotated[Utilisateur, Depends(administrateur_connecte)]
+    return verifier_permission
 
 
 class Pagination:
