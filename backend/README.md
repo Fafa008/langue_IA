@@ -106,6 +106,7 @@ backend/
 
 ## Pas encore dans le MVP
 
-Ateliers et réservations (seule la table `atelier` existe, pour le tableau de bord), parcours, tests diagnostiques,
-facturation et paiements, gestion des formateurs, cache Redis et limitation du nombre de requêtes
-(`RATE_LIMIT_PER_MINUTE`), révocation des jetons à la déconnexion.
+Ateliers et réservations (seule la table `atelier` existe, pour le tableau de bord), parcours, routes des tests
+diagnostiques (les tables `question`, `test_diagnostic` et `reponse` existent déjà), facturation et paiements,
+gestion des formateurs, cache Redis et limitation du nombre de requêtes (`RATE_LIMIT_PER_MINUTE`), révocation des
+jetons à la déconnexion.
