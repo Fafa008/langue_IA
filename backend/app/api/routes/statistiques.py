@@ -4,10 +4,10 @@ from datetime import date, datetime, timedelta
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 
-from app.api.deps import AdministrateurConnecte, DbSession
+from app.api.deps import DbSession, permission_requise
 from app.core.config import get_settings
 from app.models import Apprenant, Atelier, Langue, Role, StatutAtelier, Utilisateur, apprenant_langue
 from app.schemas.facturation import (
@@ -22,13 +22,14 @@ from app.schemas.pedagogie import LangueOut
 from app.schemas.utilisateurs import ApprenantOut
 
 router = APIRouter(prefix="/admin/statistiques", tags=["tableau de bord"])
+LectureStatistiques = Annotated[Utilisateur, Depends(permission_requise("stats:read"))]
 
 DERNIERES_INSCRIPTIONS = 5
 PERIODES = (7, 30, 90)
 
 
 @router.get("", response_model=StatistiquesOut)
-def consulter_statistiques(db: DbSession, _admin: AdministrateurConnecte) -> StatistiquesOut:
+def consulter_statistiques(db: DbSession, _admin: LectureStatistiques) -> StatistiquesOut:
     par_role = dict(db.execute(select(Utilisateur.role, func.count()).group_by(Utilisateur.role)).all())
     ateliers = db.scalar(
         select(func.count())
@@ -73,7 +74,7 @@ def consulter_statistiques(db: DbSession, _admin: AdministrateurConnecte) -> Sta
 @router.get("/inscriptions", response_model=list[InscriptionsDuJourOut])
 def inscriptions_par_jour(
     db: DbSession,
-    _admin: AdministrateurConnecte,
+    _admin: LectureStatistiques,
     jours: Annotated[int, Query(description="Période en jours (7, 30 ou 90), aujourd'hui compris")] = 30,
 ) -> list[InscriptionsDuJourOut]:
     """Un élément par jour, du plus ancien au plus récent, jours sans inscription compris (fuseau TIMEZONE)."""

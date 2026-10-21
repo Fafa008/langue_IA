@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import AdministrateurConnecte, DbSession, Pagination
+from app.api.deps import DbSession, Pagination, permission_requise
 from app.core.config import get_settings
 from app.core.security import creer_jeton_reinitialisation, hacher_mot_de_passe
 from app.models import Formateur, Langue, Role, StatutUtilisateur, Utilisateur
@@ -42,7 +42,7 @@ def _verifier_email_libre(db: Session, email: str) -> None:
 @router.get("", response_model=PageFormateurs)
 def lister_formateurs(
     db: DbSession,
-    _admin: AdministrateurConnecte,
+    _admin: Annotated[Utilisateur, Depends(permission_requise("trainers:read"))],
     pagination: Annotated[Pagination, Depends()],
     search: Annotated[str | None, Query(description="Nom, prénom ou e-mail")] = None,
     statut: StatutUtilisateur | None = None,
@@ -71,7 +71,11 @@ def lister_formateurs(
 
 
 @router.post("", response_model=FormateurOut, status_code=status.HTTP_201_CREATED)
-def creer_formateur(donnees: FormateurCreate, db: DbSession, _admin: AdministrateurConnecte) -> FormateurOut:
+def creer_formateur(
+    donnees: FormateurCreate,
+    db: DbSession,
+    _admin: Annotated[Utilisateur, Depends(permission_requise("trainers:manage"))],
+) -> FormateurOut:
     """Le compte est créé sans mot de passe connu : le formateur reçoit un lien pour choisir le sien."""
     _verifier_email_libre(db, donnees.email)
     langues = _langues(db, donnees.id_langues)
@@ -102,7 +106,10 @@ def creer_formateur(donnees: FormateurCreate, db: DbSession, _admin: Administrat
 
 @router.patch("/{id_user}", response_model=FormateurOut)
 def modifier_formateur(
-    id_user: int, donnees: FormateurUpdate, db: DbSession, _admin: AdministrateurConnecte
+    id_user: int,
+    donnees: FormateurUpdate,
+    db: DbSession,
+    _admin: Annotated[Utilisateur, Depends(permission_requise("trainers:manage"))],
 ) -> FormateurOut:
     utilisateur = db.get(Utilisateur, id_user)
     if utilisateur is None or utilisateur.role != Role.FORMATEUR:
