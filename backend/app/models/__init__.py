@@ -1,7 +1,8 @@
 """Tous les modèles, importés ici pour qu'Alembic et SQLAlchemy connaissent chaque table."""
 
 from app.models.ateliers import Atelier
-from app.models.enums import Role, StatutAbonnement, StatutAtelier, StatutUtilisateur
+from app.models.diagnostic import Question, Reponse, TestDiagnostic
+from app.models.enums import Role, StatutAbonnement, StatutAtelier, StatutDiagnostic, StatutUtilisateur
 from app.models.facturation import Abonnement, Formule, formule_langue
 from app.models.pedagogie import Langue, Niveau, langue_niveau
 from app.models.roles import Permission, RoleRBAC, role_permission
@@ -24,11 +25,15 @@ __all__ = [
     "Langue",
     "Niveau",
     "Permission",
+    "Question",
+    "Reponse",
     "Role",
     "RoleRBAC",
     "StatutAbonnement",
     "StatutAtelier",
+    "StatutDiagnostic",
     "StatutUtilisateur",
+    "TestDiagnostic",
     "Utilisateur",
     "apprenant_langue",
     "formateur_langue",
