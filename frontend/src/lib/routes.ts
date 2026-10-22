@@ -11,6 +11,7 @@ export const ROUTES = {
   profil: `${ESPACE}/profil`,
   apprenant: {
     dashboard: `${ESPACE}/apprenant`,
+    testDiagnostic: `${ESPACE}/apprenant/test-diagnostic`,
     mesCours: `${ESPACE}/apprenant/mes-cours`,
     ateliers: `${ESPACE}/apprenant/ateliers`,
     mesInscriptions: `${ESPACE}/apprenant/mes-inscriptions`,
