@@ -36,6 +36,7 @@ export const ACCUEIL_PAR_ROLE: Record<Role, string> = {
 
 const APPRENANT: NavItem[] = [
   { label: "Tableau de bord", href: ROUTES.apprenant.dashboard, icon: House },
+  { label: "Test de positionnement", href: ROUTES.apprenant.testDiagnostic, icon: ClipboardList },
   { label: "Mes cours", href: ROUTES.apprenant.mesCours, icon: BookOpen, bientot: true },
   { label: "Ateliers", href: ROUTES.apprenant.ateliers, icon: CalendarDays, bientot: true },
   { label: "Mon profil", href: ROUTES.profil, icon: UserRound },

@@ -18,6 +18,12 @@ describe("navigation par rôle", () => {
     expect(NAVIGATION.FORMATEUR.map((i) => i.href)).toContain(ROUTES.profil);
   });
 
+  it("le test de positionnement est accessible dans l'espace apprenant", () => {
+    expect(NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.testDiagnostic)).toMatchObject({
+      label: "Test de positionnement",
+    });
+  });
+
   it("chaque rôle arrive dans son dossier de l'espace connecté", () => {
     expect(ACCUEIL_PAR_ROLE).toEqual({
       APPRENANT: "/espace/apprenant",
