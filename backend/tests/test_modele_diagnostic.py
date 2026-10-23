@@ -189,13 +189,30 @@ class TestMigration:
         assert {"question", "test_diagnostic", "reponse"} <= set(tables)
 
     def test_la_migration_du_diagnostic_est_reversible(self, db: Session):
-        """Downgrade puis upgrade : les tables repartent sans toucher aux autres tables."""
+        """Chaque migration du diagnostic peut être annulée puis rejouée sans toucher aux autres tables."""
         config = Config("alembic.ini")
         command.downgrade(config, "-1")
 
+        colonnes_question = db.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'question'"
+            )
+        ).scalars().all()
+        assert {"id_question", "enonce", "competence", "id_langue", "id_niveau"} <= set(colonnes_question)
+        assert not {"type_reponse", "choix", "support", "audio_url", "audio_texte"} & set(colonnes_question)
+
+        command.downgrade(config, "-1")
         reste = db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")).scalars().all()
         assert not {"question", "test_diagnostic", "reponse"} & set(reste)
 
         command.upgrade(config, "head")
         tables = db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")).scalars().all()
         assert {"question", "test_diagnostic", "reponse"} <= set(tables)
+        colonnes_question = db.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'question'"
+            )
+        ).scalars().all()
+        assert {"type_reponse", "choix", "support", "audio_url", "audio_texte"} <= set(colonnes_question)

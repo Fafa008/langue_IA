@@ -2,13 +2,13 @@
 
 Persistance du diagnostic linguistique : banque de questions par langue et niveau, tentative d'un
 apprenant sur une cible (langue + niveau) et réponses fournies, dont l'évaluation (service IA)
-sera renseignée plus tard. Les routes du diagnostic ne font pas encore partie du MVP
-(backend/README.md) ; la table `atelier` avait suivi la même approche.
+sera renseignée plus tard. La lecture filtrée des questions est exposée par l'API ; les routes
+de session et de réponse restent à implémenter.
 """
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,12 +19,21 @@ from app.models.pedagogie import Langue, Niveau
 
 class Question(Base):
     __tablename__ = "question"
+    __table_args__ = (
+        CheckConstraint("type_reponse IN ('choix', 'texte', 'audio')", name="ck_question_type_reponse"),
+        Index("ix_question_id_langue_id_niveau", "id_langue", "id_niveau"),
+    )
 
     id_question: Mapped[int] = mapped_column(primary_key=True)
     enonce: Mapped[str] = mapped_column(Text)
     # Compétence évaluée (« compréhension orale », « expression écrite »…) : vocabulaire ouvert,
     # à confirmer avec l'équipe avant de figer une énumération (comme Administrateur.niveau_acces)
     competence: Mapped[str] = mapped_column(String(50))
+    type_reponse: Mapped[str] = mapped_column(String(10), default="choix")
+    choix: Mapped[list[str] | None] = mapped_column(JSONB)
+    support: Mapped[str | None] = mapped_column(Text)
+    audio_url: Mapped[str | None] = mapped_column(Text)
+    audio_texte: Mapped[str | None] = mapped_column(Text)
     id_langue: Mapped[int] = mapped_column(ForeignKey("langue.id_langue", ondelete="RESTRICT"))
     # Une question d'une langue ne porte que des niveaux ouverts pour cette langue (contrôle des routes)
     id_niveau: Mapped[int] = mapped_column(ForeignKey("niveau.id_niveau", ondelete="RESTRICT"))

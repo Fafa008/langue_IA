@@ -422,11 +422,39 @@ Même corps que `POST` (code et libellé).
 **204** : les lignes `LangueNiveau` du niveau sont supprimées avec lui (il disparaît des langues où il était ouvert).
 Erreur : **409** si le niveau est utilisé (`TestDiagnostic`, `Parcours`, `Exercice`).
 
-## Test de positionnement adaptatif — contrat frontend à implémenter côté backend
+## Test de positionnement adaptatif
 
 Le parcours frontend est piloté par une session serveur : le navigateur ne reçoit ni la banque complète ni les
-bonnes réponses avant d'avoir soumis son choix. Les routes ci-dessous sont le contrat attendu par le frontend ;
-elles ne sont pas encore implémentées dans le backend.
+bonnes réponses avant d'avoir soumis son choix. La consultation des questions est disponible ; les routes de session
+et de réponse ci-dessous restent à implémenter dans le backend.
+
+### `GET /diagnostic/questions` — rôle `APPRENANT`
+
+Les paramètres de requête sont obligatoires :
+
+```text
+GET /api/v1/diagnostic/questions?code_langue=en&code_niveau=A1
+```
+
+**200** : liste des questions correspondant exactement à la langue et au niveau demandés. La liste est vide si aucune
+question n'a encore été enregistrée pour cette combinaison.
+
+```json
+[
+  {
+    "id_question": "12",
+    "niveau": "A1",
+    "competence": "grammaire",
+    "type_reponse": "choix",
+    "enonce": "She ___ a student.",
+    "choix": ["is", "are", "am", "be"]
+  }
+]
+```
+
+Une question peut également contenir `support`, `audio_url` ou `audio_texte`. Les champs sans valeur sont omis.
+La route ne renvoie aucune correction ni bonne réponse. Erreurs : **401** session absente ou invalide, **403** rôle
+autre qu'`APPRENANT`, **404** langue ou niveau inconnu, **422** niveau connu mais non ouvert pour cette langue.
 
 ### `POST /test-diagnostic/sessions` — rôle `APPRENANT`
 
