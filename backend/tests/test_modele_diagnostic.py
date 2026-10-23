@@ -193,12 +193,16 @@ class TestMigration:
         config = Config("alembic.ini")
         command.downgrade(config, "-1")
 
-        colonnes_question = db.execute(
-            text(
-                "SELECT column_name FROM information_schema.columns "
-                "WHERE table_schema = 'public' AND table_name = 'question'"
+        colonnes_question = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'question'"
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert {"id_question", "enonce", "competence", "id_langue", "id_niveau"} <= set(colonnes_question)
         assert not {"type_reponse", "choix", "support", "audio_url", "audio_texte"} & set(colonnes_question)
 
@@ -209,10 +213,14 @@ class TestMigration:
         command.upgrade(config, "head")
         tables = db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")).scalars().all()
         assert {"question", "test_diagnostic", "reponse"} <= set(tables)
-        colonnes_question = db.execute(
-            text(
-                "SELECT column_name FROM information_schema.columns "
-                "WHERE table_schema = 'public' AND table_name = 'question'"
+        colonnes_question = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'question'"
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert {"type_reponse", "choix", "support", "audio_url", "audio_texte"} <= set(colonnes_question)

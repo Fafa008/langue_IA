@@ -110,10 +110,13 @@ class TestListerQuestions:
         assert reponse.json() == []
 
     def test_exige_une_session_et_le_role_apprenant(self, client, db: Session):
-        assert client.get(
-            "/api/v1/diagnostic/questions",
-            params={"code_langue": "en", "code_niveau": "A1"},
-        ).status_code == 401
+        assert (
+            client.get(
+                "/api/v1/diagnostic/questions",
+                params={"code_langue": "en", "code_niveau": "A1"},
+            ).status_code
+            == 401
+        )
 
         formateur = creer_utilisateur(db, Role.FORMATEUR, email="formateur@exemple.com")
         reponse = client.get(
