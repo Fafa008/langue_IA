@@ -35,6 +35,7 @@ export interface SessionTest {
   numeroQuestion: number;
   totalQuestions: number;
   question: Question;
+  questions?: Question[];
 }
 
 interface RetourReponseBase {
@@ -43,6 +44,11 @@ interface RetourReponseBase {
 }
 
 export type RetourReponse = RetourReponseBase & (
+  | {
+      typeReponse: "en_attente";
+      questionSuivante: Question | null;
+      resultat: null;
+    }
   | {
       typeReponse: "choix";
       correcte: boolean;
@@ -74,7 +80,7 @@ export interface CompetenceResultat {
   total: number;
 }
 
-export type PhaseTest = "intro" | "personnalisation" | "question" | "retour" | "resultat";
+export type PhaseTest = "intro" | "personnalisation" | "question" | "retour" | "resultat" | "evaluationEnAttente";
 
 export interface EtatTest {
   phase: PhaseTest;
@@ -85,6 +91,7 @@ export interface EtatTest {
   numeroQuestion: number;
   totalQuestions: number;
   courante: Question | null;
+  questionsRestantes: Question[];
   choisie: number | null;
   texteSaisi: string;
   audioEnregistre: Blob | null;

@@ -6,6 +6,7 @@ import {
   type CompetenceResultat,
   type CompetenceTest,
   type ObjectifFormation,
+  type Question,
   type ReponseTest,
   type RetourReponse,
   type SessionTest,
@@ -104,7 +105,13 @@ export const testDiagnosticMockService = {
     };
   },
 
-  async repondre(idSession: string, idQuestion: string, reponse: ReponseTest): Promise<RetourReponse> {
+  async repondre(
+    idSession: string,
+    idQuestion: string,
+    reponse: ReponseTest,
+    _valeurChoix?: string,
+    _progression?: { numeroQuestion: number; totalQuestions: number; questionSuivante: Question | null },
+  ): Promise<RetourReponse> {
     const session = sessions.get(idSession);
     if (!session) throw new ApiError(404, "Session de test introuvable.");
     if (session.derniereReponse?.idQuestion === idQuestion) {

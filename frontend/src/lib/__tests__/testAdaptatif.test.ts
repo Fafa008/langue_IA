@@ -60,6 +60,44 @@ describe("état du test piloté par la session", () => {
     });
   });
 
+  it("termine sur une évaluation en attente quand toutes les réponses ont été sauvegardées", () => {
+    const secondeQuestion = {
+      id: "q-2",
+      niveau: "B1",
+      competence: "lecture" as const,
+      typeReponse: "texte" as const,
+      enonce: "Question 2",
+    };
+    const sessionAvecQuestions: SessionTest = {
+      ...session,
+      questions: [session.question, secondeQuestion],
+    };
+    const enCours = reducteur(etatInitial("en"), { type: "demarrer", session: sessionAvecQuestions });
+    const retourAttente: RetourReponse = {
+      typeReponse: "en_attente",
+      numeroQuestion: 1,
+      totalQuestions: 2,
+      questionSuivante: secondeQuestion,
+      resultat: null,
+    };
+    const apresPremiereReponse = reducteur(enCours, { type: "repondre", choix: 0, retour: retourAttente });
+    const questionSuivante = reducteur(apresPremiereReponse, { type: "suivante" });
+
+    expect(questionSuivante).toMatchObject({
+      phase: "question",
+      courante: secondeQuestion,
+      questionsRestantes: [],
+    });
+
+    const retourFinal = { ...retourAttente, numeroQuestion: 2, questionSuivante: null };
+    const apresDerniereReponse = reducteur(questionSuivante, { type: "repondre", choix: null, retour: retourFinal });
+    expect(reducteur(apresDerniereReponse, { type: "suivante" })).toMatchObject({
+      phase: "evaluationEnAttente",
+      courante: null,
+      resultat: null,
+    });
+  });
+
   it("ignore les réponses invalides pour l'étape courante", () => {
     const initial = etatInitial("en");
     expect(reducteur(initial, { type: "repondre", choix: 0, retour })).toBe(initial);
