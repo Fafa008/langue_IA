@@ -7,6 +7,7 @@ import { etatInitial, reducteur } from "@/lib/testAdaptatif";
 import { testDiagnosticService } from "@/services/test-diagnostic.service";
 import type { CodeLangue } from "@/types/langue";
 import type { CreneauPresence, ObjectifFormation, ReponseTest } from "@/types/test-diagnostic";
+import type { ReponseProgression } from "@/services/test-diagnostic.service";
 
 export function useTestDiagnostic(langueInitiale: CodeLangue) {
   const [etat, dispatch] = useReducer(reducteur, langueInitiale, etatInitial);
@@ -15,8 +16,19 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
       testDiagnosticService.demarrer(variables.langue, variables.objectif, variables.creneaux),
   });
   const reponse = useMutation({
-    mutationFn: ({ idSession, idQuestion, reponse }: { idSession: string; idQuestion: string; reponse: ReponseTest }) =>
-      testDiagnosticService.repondre(idSession, idQuestion, reponse),
+    mutationFn: ({
+      idSession,
+      idQuestion,
+      reponse,
+      valeurChoix,
+      progression,
+    }: {
+      idSession: string;
+      idQuestion: string;
+      reponse: ReponseTest;
+      valeurChoix?: string;
+      progression: ReponseProgression;
+    }) => testDiagnosticService.repondre(idSession, idQuestion, reponse, valeurChoix, progression),
   });
 
   const choisirLangue = (langue: CodeLangue) => {
@@ -36,7 +48,17 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
     if (!etat.sessionId || !etat.courante || etat.phase !== "question") return;
     if (choix !== null) dispatch({ type: "choisirReponse", choix });
     reponse.mutate(
-      { idSession: etat.sessionId, idQuestion: etat.courante.id, reponse: reponseTest },
+      {
+        idSession: etat.sessionId,
+        idQuestion: etat.courante.id,
+        reponse: reponseTest,
+        valeurChoix: choix === null ? undefined : etat.courante.choix?.[choix],
+        progression: {
+          questionSuivante: etat.questionsRestantes[0] ?? null,
+          numeroQuestion: etat.numeroQuestion,
+          totalQuestions: etat.totalQuestions,
+        },
+      },
       { onSuccess: (retour) => dispatch({ type: "repondre", choix, retour }) },
     );
   };
@@ -99,7 +121,17 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
         return;
       }
       reponse.mutate(
-        { idSession: etat.sessionId, idQuestion: etat.courante.id, reponse: reponseTest },
+        {
+          idSession: etat.sessionId,
+          idQuestion: etat.courante.id,
+          reponse: reponseTest,
+          valeurChoix: etat.choisie === null ? undefined : etat.courante.choix?.[etat.choisie],
+          progression: {
+            questionSuivante: etat.questionsRestantes[0] ?? null,
+            numeroQuestion: etat.numeroQuestion,
+            totalQuestions: etat.totalQuestions,
+          },
+        },
         { onSuccess: (retour) => dispatch({ type: "repondre", choix: etat.choisie, retour }) },
       );
     },

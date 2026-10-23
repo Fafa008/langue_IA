@@ -424,9 +424,29 @@ Erreur : **409** si le niveau est utilisé (`TestDiagnostic`, `Parcours`, `Exerc
 
 ## Test de positionnement adaptatif
 
-Le parcours frontend est piloté par une session serveur : le navigateur ne reçoit ni la banque complète ni les
-bonnes réponses avant d'avoir soumis son choix. La consultation des questions est disponible ; les routes de session
-et de réponse ci-dessous restent à implémenter dans le backend.
+Le flux actuel crée une tentative persistée, charge les questions de son niveau initial et enregistre les réponses.
+L'évaluation IA et l'adaptation du niveau ne sont pas encore disponibles. Le frontend indique explicitement que le
+résultat est en attente ; aucune correction ni résultat simulé n'est renvoyé par le backend. Les réponses restent
+enregistrées en base avec `evaluation = null` jusqu'à leur prise en charge par le flux d'évaluation ; aucune suppression
+automatique n'est actuellement configurée.
+
+### `POST /diagnostic/tentatives` — rôle `APPRENANT`
+
+Crée une tentative pour la langue demandée. Le backend choisit le premier niveau ouvert qui possède au moins une
+question à choix ou à réponse textuelle.
+
+```json
+{ "code_langue": "en" }
+```
+
+**201** :
+
+```json
+{ "id_tentative": 42, "code_langue": "en", "code_niveau": "A1" }
+```
+
+Erreurs : **401** session absente ou invalide, **403** rôle autre qu'`APPRENANT`, **404** langue inconnue ou aucune
+question enregistrable n'est disponible.
 
 ### `GET /diagnostic/questions` — rôle `APPRENANT`
 
@@ -456,98 +476,43 @@ Une question peut également contenir `support`, `audio_url` ou `audio_texte`. L
 La route ne renvoie aucune correction ni bonne réponse. Erreurs : **401** session absente ou invalide, **403** rôle
 autre qu'`APPRENANT`, **404** langue ou niveau inconnu, **422** niveau connu mais non ouvert pour cette langue.
 
-### `POST /test-diagnostic/sessions` — rôle `APPRENANT`
+### `POST /diagnostic/reponse` — rôle `APPRENANT`
+
+Enregistre une réponse dans une tentative appartenant à l'apprenant et encore en cours. Pour une question à choix,
+`reponse_fournie` contient le texte de l'option sélectionnée ; pour une question textuelle, il contient le texte saisi.
+Cette route ne corrige pas la réponse.
 
 ```json
 {
-  "code_langue": "en",
-  "objectif": "professionnel",
-  "creneaux": ["matin", "apres_midi"]
+  "id_tentative": 42,
+  "id_question": "12",
+  "reponse_fournie": "is"
 }
 ```
+
+La question doit appartenir à la même langue et au même niveau initial que la tentative. Pour une question à choix, la
+valeur fournie doit correspondre à l'une des options. Une même réponse renvoyée après une erreur réseau est idempotente ;
+une réponse différente pour la même question est refusée.
 
 **201** :
 
 ```json
 {
-  "id_session": "session-123",
-  "code_langue": "en",
-  "niveaux": ["A1", "A2", "B1", "B2", "C1", "C2"],
-  "numero_question": 1,
-  "total_questions": 10,
-  "question": {
-    "id_question": "question-456",
-    "niveau": "B1",
-    "competence": "grammaire",
-    "type_reponse": "choix",
-    "enonce": "She ___ a student.",
-    "choix": ["is", "are", "am", "be"]
-  }
+  "id_reponse": 81,
+  "id_tentative": 42,
+  "id_question": "12",
+  "reponse_fournie": "is"
 }
 ```
 
-`objectif` vaut `professionnel`, `personnel` ou `scolaire`. `creneaux` contient zéro ou plusieurs valeurs parmi
-`matin`, `apres_midi`, `soiree`. `niveaux` est ordonné du niveau le plus bas au plus haut et peut contenir des codes
-propres à la langue (ex. `HSK 1`). `competence` vaut `grammaire`, `lecture`, `ecoute`, `ecrit` ou `oral` ;
-`type_reponse` vaut `choix`, `texte` ou `audio`. Une question peut aussi inclure `support` et `audio_url`.
-Pour une question d’écoute en mode démo frontend, `audio_texte` contient le texte lu par la synthèse vocale du
-navigateur. En production, préférer un fichier stable servi par `audio_url` : le rendu de la synthèse vocale varie
-selon les voix installées dans le navigateur.
-`question` ne contient jamais la bonne réponse. Erreurs : **404** si aucune question n'est disponible pour la langue,
-**422** si le code de langue ou la personnalisation est invalide.
+Erreurs : **401** session absente ou invalide, **403** rôle autre qu'`APPRENANT`, **404** tentative non accessible ou
+question inconnue, **409** tentative terminée/annulée ou réponse différente déjà enregistrée, **422** réponse vide,
+identifiant invalide ou question ne correspondant pas à la tentative. La colonne d'évaluation reste `null` en attente
+de l'intégration IA. Les réponses audio ne sont pas acceptées tant qu'un stockage de médias n'est pas disponible.
 
-### `POST /test-diagnostic/sessions/{id_session}/reponses` — rôle `APPRENANT`
-
-```json
-{ "id_question": "question-456", "choix": 0 }
-```
-
-**200** :
-
-```json
-{
-  "correcte": true,
-  "bonne_reponse": 0,
-  "type_reponse": "choix",
-  "numero_question": 1,
-  "total_questions": 10,
-  "question_suivante": {
-    "id_question": "question-789",
-    "niveau": "B2",
-    "competence": "lecture",
-    "type_reponse": "choix",
-    "enonce": "Question suivante",
-    "choix": ["A", "B", "C", "D"]
-  },
-  "resultat": null
-}
-```
-
-Pour une réponse `texte`, envoyer `{ "id_question": "...", "texte": "..." }`. Pour une réponse `audio`, envoyer un
-`multipart/form-data` contenant `id_question` et le fichier `audio`. `choix` est l'index (à partir de zéro) de
-l'option sélectionnée. La correction n'est retournée qu'après cette soumission. Pour `texte` et `audio`, la réponse
-contient `evaluation` et peut inclure `score_prononciation`.
-
-Quand la session est terminée, `question_suivante` vaut `null` et `resultat` contient le niveau, le score global, les
-résultats par compétence et les lacunes identifiées ; sinon `resultat` vaut `null`.
-
-```json
-{
-  "niveau": "B1",
-  "score": 7,
-  "total": 10,
-  "competences": [
-    { "competence": "grammaire", "score": 3, "total": 4 },
-    { "competence": "oral", "score": 0, "total": 1 }
-  ],
-  "lacunes": ["oral"]
-}
-```
-
-Le backend vérifie l'appartenance de la session à l'apprenant connecté, l'ordre des questions et la validité de la
-réponse, puis calcule le niveau, le score et les compétences à renforcer. La même réponse renvoyée une seconde fois
-(même question et même réponse) doit être idempotente pour permettre une nouvelle tentative réseau sûre. Erreurs :
-**404** session inconnue, **409** question hors session ou réponse différente déjà traitée, **422** réponse invalide.
+Le frontend affiche ensuite les autres questions du niveau dans l'ordre reçu et termine sur un écran « évaluation en
+attente ». Cette progression fixe est provisoire ; elle sera remplacée par la sélection adaptative fournie par le
+service IA. Les champs de personnalisation `objectif` et `creneaux` ne sont pas encore persistés.
 
 ## Formateurs — rôle `ADMINISTRATEUR`
 

@@ -24,9 +24,10 @@ export const ENDPOINTS = {
   langue: (idLangue: number) => `${API}/langues/${idLangue}`,
   niveaux: `${API}/niveaux`,
   niveau: (idNiveau: number) => `${API}/niveaux/${idNiveau}`,
-  testDiagnostic: {
-    sessions: `${API}/test-diagnostic/sessions`,
-    sessionReponses: (idSession: string) => `${API}/test-diagnostic/sessions/${encodeURIComponent(idSession)}/reponses`,
+  diagnostic: {
+    tentatives: `${API}/diagnostic/tentatives`,
+    questions: `${API}/diagnostic/questions`,
+    reponse: `${API}/diagnostic/reponse`,
   },
   formateurs: `${API}/formateurs`,
   formateur: (idUser: number) => `${API}/formateurs/${idUser}`,

@@ -39,6 +39,11 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
             Mode démonstration : l’évaluation des réponses écrites et orales est simulée jusqu’à la connexion du service IA.
           </p>
         )}
+        {!API_MOCK && (
+          <p role="note" className="mt-4 rounded-btn border border-border bg-background p-3 text-small text-content-secondary">
+            Vos réponses seront enregistrées. Leur évaluation et l’adaptation du parcours seront disponibles après l’intégration du service IA.
+          </p>
+        )}
 
         {test.langueIndisponible && (
           <Alert className="mt-4">
@@ -117,6 +122,21 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
         resultat={etat.resultat}
         onRecommencer={test.recommencer}
       />
+    );
+  }
+
+  if (etat.phase === "evaluationEnAttente") {
+    return (
+      <div className="mx-auto max-w-2xl text-center" data-testid="evaluation-pending">
+        <p className="eyebrow">Réponses enregistrées</p>
+        <h1 className="mt-2">Votre évaluation est en attente</h1>
+        <p className="mt-4 text-content-secondary">
+          Vos réponses ont été sauvegardées. Le niveau sera évalué lorsque le service IA sera disponible.
+        </p>
+        <button type="button" className="btn-secondary mt-8" onClick={test.recommencer}>
+          Recommencer le test
+        </button>
+      </div>
     );
   }
 
@@ -206,6 +226,13 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
                 ? "Bonne réponse"
                 : `Réponse incorrecte. Bonne réponse : ${etat.courante.choix?.[etat.retour.bonneReponse]}`}
             </p>
+          ) : etat.retour.typeReponse === "en_attente" ? (
+            <div>
+              <p className="font-semibold">Réponse enregistrée</p>
+              <p className="mt-1 text-content-secondary">
+                L’évaluation sera effectuée lorsque le service IA sera disponible.
+              </p>
+            </div>
           ) : (
             <div>
               <p className="font-semibold">Réponse reçue</p>
@@ -216,7 +243,11 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
             </div>
           )}
           <button type="button" className="btn-primary mt-4 w-full" onClick={test.suivante}>
-            {etat.retour.resultat ? "Voir mon résultat" : "Question suivante"}
+            {etat.retour.resultat
+              ? "Voir mon résultat"
+              : etat.retour.typeReponse === "en_attente" && !etat.retour.questionSuivante
+                ? "Terminer"
+                : "Question suivante"}
           </button>
         </div>
       )}
