@@ -50,6 +50,7 @@ Toutes sous `/api/v1`. Le détail des requêtes, réponses et erreurs est dans l
 | Utilisateurs       | `GET /users`, `PATCH /users/{id_user}`                                                | administrateur |
 | Tableau de bord    | `GET /admin/statistiques`, `GET /admin/statistiques/inscriptions`                     | administrateur |
 | Langues et niveaux | `GET` / `POST /langues`, `PATCH` / `DELETE /langues/{id}`, idem `/niveaux`            | administrateur |
+| Diagnostic         | `GET /diagnostic/questions?code_langue=en&code_niveau=A1`                              | apprenant      |
 
 Hors préfixe : `GET /health` (supervision) et `GET /media/photos/…` (photos de profil, lecture publique).
 
@@ -106,7 +107,7 @@ backend/
 
 ## Pas encore dans le MVP
 
-Ateliers et réservations (seule la table `atelier` existe, pour le tableau de bord), parcours, routes des tests
-diagnostiques (les tables `question`, `test_diagnostic` et `reponse` existent déjà), facturation et paiements,
-gestion des formateurs, cache Redis et limitation du nombre de requêtes (`RATE_LIMIT_PER_MINUTE`), révocation des
-jetons à la déconnexion.
+Ateliers et réservations (seule la table `atelier` existe, pour le tableau de bord), parcours et routes de session et
+de réponse du test diagnostique (les tables `question`, `test_diagnostic` et `reponse` existent déjà ; la lecture des
+questions par langue et niveau est disponible), facturation et paiements, gestion des formateurs, cache Redis et
+limitation du nombre de requêtes (`RATE_LIMIT_PER_MINUTE`), révocation des jetons à la déconnexion.
