@@ -27,9 +27,7 @@ def upgrade() -> None:
     op.add_column("question", sa.Column("support", sa.Text(), nullable=True))
     op.add_column("question", sa.Column("audio_url", sa.Text(), nullable=True))
     op.add_column("question", sa.Column("audio_texte", sa.Text(), nullable=True))
-    op.create_check_constraint(
-        "ck_question_type_reponse", "question", "type_reponse IN ('choix', 'texte', 'audio')"
-    )
+    op.create_check_constraint("ck_question_type_reponse", "question", "type_reponse IN ('choix', 'texte', 'audio')")
     op.create_index("ix_question_id_langue_id_niveau", "question", ["id_langue", "id_niveau"], unique=False)
 
 
