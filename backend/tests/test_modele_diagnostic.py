@@ -269,7 +269,7 @@ class TestMigration:
             .scalars()
             .all()
         )
-        assert {
-            "type_reponse", "choix", "support", "audio_url", "audio_texte", "reponse_correcte"
-        } <= set(colonnes_question)
+        assert {"type_reponse", "choix", "support", "audio_url", "audio_texte", "reponse_correcte"} <= set(
+            colonnes_question
+        )
         assert "score" in colonnes_tentative

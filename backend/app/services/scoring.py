@@ -48,9 +48,7 @@ def niveau_de_reference(pourcentage: Decimal, cadre: CadreReference) -> str:
 
 
 def _calculer_pourcentage(nb_correctes: int, nb_questions: int) -> Decimal:
-    return (Decimal(nb_correctes * SCORE_MAX) / Decimal(nb_questions)).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
-    )
+    return (Decimal(nb_correctes * SCORE_MAX) / Decimal(nb_questions)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def terminer_tentative(

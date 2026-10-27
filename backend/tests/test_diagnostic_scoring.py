@@ -61,9 +61,18 @@ def _repondre(client, apprenant, tentative: TentativeDiagnostic, question: Quest
 @pytest.mark.parametrize(
     ("score", "niveau"),
     [
-        ("0", "A1"), ("19.99", "A1"), ("20", "A2"), ("39.99", "A2"),
-        ("40", "B1"), ("59.99", "B1"), ("60", "B2"), ("74.99", "B2"),
-        ("75", "C1"), ("89.99", "C1"), ("90", "C2"), ("100", "C2"),
+        ("0", "A1"),
+        ("19.99", "A1"),
+        ("20", "A2"),
+        ("39.99", "A2"),
+        ("40", "B1"),
+        ("59.99", "B1"),
+        ("60", "B2"),
+        ("74.99", "B2"),
+        ("75", "C1"),
+        ("89.99", "C1"),
+        ("90", "C2"),
+        ("100", "C2"),
     ],
 )
 def test_applique_les_seuils_cecrl(score: str, niveau: str):
@@ -73,8 +82,13 @@ def test_applique_les_seuils_cecrl(score: str, niveau: str):
 @pytest.mark.parametrize(
     ("score", "niveau"),
     [
-        ("0", "HSK 1"), ("20", "HSK 2"), ("40", "HSK 3"),
-        ("60", "HSK 4"), ("75", "HSK 5"), ("90", "HSK 6"), ("100", "HSK 6"),
+        ("0", "HSK 1"),
+        ("20", "HSK 2"),
+        ("40", "HSK 3"),
+        ("60", "HSK 4"),
+        ("75", "HSK 5"),
+        ("90", "HSK 6"),
+        ("100", "HSK 6"),
     ],
 )
 def test_applique_les_seuils_hsk(score: str, niveau: str):
