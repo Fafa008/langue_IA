@@ -74,7 +74,7 @@ backend/
 │   ├── core/                # configuration (.env), base de données, sécurité (bcrypt, JWT)
 │   ├── models/              # tables, d'après le diagramme de classes
 │   ├── schemas/             # entrées / sorties de l'API ; regles.py = règles de saisie du frontend
-│   ├── services/            # e-mail, photos, recherche sans accents
+│   ├── services/            # règles métier et intégrations (e-mail, photos, diagnostic…)
 │   ├── seed.py              # données de départ
 │   └── main.py
 ├── alembic/versions/        # migrations
@@ -98,6 +98,8 @@ backend/
   (`docker compose logs backend`).
 - **Session révoquée** : un compte désactivé reçoit 401 sur les routes protégées, même avec un JWT encore valide.
 - **Statistiques par jour** calculées dans le fuseau `TIMEZONE` (Madagascar par défaut).
+- **Diagnostic** : les routes traduisent les erreurs métier en réponses HTTP ; la persistance des tentatives et des
+  réponses est isolée dans `app/services/diagnostic.py`. L'évaluation reste séparée et en attente de l'intégration IA.
 
 ## Ajouter une table
 

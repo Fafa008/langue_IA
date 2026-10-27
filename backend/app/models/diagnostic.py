@@ -1,9 +1,8 @@
-"""Paquetage Diagnostic : Question, TestDiagnostic et Reponse (US34).
+"""Modèles persistants du test de diagnostic linguistique.
 
 Persistance du diagnostic linguistique : banque de questions par langue et niveau, tentative d'un
-apprenant sur une cible (langue + niveau) et réponses fournies, dont l'évaluation (service IA)
-sera renseignée plus tard. La lecture filtrée des questions est exposée par l'API ; les routes
-de session et de réponse restent à implémenter.
+apprenant sur une cible (langue + niveau) et réponses fournies. L'évaluation, destinée à être
+renseignée par le service IA, reste nulle tant qu'elle n'a pas été calculée.
 """
 
 from datetime import datetime
@@ -78,7 +77,7 @@ class Reponse(Base):
     # Une question supprimée emporterait l'historique des réponses : refusée tant qu'elle est utilisée
     id_question: Mapped[int] = mapped_column(ForeignKey("question.id_question", ondelete="RESTRICT"), index=True)
     reponse_fournie: Mapped[str] = mapped_column(Text)
-    # Données de l'évaluation (juste/faux, score, commentaire du service IA) : null tant qu'évaluée
+    # Données d'évaluation (juste/faux, score, commentaire IA) ; null tant qu'elle est en attente
     evaluation: Mapped[dict | None] = mapped_column(JSONB)
 
     tentative: Mapped[TestDiagnostic] = relationship(back_populates="reponses")
