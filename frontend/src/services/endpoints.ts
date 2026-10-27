@@ -26,6 +26,7 @@ export const ENDPOINTS = {
   niveau: (idNiveau: number) => `${API}/niveaux/${idNiveau}`,
   diagnostic: {
     tentatives: `${API}/diagnostic/tentatives`,
+    terminerTentative: (idTentative: number) => `${API}/diagnostic/tentatives/${idTentative}/terminer`,
     questions: `${API}/diagnostic/questions`,
     reponse: `${API}/diagnostic/reponse`,
   },

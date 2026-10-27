@@ -41,7 +41,7 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
         )}
         {!API_MOCK && (
           <p role="note" className="mt-4 rounded-btn border border-border bg-background p-3 text-small text-content-secondary">
-            Vos réponses seront enregistrées. Leur évaluation et l’adaptation du parcours seront disponibles après l’intégration du service IA.
+            Vos réponses seront enregistrées et le score déterministe calculé à la fin. Le service IA pourra ensuite compléter l’évaluation et adapter le parcours.
           </p>
         )}
 
@@ -125,21 +125,6 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
     );
   }
 
-  if (etat.phase === "evaluationEnAttente") {
-    return (
-      <div className="mx-auto max-w-2xl text-center" data-testid="evaluation-pending">
-        <p className="eyebrow">Réponses enregistrées</p>
-        <h1 className="mt-2">Votre évaluation est en attente</h1>
-        <p className="mt-4 text-content-secondary">
-          Vos réponses ont été sauvegardées. Le niveau sera évalué lorsque le service IA sera disponible.
-        </p>
-        <button type="button" className="btn-secondary mt-8" onClick={test.recommencer}>
-          Recommencer le test
-        </button>
-      </div>
-    );
-  }
-
   if (!etat.courante || !etat.sessionId) {
     return (
       <div className="mx-auto max-w-2xl">
@@ -209,6 +194,14 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
           </button>
         </Alert>
       )}
+      {test.erreurTerminaison && (
+        <Alert className="mt-4">
+          {getErrorMessage(test.erreurTerminaison)}{" "}
+          <button type="button" onClick={test.reessayerTerminaison} className="underline">
+            Réessayer le calcul
+          </button>
+        </Alert>
+      )}
 
       {enRetour && etat.retour && (
         <div
@@ -230,7 +223,7 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
             <div>
               <p className="font-semibold">Réponse enregistrée</p>
               <p className="mt-1 text-content-secondary">
-                L’évaluation sera effectuée lorsque le service IA sera disponible.
+                Cette réponse est enregistrée. Le score sera calculé à la fin du test.
               </p>
             </div>
           ) : (
@@ -242,8 +235,15 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
               )}
             </div>
           )}
-          <button type="button" className="btn-primary mt-4 w-full" onClick={test.suivante}>
-            {etat.retour.resultat
+          <button
+            type="button"
+            className="btn-primary mt-4 w-full"
+            onClick={test.suivante}
+            disabled={test.terminaisonEnCours}
+          >
+            {test.terminaisonEnCours
+              ? "Calcul du score…"
+              : etat.retour.resultat
               ? "Voir mon résultat"
               : etat.retour.typeReponse === "en_attente" && !etat.retour.questionSuivante
                 ? "Terminer"

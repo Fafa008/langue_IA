@@ -424,11 +424,12 @@ Erreur : **409** si le niveau est utilisé (`TestDiagnostic`, `Parcours`, `Exerc
 
 ## Test de positionnement adaptatif
 
-Le flux actuel crée une tentative persistée, charge les questions de son niveau initial et enregistre les réponses.
-L'évaluation IA et l'adaptation du niveau ne sont pas encore disponibles. Le frontend indique explicitement que le
-résultat est en attente ; aucune correction ni résultat simulé n'est renvoyé par le backend. Les réponses restent
-enregistrées en base avec `evaluation = null` jusqu'à leur prise en charge par le flux d'évaluation ; aucune suppression
-automatique n'est actuellement configurée.
+Le backend permet de créer une tentative persistée, de charger les questions de son niveau initial, d'enregistrer
+les réponses et de calculer un score déterministe à la clôture. Les questions à choix utilisées par le scoring
+doivent avoir une `reponse_correcte` configurée en base ; cette clé reste privée et n'est jamais renvoyée par l'API
+apprenant. Les questions sans réponse comptent comme incorrectes. Si une clé manque ou ne correspond pas à une
+option, la clôture est refusée. Le futur service IA pourra enrichir ou compléter cette première évaluation, sans
+remplacer le contrat de persistance des réponses. Aucune suppression automatique n'est configurée.
 
 ### `POST /diagnostic/tentatives` — rôle `APPRENANT`
 
@@ -510,9 +511,44 @@ question inconnue, **409** tentative terminée/annulée ou réponse différente 
 identifiant invalide ou question ne correspondant pas à la tentative. La colonne d'évaluation reste `null` en attente
 de l'intégration IA. Les réponses audio ne sont pas acceptées tant qu'un stockage de médias n'est pas disponible.
 
-Le frontend affiche ensuite les autres questions du niveau dans l'ordre reçu et termine sur un écran « évaluation en
-attente ». Cette progression fixe est provisoire ; elle sera remplacée par la sélection adaptative fournie par le
-service IA. Les champs de personnalisation `objectif` et `creneaux` ne sont pas encore persistés.
+### `POST /diagnostic/tentatives/{id_tentative}/terminer` — rôle `APPRENANT`
+
+Corrige de manière déterministe les questions à choix de la tentative, enregistre le score et le niveau de référence,
+puis passe la tentative au statut terminé. Le score est le pourcentage de bonnes réponses parmi les questions à choix,
+arrondi à deux décimales. Une nouvelle requête sur une tentative terminée renvoie le résultat déjà enregistré.
+
+**200** :
+
+```json
+{
+  "id_tentative": 42,
+  "score": 72.0,
+  "max_score": 100,
+  "percentage": 72.0,
+  "level": "B2",
+  "framework": "CECRL"
+}
+```
+
+`score` et `percentage` sont identiques, sur 100. La grille de référence utilisée par le backend est :
+
+| Pourcentage | CECRL | HSK |
+| --- | --- | --- |
+| 0 à moins de 20 % | A1 | HSK 1 |
+| 20 à moins de 40 % | A2 | HSK 2 |
+| 40 à moins de 60 % | B1 | HSK 3 |
+| 60 à moins de 75 % | B2 | HSK 4 |
+| 75 à moins de 90 % | C1 | HSK 5 |
+| 90 à 100 % | C2 | HSK 6 |
+
+Le mandarin (`zh`) utilise HSK ; les autres langues utilisent CECRL. Erreurs : **401** session absente ou invalide,
+**403** rôle autre qu'`APPRENANT`, **404** tentative inconnue ou appartenant à un autre apprenant, **409** tentative
+annulée ou questions/clés de correction non configurées.
+
+Après l'enregistrement de la dernière réponse, le frontend appelle cette route et affiche le score, le niveau et le
+cadre de référence retournés par le backend. Les réponses détaillées (`evaluation`) restent disponibles pour une
+future évaluation IA. La progression fixe et les champs de personnalisation `objectif` et `creneaux` ne sont pas
+encore pilotés ou persistés par le backend.
 
 ## Formateurs — rôle `ADMINISTRATEUR`
 

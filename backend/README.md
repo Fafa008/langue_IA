@@ -50,7 +50,7 @@ Toutes sous `/api/v1`. Le détail des requêtes, réponses et erreurs est dans l
 | Utilisateurs       | `GET /users`, `PATCH /users/{id_user}`                                                | administrateur |
 | Tableau de bord    | `GET /admin/statistiques`, `GET /admin/statistiques/inscriptions`                     | administrateur |
 | Langues et niveaux | `GET` / `POST /langues`, `PATCH` / `DELETE /langues/{id}`, idem `/niveaux`            | administrateur |
-| Diagnostic         | `POST /diagnostic/tentatives`, `GET /diagnostic/questions?code_langue=en&code_niveau=A1`, `POST /diagnostic/reponse` | apprenant |
+| Diagnostic         | `POST /diagnostic/tentatives`, `GET /diagnostic/questions?code_langue=en&code_niveau=A1`, `POST /diagnostic/reponse`, `POST /diagnostic/tentatives/{id}/terminer` | apprenant |
 
 Hors préfixe : `GET /health` (supervision) et `GET /media/photos/…` (photos de profil, lecture publique).
 
@@ -99,7 +99,9 @@ backend/
 - **Session révoquée** : un compte désactivé reçoit 401 sur les routes protégées, même avec un JWT encore valide.
 - **Statistiques par jour** calculées dans le fuseau `TIMEZONE` (Madagascar par défaut).
 - **Diagnostic** : les routes traduisent les erreurs métier en réponses HTTP ; la persistance des tentatives et des
-  réponses est isolée dans `app/services/diagnostic.py`. L'évaluation reste séparée et en attente de l'intégration IA.
+  réponses est isolée dans `app/services/diagnostic.py`. Le score déterministe et le niveau de référence sont
+  calculés dans `app/services/scoring.py`, à partir des questions à choix configurées. Le futur service IA pourra
+  compléter cette évaluation sans modifier le contrat de persistance des réponses.
 
 ## Ajouter une table
 
@@ -109,7 +111,6 @@ backend/
 
 ## Pas encore dans le MVP
 
-Ateliers et réservations (seule la table `atelier` existe, pour le tableau de bord), évaluation IA et adaptation du
-test diagnostique (une tentative peut être créée et ses réponses enregistrées ; `evaluation` reste nulle jusqu'à
-l'intégration du service IA), stockage des réponses audio, facturation et paiements, gestion des formateurs, cache
-Redis et limitation du nombre de requêtes (`RATE_LIMIT_PER_MINUTE`), révocation des jetons à la déconnexion.
+Ateliers et réservations (seule la table `atelier` existe, pour le tableau de bord), évaluation IA avancée et
+adaptation du test diagnostique, stockage des réponses audio, facturation et paiements, gestion des formateurs,
+cache Redis et limitation du nombre de requêtes (`RATE_LIMIT_PER_MINUTE`), révocation des jetons à la déconnexion.

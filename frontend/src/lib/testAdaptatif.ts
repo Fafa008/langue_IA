@@ -75,14 +75,23 @@ export function reducteur(etat: EtatTest, action: ActionTest): EtatTest {
         retour: action.retour,
       };
     }
+    case "terminer":
+      if (etat.phase !== "retour" || etat.retour?.questionSuivante) return etat;
+      return {
+        ...etat,
+        phase: "resultat",
+        courante: null,
+        choisie: null,
+        resultat: action.resultat,
+      };
     case "suivante": {
       if (etat.phase !== "retour") return etat;
       if (etat.retour?.resultat) {
         return { ...etat, phase: "resultat", courante: null, choisie: null, resultat: etat.retour.resultat };
       }
       if (!etat.retour?.questionSuivante) {
-        return etat.retour?.typeReponse === "en_attente"
-          ? { ...etat, phase: "evaluationEnAttente", courante: null, choisie: null }
+        return etat.retour?.resultat
+          ? { ...etat, phase: "resultat", courante: null, choisie: null, resultat: etat.retour.resultat }
           : etat;
       }
       return {

@@ -1,9 +1,10 @@
 import { configureApiClient } from "@/lib/api-client";
+import { API_URL } from "@/lib/env";
 import { QUESTIONS_TEST } from "@/mocks/questions-test.mock";
 import { httpTestDiagnosticService } from "@/services/test-diagnostic.service";
 import { fetchCall, mockFetch } from "@/test/fetch-mock";
 
-const API = "http://localhost:8000/api/v1";
+const API = `${API_URL}/api/v1`;
 
 beforeEach(() => {
   configureApiClient({ getToken: () => "jwt-test", onUnauthorized: jest.fn() });
@@ -95,6 +96,47 @@ describe("httpTestDiagnosticService", () => {
       "POST",
       { id_tentative: 42, id_question: "1", reponse_fournie: "is" },
     ]);
+  });
+
+  it("termine la tentative et transforme le résultat du scoring pour l'écran", async () => {
+    const fetchMock = mockFetch({
+      body: {
+        id_tentative: 42,
+        score: 66.67,
+        max_score: 100,
+        percentage: 66.67,
+        level: "B2",
+        framework: "CECRL",
+      },
+    });
+
+    await expect(httpTestDiagnosticService.terminer("42")).resolves.toEqual({
+      niveau: "B2",
+      score: 66.67,
+      total: 100,
+      cadre: "CECRL",
+      competences: [],
+      lacunes: [],
+    });
+    expect(fetchCall(fetchMock)).toMatchObject({
+      url: `${API}/diagnostic/tentatives/42/terminer`,
+      init: { method: "POST" },
+    });
+  });
+
+  it("refuse un résultat de scoring incohérent avec la tentative", async () => {
+    mockFetch({
+      body: {
+        id_tentative: 41,
+        score: 66.67,
+        max_score: 100,
+        percentage: 66.67,
+        level: "B2",
+        framework: "CECRL",
+      },
+    });
+
+    await expect(httpTestDiagnosticService.terminer("42")).rejects.toThrow("résultat de scoring");
   });
 
   it("refuse l'envoi de réponses audio tant qu'aucun stockage média n'est disponible", async () => {

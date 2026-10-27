@@ -55,3 +55,14 @@ class TentativeOut(BaseModel):
     id_tentative: int
     code_langue: str
     code_niveau: str
+
+
+class ScoreDiagnosticOut(BaseModel):
+    """Score final et niveau de référence renvoyés par le service scoring."""
+
+    id_tentative: int
+    score: float
+    max_score: Literal[100] = 100
+    percentage: float
+    level: str
+    framework: Literal["CECRL", "HSK"]

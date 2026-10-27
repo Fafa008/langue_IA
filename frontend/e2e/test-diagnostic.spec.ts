@@ -39,7 +39,7 @@ async function expectSansDebordement(page: Page) {
   expect(deborde).toBe(false);
 }
 
-test.describe("Test de positionnement — échanges API sans évaluation IA", () => {
+test.describe("Test de positionnement — réponses et score déterministe", () => {
   test("préselectionne la langue indiquée dans l'URL", async ({ page }) => {
     await ouvrir(page, "fr");
     await expect(page.getByRole("radio", { name: /Français/ })).toBeChecked();
@@ -54,21 +54,27 @@ test.describe("Test de positionnement — échanges API sans évaluation IA", ()
     await expect(page.getByTestId("feedback")).toHaveCount(0);
   });
 
-  test("enregistre les réponses et affiche une évaluation en attente au lieu d'une correction simulée", async ({ page }) => {
+  test("enregistre les réponses, termine la tentative et affiche le score du backend", async ({ page }) => {
     await ouvrir(page, "en");
     await demarrer(page);
 
     await repondre(page);
     await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
-    await expect(page.getByTestId("feedback")).toContainText("service IA sera disponible");
+    await expect(page.getByTestId("feedback")).toContainText("score sera calculé à la fin");
     await expect(page.getByTestId("feedback")).not.toContainText("Bonne réponse");
     await page.getByRole("button", { name: "Question suivante" }).click();
 
     await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-a1-2");
     await repondre(page);
+    const terminaison = page.waitForResponse((response) =>
+      response.url().includes("/api/v1/diagnostic/tentatives/1/terminer") && response.request().method() === "POST",
+    );
     await page.getByRole("button", { name: "Terminer" }).click();
-    await expect(page.getByTestId("evaluation-pending")).toContainText("Vos réponses ont été sauvegardées");
-    await expect(page.getByTestId("result-level")).toHaveCount(0);
+    expect((await terminaison).status()).toBe(200);
+    await expect(page.getByTestId("test-result")).toBeVisible();
+    await expect(page.getByTestId("result-level")).toHaveText("B1");
+    await expect(page.getByTestId("result-framework")).toHaveText("CECRL");
+    await expect(page.getByTestId("result-score")).toHaveText(/50\s*%/);
   });
 
   test("permet de réessayer l'enregistrement après une erreur serveur", async ({ page }) => {
