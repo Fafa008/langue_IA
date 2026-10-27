@@ -30,10 +30,14 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
       progression: ReponseProgression;
     }) => testDiagnosticService.repondre(idSession, idQuestion, reponse, valeurChoix, progression),
   });
+  const terminaison = useMutation({
+    mutationFn: (idSession: string) => testDiagnosticService.terminer(idSession),
+  });
 
   const choisirLangue = (langue: CodeLangue) => {
     demarrage.reset();
     reponse.reset();
+    terminaison.reset();
     dispatch({ type: "choisirLangue", langue });
   };
 
@@ -76,7 +80,29 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
   const recommencer = () => {
     demarrage.reset();
     reponse.reset();
+    terminaison.reset();
     dispatch({ type: "recommencer" });
+  };
+
+  const terminer = () => {
+    if (etat.phase !== "retour" || !etat.retour) return;
+    if (etat.retour.resultat || etat.retour.questionSuivante) {
+      dispatch({ type: "suivante" });
+      return;
+    }
+    if (!etat.sessionId) {
+      dispatch({ type: "suivante" });
+      return;
+    }
+    terminaison.mutate(etat.sessionId, {
+      onSuccess: (resultat) => dispatch({ type: "terminer", resultat }),
+    });
+  };
+
+  const reessayerTerminaison = () => {
+    if (etat.sessionId) terminaison.mutate(etat.sessionId, {
+      onSuccess: (resultat) => dispatch({ type: "terminer", resultat }),
+    });
   };
 
   return {
@@ -101,13 +127,16 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
     repondre,
     repondreTexte,
     repondreAudio,
-    suivante: () => dispatch({ type: "suivante" }),
+    suivante: terminer,
     recommencer,
     demarrageEnCours: demarrage.isPending,
     erreurDemarrage: demarrage.error,
     langueIndisponible: demarrage.error instanceof ApiError && demarrage.error.status === 404,
     reponseEnCours: reponse.isPending,
     erreurReponse: reponse.error,
+    terminaisonEnCours: terminaison.isPending,
+    erreurTerminaison: terminaison.error,
+    reessayerTerminaison,
     reessayerReponse: () => {
       if (!etat.sessionId || !etat.courante) return;
       let reponseTest: ReponseTest;

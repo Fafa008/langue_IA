@@ -70,6 +70,7 @@ export interface ResultatTest {
   niveau: string;
   score: number;
   total: number;
+  cadre?: "CECRL" | "HSK";
   competences: CompetenceResultat[];
   lacunes: CompetenceTest[];
 }
@@ -80,7 +81,7 @@ export interface CompetenceResultat {
   total: number;
 }
 
-export type PhaseTest = "intro" | "personnalisation" | "question" | "retour" | "resultat" | "evaluationEnAttente";
+export type PhaseTest = "intro" | "personnalisation" | "question" | "retour" | "resultat";
 
 export interface EtatTest {
   phase: PhaseTest;
@@ -108,5 +109,6 @@ export type ActionTest =
   | { type: "choisirTexte"; texte: string }
   | { type: "choisirAudio"; audio: Blob }
   | { type: "repondre"; choix: number | null; retour: RetourReponse }
+  | { type: "terminer"; resultat: ResultatTest }
   | { type: "suivante" }
   | { type: "recommencer" };

@@ -60,7 +60,31 @@ describe("état du test piloté par la session", () => {
     });
   });
 
-  it("termine sur une évaluation en attente quand toutes les réponses ont été sauvegardées", () => {
+  it("termine avec le résultat reçu du service de scoring", () => {
+    const enCours = reducteur(etatInitial("en"), { type: "demarrer", session });
+    const feedback = reducteur(enCours, { type: "repondre", choix: 0, retour: {
+      typeReponse: "en_attente",
+      numeroQuestion: 2,
+      totalQuestions: 2,
+      questionSuivante: null,
+      resultat: null,
+    } });
+    const resultat = {
+      niveau: "B2",
+      score: 66.67,
+      total: 100,
+      cadre: "CECRL" as const,
+      competences: [],
+      lacunes: [],
+    };
+    expect(reducteur(feedback, { type: "terminer", resultat })).toMatchObject({
+      phase: "resultat",
+      courante: null,
+      resultat,
+    });
+  });
+
+  it("ne termine pas avant que la réponse finale ait été enregistrée", () => {
     const secondeQuestion = {
       id: "q-2",
       niveau: "B1",
@@ -92,8 +116,8 @@ describe("état du test piloté par la session", () => {
     const retourFinal = { ...retourAttente, numeroQuestion: 2, questionSuivante: null };
     const apresDerniereReponse = reducteur(questionSuivante, { type: "repondre", choix: null, retour: retourFinal });
     expect(reducteur(apresDerniereReponse, { type: "suivante" })).toMatchObject({
-      phase: "evaluationEnAttente",
-      courante: null,
+      phase: "retour",
+      courante: secondeQuestion,
       resultat: null,
     });
   });

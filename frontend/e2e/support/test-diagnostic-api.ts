@@ -10,6 +10,7 @@ interface TentativeE2E {
   niveau: string;
   questions: QuestionMock[];
   reponses: Map<string, { id: number; valeur: string }>;
+  statut: "EN_COURS" | "TERMINE";
 }
 
 function questionPublique(question: Question) {
@@ -26,7 +27,7 @@ function questionPublique(question: Question) {
   };
 }
 
-/** Faux backend du flux réel : tentative persistée, questions sans correction et réponse en attente d'évaluation. */
+/** Faux backend du flux API : conserve les réponses et renvoie le résultat de scoring à la clôture. */
 export async function mockTestDiagnosticApi(
   page: Page,
   { failFirstAnswer = false }: { failFirstAnswer?: boolean } = {},
@@ -59,6 +60,7 @@ export async function mockTestDiagnosticApi(
         niveau,
         questions: banque.filter((question) => question.niveau === niveau && question.typeReponse !== "audio"),
         reponses: new Map(),
+        statut: "EN_COURS",
       });
       await json(route, 201, { id_tentative: id, code_langue: langue, code_niveau: niveau });
       return;
@@ -105,6 +107,43 @@ export async function mockTestDiagnosticApi(
         id_tentative: tentative.id,
         id_question: corps.id_question,
         reponse_fournie: reponse.valeur,
+      });
+      return;
+    }
+
+    const terminaison = url.pathname.match(/^\/api\/v1\/diagnostic\/tentatives\/(\d+)\/terminer$/);
+    if (request.method() === "POST" && terminaison) {
+      const tentative = tentatives.get(Number(terminaison[1]));
+      if (!tentative) {
+        await json(route, 404, { detail: "Tentative introuvable." });
+        return;
+      }
+      const questionsCorrigeables = tentative.questions.filter((question) => question.typeReponse === "choix");
+      if (questionsCorrigeables.length === 0) {
+        await json(route, 409, { detail: "Aucune question à choix n'est disponible pour le scoring." });
+        return;
+      }
+      const correctes = questionsCorrigeables.filter((question) => {
+        const valeur = tentative.reponses.get(question.id)?.valeur;
+        return valeur !== undefined && question.choix?.[question.bonneReponse] === valeur;
+      }).length;
+      const percentage = Math.round((correctes / questionsCorrigeables.length) * 10_000) / 100;
+      const level = percentage < 20 ? "A1"
+        : percentage < 40 ? "A2"
+          : percentage < 60 ? "B1"
+            : percentage < 75 ? "B2"
+              : percentage < 90 ? "C1"
+                : "C2";
+      tentative.statut = "TERMINE";
+      await json(route, 200, {
+        id_tentative: tentative.id,
+        score: percentage,
+        max_score: 100,
+        percentage,
+        level: tentative.langue === "zh"
+          ? ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"][["A1", "A2", "B1", "B2", "C1", "C2"].indexOf(level)]
+          : level,
+        framework: tentative.langue === "zh" ? "HSK" : "CECRL",
       });
       return;
     }

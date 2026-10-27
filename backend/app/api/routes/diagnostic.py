@@ -2,11 +2,18 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Path, Query, status
 
 from app.api.deps import DbSession, UtilisateurConnecte
 from app.models import Question, Reponse, Role
-from app.schemas.diagnostic import QuestionOut, ReponseCreate, ReponseOut, TentativeCreate, TentativeOut
+from app.schemas.diagnostic import (
+    QuestionOut,
+    ReponseCreate,
+    ReponseOut,
+    ScoreDiagnosticOut,
+    TentativeCreate,
+    TentativeOut,
+)
 from app.services.diagnostic import (
     CodeErreurDiagnostic,
     ErreurDiagnostic,
@@ -20,6 +27,8 @@ from app.services.diagnostic import (
 from app.services.diagnostic import (
     lister_questions as lister_questions_service,
 )
+from app.services.scoring import CodeErreurScoring, ErreurScoring
+from app.services.scoring import terminer_tentative as terminer_tentative_service
 
 router = APIRouter(tags=["diagnostic"])
 
@@ -55,9 +64,27 @@ _ERREURS_HTTP = {
     ),
 }
 
+_ERREURS_SCORING_HTTP = {
+    CodeErreurScoring.TENTATIVE_INCONNUE: (status.HTTP_404_NOT_FOUND, "Tentative introuvable."),
+    CodeErreurScoring.TENTATIVE_TERMINEE: (status.HTTP_409_CONFLICT, "Cette tentative ne peut plus être terminée."),
+    CodeErreurScoring.QUESTIONS_NON_CONFIGUREES: (
+        status.HTTP_409_CONFLICT,
+        "Les questions à choix n'ont pas toutes une clé de correction valide.",
+    ),
+    CodeErreurScoring.NIVEAU_NON_CONFIGURE: (
+        status.HTTP_409_CONFLICT,
+        "Le référentiel ne contient pas le niveau calculé.",
+    ),
+}
+
 
 def _convertir_erreur(erreur: ErreurDiagnostic) -> HTTPException:
     code, detail = _ERREURS_HTTP[erreur.code]
+    return HTTPException(code, detail)
+
+
+def _convertir_erreur_scoring(erreur: ErreurScoring) -> HTTPException:
+    code, detail = _ERREURS_SCORING_HTTP[erreur.code]
     return HTTPException(code, detail)
 
 
@@ -148,3 +175,30 @@ def enregistrer_reponse(
     except ErreurDiagnostic as erreur:
         raise _convertir_erreur(erreur) from None
     return _reponse_out(reponse)
+
+
+@router.post(
+    "/diagnostic/tentatives/{id_tentative}/terminer",
+    response_model=ScoreDiagnosticOut,
+)
+def terminer_tentative(
+    id_tentative: Annotated[int, Path(gt=0)],
+    db: DbSession,
+    utilisateur: UtilisateurConnecte,
+) -> ScoreDiagnosticOut:
+    """Calcule le score déterministe et fixe le niveau de référence de la tentative."""
+    if utilisateur.role != Role.APPRENANT:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Droits insuffisants.")
+
+    try:
+        tentative, score, code_niveau, cadre = terminer_tentative_service(db, utilisateur.id_user, id_tentative)
+    except ErreurScoring as erreur:
+        raise _convertir_erreur_scoring(erreur) from None
+
+    return ScoreDiagnosticOut(
+        id_tentative=tentative.id_test,
+        score=float(score),
+        percentage=float(score),
+        level=code_niveau,
+        framework=cadre.value,
+    )

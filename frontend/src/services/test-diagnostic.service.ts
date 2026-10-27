@@ -8,6 +8,7 @@ import {
   type Question,
   type ReponseTest,
   type RetourReponse,
+  type ResultatTest,
   type SessionTest,
 } from "@/types/test-diagnostic";
 import { ENDPOINTS } from "./endpoints";
@@ -37,6 +38,15 @@ interface ReponseDto {
   reponse_fournie: string;
 }
 
+interface ScoreDiagnosticDto {
+  id_tentative: number;
+  score: number;
+  max_score: number;
+  percentage: number;
+  level: string;
+  framework: "CECRL" | "HSK";
+}
+
 export interface ReponseProgression {
   numeroQuestion: number;
   totalQuestions: number;
@@ -52,6 +62,7 @@ export interface TestDiagnosticGateway {
     valeurChoix?: string,
     progression?: ReponseProgression,
   ): Promise<RetourReponse>;
+  terminer(idSession: string): Promise<ResultatTest>;
 }
 
 const toQuestion = (dto: QuestionDto): Question => ({
@@ -129,6 +140,38 @@ export const httpTestDiagnosticService = {
       resultat: null,
     };
   },
+
+  async terminer(idSession: string): Promise<ResultatTest> {
+    const tentativeId = Number(idSession);
+    if (!Number.isSafeInteger(tentativeId) || tentativeId <= 0) {
+      throw new Error("Identifiant de tentative invalide.");
+    }
+    const dto = await apiRequest<ScoreDiagnosticDto>(ENDPOINTS.diagnostic.terminerTentative(tentativeId), {
+      method: "POST",
+    });
+    if (
+      dto.id_tentative !== tentativeId
+      || !Number.isFinite(dto.score)
+      || !Number.isFinite(dto.percentage)
+      || !Number.isFinite(dto.max_score)
+      || dto.score !== dto.percentage
+      || dto.max_score !== 100
+      || dto.percentage < 0
+      || dto.percentage > 100
+      || !dto.level
+      || (dto.framework !== "CECRL" && dto.framework !== "HSK")
+    ) {
+      throw new Error("Le résultat de scoring renvoyé par le serveur est invalide.");
+    }
+    return {
+      niveau: dto.level,
+      score: dto.percentage,
+      total: dto.max_score,
+      cadre: dto.framework,
+      competences: [],
+      lacunes: [],
+    };
+  },
 };
 
 /** En mode API simulée, le mock conserve l'évaluation de démonstration. */
@@ -139,4 +182,7 @@ export const testDiagnosticService: TestDiagnosticGateway = {
   repondre: (...args) => API_MOCK
     ? testDiagnosticMockService.repondre(...args)
     : httpTestDiagnosticService.repondre(...args),
+  terminer: (...args) => API_MOCK
+    ? Promise.reject(new Error("Le mode démonstration renvoie le résultat à la dernière réponse."))
+    : httpTestDiagnosticService.terminer(...args),
 };
