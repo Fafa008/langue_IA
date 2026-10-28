@@ -50,7 +50,7 @@ Toutes sous `/api/v1`. Le détail des requêtes, réponses et erreurs est dans l
 | Utilisateurs       | `GET /users`, `PATCH /users/{id_user}`                                                | administrateur |
 | Tableau de bord    | `GET /admin/statistiques`, `GET /admin/statistiques/inscriptions`                     | administrateur |
 | Langues et niveaux | `GET` / `POST /langues`, `PATCH` / `DELETE /langues/{id}`, idem `/niveaux`            | administrateur |
-| Diagnostic         | `GET /diagnostic/questions?code_langue=en&code_niveau=A1`                              | apprenant      |
+| Diagnostic         | `POST /diagnostic/tentatives`, `GET /diagnostic/questions?code_langue=en&code_niveau=A1`, `POST /diagnostic/reponse`, `POST /diagnostic/tentatives/{id}/terminer` | apprenant |
 
 Hors préfixe : `GET /health` (supervision) et `GET /media/photos/…` (photos de profil, lecture publique).
 
@@ -74,7 +74,7 @@ backend/
 │   ├── core/                # configuration (.env), base de données, sécurité (bcrypt, JWT)
 │   ├── models/              # tables, d'après le diagramme de classes
 │   ├── schemas/             # entrées / sorties de l'API ; regles.py = règles de saisie du frontend
-│   ├── services/            # e-mail, photos, recherche sans accents
+│   ├── services/            # règles métier et intégrations (e-mail, photos, diagnostic…)
 │   ├── seed.py              # données de départ
 │   └── main.py
 ├── alembic/versions/        # migrations
@@ -98,6 +98,10 @@ backend/
   (`docker compose logs backend`).
 - **Session révoquée** : un compte désactivé reçoit 401 sur les routes protégées, même avec un JWT encore valide.
 - **Statistiques par jour** calculées dans le fuseau `TIMEZONE` (Madagascar par défaut).
+- **Diagnostic** : les routes traduisent les erreurs métier en réponses HTTP ; la persistance des tentatives et des
+  réponses est isolée dans `app/services/diagnostic.py`. Le score déterministe et le niveau de référence sont
+  calculés dans `app/services/scoring.py`, à partir des questions à choix configurées. Le futur service IA pourra
+  compléter cette évaluation sans modifier le contrat de persistance des réponses.
 
 ## Ajouter une table
 
@@ -107,7 +111,6 @@ backend/
 
 ## Pas encore dans le MVP
 
-Ateliers et réservations (seule la table `atelier` existe, pour le tableau de bord), parcours et routes de session et
-de réponse du test diagnostique (les tables `question`, `test_diagnostic` et `reponse` existent déjà ; la lecture des
-questions par langue et niveau est disponible), facturation et paiements, gestion des formateurs, cache Redis et
-limitation du nombre de requêtes (`RATE_LIMIT_PER_MINUTE`), révocation des jetons à la déconnexion.
+Ateliers et réservations (seule la table `atelier` existe, pour le tableau de bord), évaluation IA avancée et
+adaptation du test diagnostique, stockage des réponses audio, facturation et paiements, gestion des formateurs,
+cache Redis et limitation du nombre de requêtes (`RATE_LIMIT_PER_MINUTE`), révocation des jetons à la déconnexion.

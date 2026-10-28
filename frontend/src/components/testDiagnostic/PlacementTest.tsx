@@ -39,6 +39,11 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
             Mode démonstration : l’évaluation des réponses écrites et orales est simulée jusqu’à la connexion du service IA.
           </p>
         )}
+        {!API_MOCK && (
+          <p role="note" className="mt-4 rounded-btn border border-border bg-background p-3 text-small text-content-secondary">
+            Vos réponses seront enregistrées et le score déterministe calculé à la fin. Le service IA pourra ensuite compléter l’évaluation et adapter le parcours.
+          </p>
+        )}
 
         {test.langueIndisponible && (
           <Alert className="mt-4">
@@ -189,6 +194,14 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
           </button>
         </Alert>
       )}
+      {test.erreurTerminaison && (
+        <Alert className="mt-4">
+          {getErrorMessage(test.erreurTerminaison)}{" "}
+          <button type="button" onClick={test.reessayerTerminaison} className="underline">
+            Réessayer le calcul
+          </button>
+        </Alert>
+      )}
 
       {enRetour && etat.retour && (
         <div
@@ -206,6 +219,13 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
                 ? "Bonne réponse"
                 : `Réponse incorrecte. Bonne réponse : ${etat.courante.choix?.[etat.retour.bonneReponse]}`}
             </p>
+          ) : etat.retour.typeReponse === "en_attente" ? (
+            <div>
+              <p className="font-semibold">Réponse enregistrée</p>
+              <p className="mt-1 text-content-secondary">
+                Cette réponse est enregistrée. Le score sera calculé à la fin du test.
+              </p>
+            </div>
           ) : (
             <div>
               <p className="font-semibold">Réponse reçue</p>
@@ -215,8 +235,19 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
               )}
             </div>
           )}
-          <button type="button" className="btn-primary mt-4 w-full" onClick={test.suivante}>
-            {etat.retour.resultat ? "Voir mon résultat" : "Question suivante"}
+          <button
+            type="button"
+            className="btn-primary mt-4 w-full"
+            onClick={test.suivante}
+            disabled={test.terminaisonEnCours}
+          >
+            {test.terminaisonEnCours
+              ? "Calcul du score…"
+              : etat.retour.resultat
+              ? "Voir mon résultat"
+              : etat.retour.typeReponse === "en_attente" && !etat.retour.questionSuivante
+                ? "Terminer"
+                : "Question suivante"}
           </button>
         </div>
       )}

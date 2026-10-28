@@ -3,14 +3,12 @@ import { API_MOCK } from "@/lib/env";
 import { testDiagnosticMockService } from "@/mocks/test-diagnostic.mock";
 import type { CodeLangue } from "@/types/langue";
 import {
-  COMPETENCES_TEST,
-  type CompetenceResultat,
   type CompetenceTest,
   type ObjectifFormation,
   type Question,
   type ReponseTest,
-  type ResultatTest,
   type RetourReponse,
+  type ResultatTest,
   type SessionTest,
 } from "@/types/test-diagnostic";
 import { ENDPOINTS } from "./endpoints";
@@ -28,29 +26,43 @@ interface QuestionDto {
 }
 
 interface SessionTestDto {
-  id_session: string;
+  id_tentative: number;
   code_langue: CodeLangue;
-  niveaux: string[];
-  numero_question: number;
-  total_questions: number;
-  question: QuestionDto;
+  code_niveau: string;
 }
 
-interface RetourReponseDto {
-  type_reponse: "choix" | "texte" | "audio";
-  correcte?: boolean;
-  bonne_reponse?: number;
-  evaluation?: string;
-  score_prononciation?: number;
-  numero_question: number;
-  total_questions: number;
-  question_suivante: QuestionDto | null;
-  resultat: ResultatTest | null;
+interface ReponseDto {
+  id_reponse: number;
+  id_tentative: number;
+  id_question: string;
+  reponse_fournie: string;
+}
+
+interface ScoreDiagnosticDto {
+  id_tentative: number;
+  score: number;
+  max_score: number;
+  percentage: number;
+  level: string;
+  framework: "CECRL" | "HSK";
+}
+
+export interface ReponseProgression {
+  numeroQuestion: number;
+  totalQuestions: number;
+  questionSuivante: Question | null;
 }
 
 export interface TestDiagnosticGateway {
   demarrer(langue: CodeLangue, objectif: ObjectifFormation, creneaux: string[]): Promise<SessionTest>;
-  repondre(idSession: string, idQuestion: string, reponse: ReponseTest): Promise<RetourReponse>;
+  repondre(
+    idSession: string,
+    idQuestion: string,
+    reponse: ReponseTest,
+    valeurChoix?: string,
+    progression?: ReponseProgression,
+  ): Promise<RetourReponse>;
+  terminer(idSession: string): Promise<ResultatTest>;
 }
 
 const toQuestion = (dto: QuestionDto): Question => ({
@@ -65,109 +77,104 @@ const toQuestion = (dto: QuestionDto): Question => ({
   audioTexte: dto.audio_texte ?? undefined,
 });
 
-const toSession = (dto: SessionTestDto): SessionTest => ({
-  id: dto.id_session,
-  langue: dto.code_langue,
-  niveaux: dto.niveaux,
-  numeroQuestion: dto.numero_question,
-  totalQuestions: dto.total_questions,
-  question: toQuestion(dto.question),
-});
-
-const toResultat = (dto: ResultatTest | null): ResultatTest | null => {
-  if (!dto) return null;
-  const competenceValide = (competence: CompetenceResultat) =>
-    COMPETENCES_TEST.includes(competence.competence)
-    && Number.isInteger(competence.score)
-    && Number.isInteger(competence.total)
-    && competence.total > 0
-    && competence.score >= 0
-    && competence.score <= competence.total;
-  if (
-    !dto.niveau
-    || !Number.isInteger(dto.score)
-    || !Number.isInteger(dto.total)
-    || dto.total <= 0
-    || dto.score < 0
-    || dto.score > dto.total
-    || !Array.isArray(dto.competences)
-    || !dto.competences.every(competenceValide)
-    || !Array.isArray(dto.lacunes)
-    || !dto.lacunes.every((competence) => COMPETENCES_TEST.includes(competence))
-  ) {
-    throw new Error("Résultat invalide du serveur pour le test de positionnement.");
-  }
-  return dto;
-};
-
-const toRetour = (dto: RetourReponseDto): RetourReponse => {
-  const commun = {
-    numeroQuestion: dto.numero_question,
-    totalQuestions: dto.total_questions,
-  };
-  if (Boolean(dto.question_suivante) === Boolean(dto.resultat)) {
-    throw new Error("Réponse invalide du serveur pour le test de positionnement.");
-  }
-  const suite = {
-    questionSuivante: dto.question_suivante ? toQuestion(dto.question_suivante) : null,
-    resultat: toResultat(dto.resultat),
-  };
-  if (
-    dto.type_reponse === "choix"
-    && typeof dto.correcte === "boolean"
-    && typeof dto.bonne_reponse === "number"
-    && Number.isInteger(dto.bonne_reponse)
-  ) {
-    return {
-      ...commun,
-      ...suite,
-      typeReponse: "choix",
-      correcte: dto.correcte,
-      bonneReponse: dto.bonne_reponse,
-    };
-  }
-  if ((dto.type_reponse === "texte" || dto.type_reponse === "audio") && dto.evaluation) {
-    return {
-      ...commun,
-      ...suite,
-      typeReponse: dto.type_reponse,
-      evaluation: dto.evaluation,
-      scorePrononciation: dto.score_prononciation,
-    };
-  }
-  throw new Error("Réponse invalide du serveur pour le test de positionnement.");
-};
-
 export const httpTestDiagnosticService = {
-  async demarrer(langue: CodeLangue, objectif: ObjectifFormation, creneaux: string[]): Promise<SessionTest> {
-    const dto = await apiRequest<SessionTestDto>(ENDPOINTS.testDiagnostic.sessions, {
+  async demarrer(langue: CodeLangue, _objectif: ObjectifFormation, _creneaux: string[]): Promise<SessionTest> {
+    const tentative = await apiRequest<SessionTestDto>(ENDPOINTS.diagnostic.tentatives, {
       method: "POST",
-      body: { code_langue: langue, objectif, creneaux },
+      body: { code_langue: langue },
     });
-    return toSession(dto);
+    const params = new URLSearchParams({
+      code_langue: tentative.code_langue,
+      code_niveau: tentative.code_niveau,
+    });
+    const questionDtos = await apiRequest<QuestionDto[]>(`${ENDPOINTS.diagnostic.questions}?${params}`);
+    const questions = questionDtos.filter((question) => question.type_reponse !== "audio").map(toQuestion);
+    if (questions.length === 0) {
+      throw new Error("Aucune question textuelle ou à choix n'est disponible pour cette tentative.");
+    }
+    return {
+      id: String(tentative.id_tentative),
+      langue: tentative.code_langue,
+      niveaux: [tentative.code_niveau],
+      numeroQuestion: 1,
+      totalQuestions: questions.length,
+      question: questions[0],
+      questions,
+    };
   },
 
-  async repondre(idSession: string, idQuestion: string, reponse: ReponseTest): Promise<RetourReponse> {
-    const body = reponse.type === "audio"
-      ? (() => {
-          const formData = new FormData();
-          formData.set("id_question", idQuestion);
-          formData.set("audio", reponse.audio, "reponse.webm");
-          return formData;
-        })()
-      : {
-          id_question: idQuestion,
-          ...(reponse.type === "choix" ? { choix: reponse.choix } : { texte: reponse.texte }),
-        };
-    const dto = await apiRequest<RetourReponseDto>(ENDPOINTS.testDiagnostic.sessionReponses(idSession), {
+  async repondre(
+    idSession: string,
+    idQuestion: string,
+    reponse: ReponseTest,
+    valeurChoix?: string,
+    progression: ReponseProgression = { numeroQuestion: 1, totalQuestions: 1, questionSuivante: null },
+  ): Promise<RetourReponse> {
+    if (reponse.type === "audio") {
+      throw new Error("L'enregistrement des réponses audio sera disponible après la mise en place du stockage des médias.");
+    }
+    const reponseFournie = reponse.type === "choix" ? valeurChoix : reponse.texte;
+    if (!reponseFournie?.trim()) {
+      throw new Error("La réponse à enregistrer est vide ou invalide.");
+    }
+    const tentativeId = Number(idSession);
+    if (!Number.isSafeInteger(tentativeId) || tentativeId <= 0) {
+      throw new Error("Identifiant de tentative invalide.");
+    }
+    const dto = await apiRequest<ReponseDto>(ENDPOINTS.diagnostic.reponse, {
       method: "POST",
-      body,
+      body: {
+        id_tentative: tentativeId,
+        id_question: idQuestion,
+        reponse_fournie: reponseFournie,
+      },
     });
-    return toRetour(dto);
+    if (dto.id_tentative !== tentativeId || dto.id_question !== idQuestion || !dto.id_reponse) {
+      throw new Error("Confirmation invalide du serveur pour la réponse enregistrée.");
+    }
+    return {
+      typeReponse: "en_attente",
+      numeroQuestion: progression.numeroQuestion,
+      totalQuestions: progression.totalQuestions,
+      questionSuivante: progression.questionSuivante,
+      resultat: null,
+    };
+  },
+
+  async terminer(idSession: string): Promise<ResultatTest> {
+    const tentativeId = Number(idSession);
+    if (!Number.isSafeInteger(tentativeId) || tentativeId <= 0) {
+      throw new Error("Identifiant de tentative invalide.");
+    }
+    const dto = await apiRequest<ScoreDiagnosticDto>(ENDPOINTS.diagnostic.terminerTentative(tentativeId), {
+      method: "POST",
+    });
+    if (
+      dto.id_tentative !== tentativeId
+      || !Number.isFinite(dto.score)
+      || !Number.isFinite(dto.percentage)
+      || !Number.isFinite(dto.max_score)
+      || dto.score !== dto.percentage
+      || dto.max_score !== 100
+      || dto.percentage < 0
+      || dto.percentage > 100
+      || !dto.level
+      || (dto.framework !== "CECRL" && dto.framework !== "HSK")
+    ) {
+      throw new Error("Le résultat de scoring renvoyé par le serveur est invalide.");
+    }
+    return {
+      niveau: dto.level,
+      score: dto.percentage,
+      total: dto.max_score,
+      cadre: dto.framework,
+      competences: [],
+      lacunes: [],
+    };
   },
 };
 
-/** En mode API simulée, le mock respecte le même contrat de session que le backend. */
+/** En mode API simulée, le mock conserve l'évaluation de démonstration. */
 export const testDiagnosticService: TestDiagnosticGateway = {
   demarrer: (...args) => API_MOCK
     ? testDiagnosticMockService.demarrer(...args)
@@ -175,4 +182,7 @@ export const testDiagnosticService: TestDiagnosticGateway = {
   repondre: (...args) => API_MOCK
     ? testDiagnosticMockService.repondre(...args)
     : httpTestDiagnosticService.repondre(...args),
+  terminer: (...args) => API_MOCK
+    ? Promise.reject(new Error("Le mode démonstration renvoie le résultat à la dernière réponse."))
+    : httpTestDiagnosticService.terminer(...args),
 };

@@ -1,140 +1,148 @@
 import { configureApiClient } from "@/lib/api-client";
+import { API_URL } from "@/lib/env";
 import { QUESTIONS_TEST } from "@/mocks/questions-test.mock";
 import { httpTestDiagnosticService } from "@/services/test-diagnostic.service";
 import { fetchCall, mockFetch } from "@/test/fetch-mock";
 
-const API = "http://localhost:8000/api/v1";
+const API = `${API_URL}/api/v1`;
 
 beforeEach(() => {
   configureApiClient({ getToken: () => "jwt-test", onUnauthorized: jest.fn() });
 });
 
 describe("httpTestDiagnosticService", () => {
-  it("démarre une session et convertit les champs de l'API", async () => {
+  it("crée une tentative puis charge les questions de son niveau", async () => {
     const fetchMock = mockFetch({
       status: 201,
       body: {
-        id_session: "session-42",
+        id_tentative: 42,
         code_langue: "en",
-        niveaux: ["A1", "A2", "B1"],
-        numero_question: 1,
-        total_questions: 10,
-        question: {
-          id_question: "question-1",
-          niveau: "B1",
-          competence: "grammaire",
-          type_reponse: "choix",
-          enonce: "She ___ a student.",
-          choix: ["is", "are"],
-        },
+        code_niveau: "A1",
       },
+    }, {
+      body: [{
+        id_question: "1",
+        niveau: "A1",
+        competence: "grammaire",
+        type_reponse: "choix",
+        enonce: "She ___ a student.",
+        choix: ["is", "are"],
+      }],
     });
 
     await expect(httpTestDiagnosticService.demarrer("en", "professionnel", ["matin"])).resolves.toEqual({
-      id: "session-42",
+      id: "42",
       langue: "en",
-      niveaux: ["A1", "A2", "B1"],
+      niveaux: ["A1"],
       numeroQuestion: 1,
-      totalQuestions: 10,
+      totalQuestions: 1,
       question: {
-        id: "question-1",
-        niveau: "B1",
+        id: "1",
+        niveau: "A1",
         competence: "grammaire",
         typeReponse: "choix",
         enonce: "She ___ a student.",
         choix: ["is", "are"],
       },
+      questions: [{
+        id: "1",
+        niveau: "A1",
+        competence: "grammaire",
+        typeReponse: "choix",
+        enonce: "She ___ a student.",
+        choix: ["is", "are"],
+      }],
     });
-    const { url, init, headers, body } = fetchCall(fetchMock);
-    expect([url, init.method, body]).toEqual([
-      `${API}/test-diagnostic/sessions`,
+    const debut = fetchCall(fetchMock, 0);
+    const questions = fetchCall(fetchMock, 1);
+    expect([debut.url, debut.init.method, debut.body]).toEqual([
+      `${API}/diagnostic/tentatives`,
       "POST",
-      { code_langue: "en", objectif: "professionnel", creneaux: ["matin"] },
+      { code_langue: "en" },
     ]);
-    expect(headers.Authorization).toBeDefined();
+    expect([questions.url, questions.init.method]).toEqual([
+      `${API}/diagnostic/questions?code_langue=en&code_niveau=A1`,
+      "GET",
+    ]);
+    expect(debut.headers.Authorization).toBeDefined();
   });
 
-  it("envoie la réponse et ne reçoit la correction qu'après validation", async () => {
+  it("enregistre la réponse sans simuler son évaluation", async () => {
     const fetchMock = mockFetch({
       body: {
-        type_reponse: "choix",
-        correcte: false,
-        bonne_reponse: 1,
-        numero_question: 1,
-        total_questions: 10,
-        question_suivante: {
-          id_question: "question-2",
-          niveau: "A2",
-          competence: "grammaire",
-          type_reponse: "choix",
-          enonce: "Question suivante",
-          choix: ["A", "B"],
-        },
-        resultat: null,
-      },
-    });
-
-    await expect(httpTestDiagnosticService.repondre("session/42", "question-1", { type: "choix", choix: 0 })).resolves.toMatchObject({
-      correcte: false,
-      bonneReponse: 1,
-      questionSuivante: { id: "question-2", niveau: "A2" },
-      resultat: null,
-    });
-    const { url, init, body } = fetchCall(fetchMock);
-    expect([url, init.method, body]).toEqual([
-      `${API}/test-diagnostic/sessions/session%2F42/reponses`,
-      "POST",
-      { id_question: "question-1", choix: 0 },
-    ]);
-  });
-
-  it("refuse une réponse serveur sans question suivante ni résultat final", async () => {
-    mockFetch({
-      body: {
-        correcte: true,
-        type_reponse: "choix",
-        bonne_reponse: 0,
-        numero_question: 1,
-        total_questions: 10,
-        question_suivante: null,
-        resultat: null,
-      },
-    });
-
-    await expect(httpTestDiagnosticService.repondre("session-1", "question-1", { type: "choix", choix: 0 })).rejects.toThrow(
-      "Réponse invalide du serveur pour le test de positionnement.",
-    );
-  });
-
-  it("convertit les compétences évaluées et les lacunes du résultat final", async () => {
-    mockFetch({
-      body: {
-        type_reponse: "choix",
-        correcte: false,
-        bonne_reponse: 1,
-        numero_question: 10,
-        total_questions: 10,
-        question_suivante: null,
-        resultat: {
-          niveau: "A2",
-          score: 4,
-          total: 10,
-          competences: [{ competence: "grammaire", score: 2, total: 6 }],
-          lacunes: ["grammaire"],
-        },
+        id_reponse: 81,
+        id_tentative: 42,
+        id_question: "1",
+        reponse_fournie: "is",
       },
     });
 
     await expect(
-      httpTestDiagnosticService.repondre("session-1", "question-10", { type: "choix", choix: 0 }),
+      httpTestDiagnosticService.repondre(
+        "42",
+        "1",
+        { type: "choix", choix: 0 },
+        "is",
+        { numeroQuestion: 1, totalQuestions: 3, questionSuivante: null },
+      ),
     ).resolves.toMatchObject({
-      resultat: {
-        niveau: "A2",
-        score: 4,
-        competences: [{ competence: "grammaire", score: 2, total: 6 }],
-        lacunes: ["grammaire"],
+      typeReponse: "en_attente",
+      questionSuivante: null,
+      resultat: null,
+    });
+    const { url, init, body } = fetchCall(fetchMock);
+    expect([url, init.method, body]).toEqual([
+      `${API}/diagnostic/reponse`,
+      "POST",
+      { id_tentative: 42, id_question: "1", reponse_fournie: "is" },
+    ]);
+  });
+
+  it("termine la tentative et transforme le résultat du scoring pour l'écran", async () => {
+    const fetchMock = mockFetch({
+      body: {
+        id_tentative: 42,
+        score: 66.67,
+        max_score: 100,
+        percentage: 66.67,
+        level: "B2",
+        framework: "CECRL",
       },
     });
+
+    await expect(httpTestDiagnosticService.terminer("42")).resolves.toEqual({
+      niveau: "B2",
+      score: 66.67,
+      total: 100,
+      cadre: "CECRL",
+      competences: [],
+      lacunes: [],
+    });
+    expect(fetchCall(fetchMock)).toMatchObject({
+      url: `${API}/diagnostic/tentatives/42/terminer`,
+      init: { method: "POST" },
+    });
+  });
+
+  it("refuse un résultat de scoring incohérent avec la tentative", async () => {
+    mockFetch({
+      body: {
+        id_tentative: 41,
+        score: 66.67,
+        max_score: 100,
+        percentage: 66.67,
+        level: "B2",
+        framework: "CECRL",
+      },
+    });
+
+    await expect(httpTestDiagnosticService.terminer("42")).rejects.toThrow("résultat de scoring");
+  });
+
+  it("refuse l'envoi de réponses audio tant qu'aucun stockage média n'est disponible", async () => {
+    await expect(
+      httpTestDiagnosticService.repondre("42", "1", { type: "audio", audio: new Blob(["audio"]) }),
+    ).rejects.toThrow("stockage des médias");
   });
 
   it("charge le faux backend uniquement quand le mode simulé est activé", async () => {
