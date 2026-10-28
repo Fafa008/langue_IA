@@ -38,9 +38,20 @@ export default function TestResult({ libelleLangue, resultat, onRecommencer }: T
         </span>
       </div>
 
-      <p className="text-h4 font-semibold">{DESCRIPTIONS[resultat.niveau] ?? "Niveau évalué"}</p>
+      <p className="text-h4 font-semibold">
+        {DESCRIPTIONS[resultat.niveau] ?? "Niveau de référence estimé"}
+      </p>
+      {resultat.cadre && (
+        <p className="mt-1 text-content-secondary">
+          Référentiel : <span data-testid="result-framework">{resultat.cadre}</span>
+        </p>
+      )}
       <p className="mt-1 text-content-secondary">
-        Score : <span data-testid="result-score">{resultat.score} / {resultat.total}</span>
+        Score : <span data-testid="result-score">
+          {resultat.cadre
+            ? `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(resultat.score)} %`
+            : `${resultat.score} / ${resultat.total}`}
+        </span>
       </p>
 
       <section className="card mt-8 text-left" aria-labelledby="result-skills-title">

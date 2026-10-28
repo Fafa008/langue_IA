@@ -10,6 +10,7 @@ export const etatInitial = (langue: CodeLangue): EtatTest => ({
   numeroQuestion: 0,
   totalQuestions: 0,
   courante: null,
+  questionsRestantes: [],
   choisie: null,
   texteSaisi: "",
   audioEnregistre: null,
@@ -38,6 +39,7 @@ export function reducteur(etat: EtatTest, action: ActionTest): EtatTest {
         numeroQuestion: session.numeroQuestion,
         totalQuestions: session.totalQuestions,
         courante: session.question,
+        questionsRestantes: session.questions?.filter((question) => question.id !== session.question.id) ?? [],
         choisie: null,
         texteSaisi: "",
         audioEnregistre: null,
@@ -73,17 +75,33 @@ export function reducteur(etat: EtatTest, action: ActionTest): EtatTest {
         retour: action.retour,
       };
     }
+    case "terminer":
+      if (etat.phase !== "retour" || etat.retour?.questionSuivante) return etat;
+      return {
+        ...etat,
+        phase: "resultat",
+        courante: null,
+        choisie: null,
+        resultat: action.resultat,
+      };
     case "suivante": {
       if (etat.phase !== "retour") return etat;
       if (etat.retour?.resultat) {
         return { ...etat, phase: "resultat", courante: null, choisie: null, resultat: etat.retour.resultat };
       }
-      if (!etat.retour?.questionSuivante) return etat;
+      if (!etat.retour?.questionSuivante) {
+        return etat.retour?.resultat
+          ? { ...etat, phase: "resultat", courante: null, choisie: null, resultat: etat.retour.resultat }
+          : etat;
+      }
       return {
         ...etat,
         phase: "question",
         numeroQuestion: etat.numeroQuestion + 1,
         courante: etat.retour.questionSuivante,
+        questionsRestantes: etat.retour.typeReponse === "en_attente"
+          ? etat.questionsRestantes.slice(1)
+          : etat.questionsRestantes,
         choisie: null,
         texteSaisi: "",
         audioEnregistre: null,

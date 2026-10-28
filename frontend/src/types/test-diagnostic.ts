@@ -35,6 +35,7 @@ export interface SessionTest {
   numeroQuestion: number;
   totalQuestions: number;
   question: Question;
+  questions?: Question[];
 }
 
 interface RetourReponseBase {
@@ -43,6 +44,11 @@ interface RetourReponseBase {
 }
 
 export type RetourReponse = RetourReponseBase & (
+  | {
+      typeReponse: "en_attente";
+      questionSuivante: Question | null;
+      resultat: null;
+    }
   | {
       typeReponse: "choix";
       correcte: boolean;
@@ -64,6 +70,7 @@ export interface ResultatTest {
   niveau: string;
   score: number;
   total: number;
+  cadre?: "CECRL" | "HSK";
   competences: CompetenceResultat[];
   lacunes: CompetenceTest[];
 }
@@ -85,6 +92,7 @@ export interface EtatTest {
   numeroQuestion: number;
   totalQuestions: number;
   courante: Question | null;
+  questionsRestantes: Question[];
   choisie: number | null;
   texteSaisi: string;
   audioEnregistre: Blob | null;
@@ -101,5 +109,6 @@ export type ActionTest =
   | { type: "choisirTexte"; texte: string }
   | { type: "choisirAudio"; audio: Blob }
   | { type: "repondre"; choix: number | null; retour: RetourReponse }
+  | { type: "terminer"; resultat: ResultatTest }
   | { type: "suivante" }
   | { type: "recommencer" };

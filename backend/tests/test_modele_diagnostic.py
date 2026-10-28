@@ -1,8 +1,7 @@
-"""Modèle du diagnostic (US34) : questions, tentatives de diagnostic et réponses.
+"""Modèles et migrations du diagnostic : questions, tentatives et réponses.
 
 Ces tests visent la couche modèle contre PostgreSQL (clés étrangères, contrainte d'unicité,
-défauts serveur, migration applicable et réversible) ; les routes du diagnostic ne font pas
-encore partie du MVP (backend/README.md).
+défauts serveur, migration applicable et réversible).
 """
 
 import pytest
@@ -203,8 +202,45 @@ class TestMigration:
             .scalars()
             .all()
         )
-        assert {"id_question", "enonce", "competence", "id_langue", "id_niveau"} <= set(colonnes_question)
+        colonnes_tentative = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'test_diagnostic'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert "reponse_correcte" not in colonnes_question
+        assert "score" not in colonnes_tentative
+        assert {"type_reponse", "choix", "support", "audio_url", "audio_texte"} <= set(colonnes_question)
+
+        command.downgrade(config, "-1")
+        colonnes_question = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'question'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        colonnes_tentative = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'test_diagnostic'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert "reponse_correcte" not in colonnes_question
+        assert "score" not in colonnes_tentative
         assert not {"type_reponse", "choix", "support", "audio_url", "audio_texte"} & set(colonnes_question)
+        assert {"id_question", "enonce", "competence", "id_langue", "id_niveau"} <= set(colonnes_question)
 
         command.downgrade(config, "-1")
         reste = db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")).scalars().all()
@@ -223,4 +259,17 @@ class TestMigration:
             .scalars()
             .all()
         )
-        assert {"type_reponse", "choix", "support", "audio_url", "audio_texte"} <= set(colonnes_question)
+        colonnes_tentative = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'test_diagnostic'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert {"type_reponse", "choix", "support", "audio_url", "audio_texte", "reponse_correcte"} <= set(
+            colonnes_question
+        )
+        assert "score" in colonnes_tentative

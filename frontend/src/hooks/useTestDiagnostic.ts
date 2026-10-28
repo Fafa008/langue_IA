@@ -7,6 +7,7 @@ import { etatInitial, reducteur } from "@/lib/testAdaptatif";
 import { testDiagnosticService } from "@/services/test-diagnostic.service";
 import type { CodeLangue } from "@/types/langue";
 import type { CreneauPresence, ObjectifFormation, ReponseTest } from "@/types/test-diagnostic";
+import type { ReponseProgression } from "@/services/test-diagnostic.service";
 
 export function useTestDiagnostic(langueInitiale: CodeLangue) {
   const [etat, dispatch] = useReducer(reducteur, langueInitiale, etatInitial);
@@ -15,13 +16,28 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
       testDiagnosticService.demarrer(variables.langue, variables.objectif, variables.creneaux),
   });
   const reponse = useMutation({
-    mutationFn: ({ idSession, idQuestion, reponse }: { idSession: string; idQuestion: string; reponse: ReponseTest }) =>
-      testDiagnosticService.repondre(idSession, idQuestion, reponse),
+    mutationFn: ({
+      idSession,
+      idQuestion,
+      reponse,
+      valeurChoix,
+      progression,
+    }: {
+      idSession: string;
+      idQuestion: string;
+      reponse: ReponseTest;
+      valeurChoix?: string;
+      progression: ReponseProgression;
+    }) => testDiagnosticService.repondre(idSession, idQuestion, reponse, valeurChoix, progression),
+  });
+  const terminaison = useMutation({
+    mutationFn: (idSession: string) => testDiagnosticService.terminer(idSession),
   });
 
   const choisirLangue = (langue: CodeLangue) => {
     demarrage.reset();
     reponse.reset();
+    terminaison.reset();
     dispatch({ type: "choisirLangue", langue });
   };
 
@@ -36,7 +52,17 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
     if (!etat.sessionId || !etat.courante || etat.phase !== "question") return;
     if (choix !== null) dispatch({ type: "choisirReponse", choix });
     reponse.mutate(
-      { idSession: etat.sessionId, idQuestion: etat.courante.id, reponse: reponseTest },
+      {
+        idSession: etat.sessionId,
+        idQuestion: etat.courante.id,
+        reponse: reponseTest,
+        valeurChoix: choix === null ? undefined : etat.courante.choix?.[choix],
+        progression: {
+          questionSuivante: etat.questionsRestantes[0] ?? null,
+          numeroQuestion: etat.numeroQuestion,
+          totalQuestions: etat.totalQuestions,
+        },
+      },
       { onSuccess: (retour) => dispatch({ type: "repondre", choix, retour }) },
     );
   };
@@ -54,7 +80,29 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
   const recommencer = () => {
     demarrage.reset();
     reponse.reset();
+    terminaison.reset();
     dispatch({ type: "recommencer" });
+  };
+
+  const terminer = () => {
+    if (etat.phase !== "retour" || !etat.retour) return;
+    if (etat.retour.resultat || etat.retour.questionSuivante) {
+      dispatch({ type: "suivante" });
+      return;
+    }
+    if (!etat.sessionId) {
+      dispatch({ type: "suivante" });
+      return;
+    }
+    terminaison.mutate(etat.sessionId, {
+      onSuccess: (resultat) => dispatch({ type: "terminer", resultat }),
+    });
+  };
+
+  const reessayerTerminaison = () => {
+    if (etat.sessionId) terminaison.mutate(etat.sessionId, {
+      onSuccess: (resultat) => dispatch({ type: "terminer", resultat }),
+    });
   };
 
   return {
@@ -79,13 +127,16 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
     repondre,
     repondreTexte,
     repondreAudio,
-    suivante: () => dispatch({ type: "suivante" }),
+    suivante: terminer,
     recommencer,
     demarrageEnCours: demarrage.isPending,
     erreurDemarrage: demarrage.error,
     langueIndisponible: demarrage.error instanceof ApiError && demarrage.error.status === 404,
     reponseEnCours: reponse.isPending,
     erreurReponse: reponse.error,
+    terminaisonEnCours: terminaison.isPending,
+    erreurTerminaison: terminaison.error,
+    reessayerTerminaison,
     reessayerReponse: () => {
       if (!etat.sessionId || !etat.courante) return;
       let reponseTest: ReponseTest;
@@ -99,7 +150,17 @@ export function useTestDiagnostic(langueInitiale: CodeLangue) {
         return;
       }
       reponse.mutate(
-        { idSession: etat.sessionId, idQuestion: etat.courante.id, reponse: reponseTest },
+        {
+          idSession: etat.sessionId,
+          idQuestion: etat.courante.id,
+          reponse: reponseTest,
+          valeurChoix: etat.choisie === null ? undefined : etat.courante.choix?.[etat.choisie],
+          progression: {
+            questionSuivante: etat.questionsRestantes[0] ?? null,
+            numeroQuestion: etat.numeroQuestion,
+            totalQuestions: etat.totalQuestions,
+          },
+        },
         { onSuccess: (retour) => dispatch({ type: "repondre", choix: etat.choisie, retour }) },
       );
     },
