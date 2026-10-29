@@ -83,6 +83,16 @@ export interface CompetenceResultat {
 
 export type PhaseTest = "intro" | "personnalisation" | "question" | "retour" | "resultat";
 
+/** Réponse déjà validée par le serveur : sert au suivi de la progression et au récapitulatif. */
+export interface ReponseEnregistree {
+  idQuestion: string;
+  niveau: string;
+  competence: CompetenceTest;
+  typeReponse: Question["typeReponse"];
+  /** Connue pour les questions à choix ; absente pour les réponses libres évaluées par l'IA. */
+  correcte?: boolean;
+}
+
 export interface EtatTest {
   phase: PhaseTest;
   langue: CodeLangue;
@@ -97,6 +107,8 @@ export interface EtatTest {
   texteSaisi: string;
   audioEnregistre: Blob | null;
   retour: RetourReponse | null;
+  /** Réponses validées, dans l'ordre. */
+  reponses: ReponseEnregistree[];
   resultat: ResultatTest | null;
 }
 
