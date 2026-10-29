@@ -19,7 +19,7 @@ describe("navigation par rôle", () => {
   });
 
   it("le test de positionnement est accessible dans l'espace apprenant", () => {
-    expect(NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.testDiagnostic)).toMatchObject({
+    expect(NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.testDiagnostic.demarrage)).toMatchObject({
       label: "Test de positionnement",
     });
   });
