@@ -26,6 +26,18 @@ const q = (
   bonneReponse,
 });
 
+/** Extrait de compréhension orale : lu par la synthèse vocale du navigateur en mode démonstration. */
+const ecoute = (id: string, niveau: string, audioTexte: string, enonce: string, choix: string[], bonneReponse: number) =>
+  ({ ...q(id, niveau, enonce, choix, bonneReponse, "ecoute"), audioTexte });
+
+/** Sujet d'expression orale (enregistrement d'au moins 30 secondes). */
+const oral = (id: string, niveau: string, enonce: string): QuestionMock =>
+  ({ ...q(id, niveau, enonce, [], 0, "oral"), typeReponse: "audio", dureeMinimaleSecondes: 30 });
+
+/** Sujet d'expression écrite, avec un nombre de mots attendu selon le niveau. */
+const ecrit = (id: string, niveau: string, enonce: string, motsMinimum: number): QuestionMock =>
+  ({ ...q(id, niveau, enonce, [], 0, "ecrit"), typeReponse: "texte", motsMinimum });
+
 const EN: QuestionMock[] = [
   q("en-a1-1", "A1", "She ___ a student.", ["is", "are", "am", "be"], 0),
   q("en-a1-2", "A1", "I ___ coffee every morning.", ["drinks", "drink", "am drink", "drunk"], 1),
@@ -44,8 +56,25 @@ const EN: QuestionMock[] = [
     ...q("en-b2-listen", "B2", "What does the speaker recommend?", ["Taking a later train", "Booking in advance", "Travelling by bus", "Working from home"], 1, "ecoute"),
     audioTexte: "For your train journey, I recommend booking your tickets in advance. Prices are usually lower, and you will have a better choice of seats.",
   },
-  { ...q("en-c1-write", "C1", "In a few sentences, explain one advantage of lifelong learning.", [], 0, "ecrit"), typeReponse: "texte" },
-  { ...q("en-c1-speak", "C1", "Read the sentence aloud.", [], 0, "oral"), typeReponse: "audio", enonce: "\"Continuing education is essential for professional growth.\"" },
+  q("en-a2-lex", "A2", "Choose the opposite of \"cheap\".", ["expensive", "small", "easy", "early"], 0),
+  q("en-b1-lex", "B1", "I'm looking ___ my keys. Have you seen them?", ["at", "for", "after", "into"], 1),
+  q("en-c1-lex", "C1", "The new policy had a ___ effect on sales.", ["profound", "deep-seated", "heavy", "tall"], 0),
+  ecoute(
+    "en-a2-listen", "A2",
+    "Hello, this is Anna. I can't come to the meeting on Monday. Can we meet on Wednesday at ten instead?",
+    "When does Anna want to meet?", ["Monday at ten", "Wednesday at ten", "Wednesday at two", "Friday at ten"], 1,
+  ),
+  ecoute(
+    "en-c1-listen", "C1",
+    "Although remote work has improved flexibility, several studies suggest that new employees miss out on informal learning from colleagues.",
+    "What drawback of remote work is mentioned?", ["Higher costs", "Less informal learning", "Longer hours", "Poor equipment"], 1,
+  ),
+  oral("en-a2-speak", "A2", "Describe your favourite activity and explain why you like it."),
+  oral("en-b2-speak", "B2", "Talk about a change in your town or city. Is it positive or negative? Why?"),
+  oral("en-c1-speak", "C1", "Some people say technology makes us less social. Do you agree? Give examples."),
+  ecrit("en-a2-write", "A2", "Write a short message to a friend to invite them to your birthday party.", 25),
+  ecrit("en-b2-write", "B2", "Write an email to your manager asking to work from home one day a week. Give your reasons.", 50),
+  ecrit("en-c1-write", "C1", "In a short paragraph, explain one advantage and one limit of lifelong learning.", 70),
 ];
 
 const FR: QuestionMock[] = [
@@ -66,12 +95,29 @@ const FR: QuestionMock[] = [
     ...q("fr-b2-listen", "B2", "Que conseille la personne ?", ["Prendre un train plus tard", "Réserver à l'avance", "Voyager en bus", "Travailler de chez soi"], 1, "ecoute"),
     audioTexte: "Pour votre voyage en train, je vous conseille de réserver vos billets à l'avance. Les prix sont généralement plus bas et vous aurez davantage de choix pour votre place.",
   },
-  { ...q("fr-c1-write", "C1", "En quelques phrases, expliquez un avantage de la formation continue.", [], 0, "ecrit"), typeReponse: "texte" },
-  { ...q("fr-c1-speak", "C1", "Lisez la phrase à voix haute.", [], 0, "oral"), typeReponse: "audio", enonce: "« La formation continue est essentielle au développement professionnel. »" },
+  q("fr-a2-lex", "A2", "Quel est le contraire de « cher » ?", ["bon marché", "petit", "facile", "tôt"], 0),
+  q("fr-b1-lex", "B1", "Je ___ mes clés. Tu les as vues ?", ["cherche", "regarde", "trouve", "attends"], 0),
+  q("fr-c1-lex", "C1", "Cette mesure a eu un effet ___ sur les ventes.", ["considérable", "lourd", "haut", "épais"], 0),
+  ecoute(
+    "fr-a2-listen", "A2",
+    "Bonjour, c'est Anna. Je ne peux pas venir à la réunion lundi. On peut se voir mercredi à dix heures ?",
+    "Quand Anna veut-elle se voir ?", ["Lundi à dix heures", "Mercredi à dix heures", "Mercredi à deux heures", "Vendredi à dix heures"], 1,
+  ),
+  ecoute(
+    "fr-c1-listen", "C1",
+    "Si le télétravail a amélioré la flexibilité, plusieurs études montrent que les nouveaux salariés perdent l'apprentissage informel auprès de leurs collègues.",
+    "Quel inconvénient du télétravail est évoqué ?", ["Des coûts plus élevés", "Moins d'apprentissage informel", "Des journées plus longues", "Du matériel insuffisant"], 1,
+  ),
+  oral("fr-a2-speak", "A2", "Décrivez votre activité préférée et expliquez pourquoi vous l'aimez."),
+  oral("fr-b2-speak", "B2", "Parlez d'un changement dans votre ville. Est-il positif ou négatif ? Pourquoi ?"),
+  oral("fr-c1-speak", "C1", "Certains disent que la technologie nous rend moins sociables. Êtes-vous d'accord ? Donnez des exemples."),
+  ecrit("fr-a2-write", "A2", "Écrivez un court message à un ami pour l'inviter à votre anniversaire.", 25),
+  ecrit("fr-b2-write", "B2", "Écrivez un courriel à votre responsable pour demander une journée de télétravail par semaine. Justifiez votre demande.", 50),
+  ecrit("fr-c1-write", "C1", "En un court paragraphe, expliquez un avantage et une limite de la formation continue.", 70),
 ];
 
 /**
- * Données serveur simulées, banque ≥ 2 par niveau (prévoir 5 pour un vrai test).
+ * Données serveur simulées : QCM (≥ 2 par niveau), extraits à écouter et sujets d'expression par tranche de niveau.
  * Mandarin, italien, allemand : à fournir par l'équipe pédagogique.
  */
 export const QUESTIONS_TEST: Record<CodeLangue, QuestionMock[]> = { en: EN, fr: FR, zh: [], it: [], de: [] };

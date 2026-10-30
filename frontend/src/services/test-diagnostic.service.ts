@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api-client";
 import { API_MOCK } from "@/lib/env";
+import { planDepuisQuestions, trierParEtape } from "@/lib/etapesTest";
 import { testDiagnosticMockService } from "@/mocks/test-diagnostic.mock";
 import {
   type CadreReference,
@@ -24,6 +25,8 @@ interface QuestionDto {
   support?: string | null;
   audio_url?: string | null;
   audio_texte?: string | null;
+  duree_minimale_secondes?: number | null;
+  mots_minimum?: number | null;
 }
 
 interface LangueDiagnosticDto {
@@ -87,6 +90,8 @@ const toQuestion = (dto: QuestionDto): Question => ({
   support: dto.support ?? undefined,
   audioUrl: dto.audio_url ?? undefined,
   audioTexte: dto.audio_texte ?? undefined,
+  dureeMinimaleSecondes: dto.duree_minimale_secondes ?? undefined,
+  motsMinimum: dto.mots_minimum ?? undefined,
 });
 
 const toLangue = (dto: LangueDiagnosticDto): LangueDiagnostic => ({
@@ -115,7 +120,8 @@ export const httpTestDiagnosticService = {
       code_niveau: tentative.code_niveau,
     });
     const questionDtos = await apiRequest<QuestionDto[]>(`${ENDPOINTS.diagnostic.questions}?${params}`);
-    const questions = questionDtos.filter((question) => question.type_reponse !== "audio").map(toQuestion);
+    // Les réponses orales attendent le stockage des médias côté backend ; le reste suit l'ordre des étapes
+    const questions = trierParEtape(questionDtos.filter((question) => question.type_reponse !== "audio").map(toQuestion));
     if (questions.length === 0) {
       throw new Error("Aucune question textuelle ou à choix n'est disponible pour cette tentative.");
     }
@@ -125,6 +131,7 @@ export const httpTestDiagnosticService = {
       niveaux: [tentative.code_niveau],
       numeroQuestion: 1,
       totalQuestions: questions.length,
+      plan: planDepuisQuestions(questions),
       question: questions[0],
       questions,
     };
@@ -211,6 +218,6 @@ export const testDiagnosticService: TestDiagnosticGateway = {
     ? testDiagnosticMockService.repondre(...args)
     : httpTestDiagnosticService.repondre(...args),
   terminer: (...args) => API_MOCK
-    ? Promise.reject(new Error("Le mode démonstration renvoie le résultat à la dernière réponse."))
+    ? testDiagnosticMockService.terminer(...args)
     : httpTestDiagnosticService.terminer(...args),
 };

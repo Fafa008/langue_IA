@@ -53,6 +53,7 @@ describe("httpTestDiagnosticService", () => {
       niveaux: ["A1"],
       numeroQuestion: 1,
       totalQuestions: 1,
+      plan: [{ etape: "qcm", nombreQuestions: 1 }],
       question: {
         id: "1",
         niveau: "A1",
@@ -82,6 +83,30 @@ describe("httpTestDiagnosticService", () => {
       "GET",
     ]);
     expect(debut.headers.Authorization).toBeDefined();
+  });
+
+  it("range les questions dans l'ordre des étapes et en déduit le plan du test", async () => {
+    const question = (id_question: string, competence: string, type_reponse = "choix") => ({
+      id_question, niveau: "A1", competence, type_reponse, enonce: id_question, choix: ["a", "b"],
+    });
+    mockFetch({ status: 201, body: { id_tentative: 7, code_langue: "en", code_niveau: "A1" } }, {
+      body: [
+        question("ecrit", "ecrit", "texte"),
+        question("oral", "oral", "audio"),
+        question("ecoute", "ecoute"),
+        question("grammaire", "grammaire"),
+        question("lecture", "lecture"),
+      ],
+    });
+
+    const session = await httpTestDiagnosticService.demarrer("en", "professionnel", []);
+
+    expect(session.questions?.map((q) => q.id)).toEqual(["grammaire", "lecture", "ecoute", "ecrit"]);
+    expect(session.plan).toEqual([
+      { etape: "qcm", nombreQuestions: 2 },
+      { etape: "comprehension_orale", nombreQuestions: 1 },
+      { etape: "expression_ecrite", nombreQuestions: 1 },
+    ]);
   });
 
   it("enregistre la réponse sans simuler son évaluation", async () => {

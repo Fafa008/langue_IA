@@ -39,7 +39,7 @@ async function demarrer(page: Page) {
 
 async function repondre(page: Page) {
   await page.getByTestId("option-0").click();
-  await page.getByRole("button", { name: /Valider la réponse|Valider et continuer/ }).click();
+  await page.getByRole("button", { name: /Valider et (continuer|finaliser)/ }).click();
 }
 
 async function expectSansDebordement(page: Page) {
@@ -102,7 +102,8 @@ test.describe("Écran d'accueil du diagnostic", () => {
     await ouvrir(page);
     await expect(page.getByRole("heading", { name: "Évaluez votre niveau" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "2. Avant de commencer" })).toBeVisible();
-    await expect(page.getByTestId("consignes").getByRole("listitem")).toHaveCount(4);
+    await expect(page.getByTestId("consignes").getByRole("listitem")).toHaveCount(5);
+    await expect(page.getByTestId("consignes")).toContainText("Le test dure 15 minutes et comporte 4 étapes");
     await expect(page.getByTestId("consignes")).toContainText("sans dictionnaire ni traducteur");
   });
 
@@ -131,7 +132,7 @@ test.describe("Écran d'accueil du diagnostic", () => {
     await page.getByTestId("language-option-en").click();
     const chiffres = page.getByTestId("chiffres-test");
     await expect(chiffres.getByRole("term")).toHaveText(["questions", "de durée estimée", "niveaux estimés"]);
-    await expect(chiffres.getByRole("definition")).toHaveText(["2", "2 min", "6"]);
+    await expect(chiffres.getByRole("definition")).toHaveText(["2", "15 min", "6"]);
     await expect(boutonCommencer(page)).toBeEnabled();
     await expect(page.getByText("Choisissez une langue pour commencer.")).toHaveCount(0);
   });
@@ -181,6 +182,27 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     await expect(page.getByTestId("feedback")).toHaveCount(0);
   });
 
+  test("affiche l'étape en cours et le temps restant", async ({ page }) => {
+    await ouvrir(page, "en");
+    await demarrer(page);
+    await expect(page.getByRole("heading", { name: "Étape 1/1 : Grammaire et lexique" })).toBeVisible();
+    await expect(page.getByRole("timer")).toHaveText(/^1[45]:\d\d$/);
+    await expect(page.getByRole("button", { name: "Valider et continuer" })).toBeDisabled();
+  });
+
+  test("termine le test et affiche le résultat quand les 15 minutes sont écoulées", async ({ page }) => {
+    await page.clock.install();
+    await ouvrir(page, "en");
+    await demarrer(page);
+    const terminaison = page.waitForResponse((response) =>
+      response.url().includes("/api/v1/diagnostic/tentatives/1/terminer") && response.request().method() === "POST",
+    );
+    await page.clock.fastForward("15:01");
+    expect((await terminaison).status()).toBe(200);
+    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
+    await expect(page.getByTestId("result-level")).toHaveText("A1");
+  });
+
   test("enregistre les réponses, termine la tentative et affiche le score du backend", async ({ page }) => {
     await ouvrir(page, "en");
     await demarrer(page);
@@ -196,7 +218,7 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     const terminaison = page.waitForResponse((response) =>
       response.url().includes("/api/v1/diagnostic/tentatives/1/terminer") && response.request().method() === "POST",
     );
-    await page.getByRole("button", { name: "Terminer" }).click();
+    await page.getByRole("button", { name: "Finaliser le test" }).click();
     expect((await terminaison).status()).toBe(200);
     await expect(page).toHaveURL(`${URL_TEST}/resultats`);
     await expect(page.getByTestId("test-result")).toBeVisible();

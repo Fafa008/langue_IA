@@ -1,12 +1,14 @@
 import { ApiError } from "@/lib/api-client";
+import { etapeDe } from "@/lib/etapesTest";
 import { QUESTIONS_TEST } from "@/mocks/questions-test.mock";
 import { testDiagnosticMockService } from "@/mocks/test-diagnostic.mock";
+import type { Question, RetourReponse } from "@/types/test-diagnostic";
 
 describe("testDiagnosticMockService", () => {
   it("ne livre pas la bonne réponse avant validation", async () => {
     const session = await testDiagnosticMockService.demarrer("en", "professionnel", []);
     expect(session.question).not.toHaveProperty("bonneReponse");
-    expect(session).toMatchObject({ langue: "en", numeroQuestion: 1, totalQuestions: 10 });
+    expect(session).toMatchObject({ langue: "en", numeroQuestion: 1, totalQuestions: 12 });
   });
 
   it("pilote les questions et calcule le résultat comme une session backend", async () => {
@@ -39,8 +41,8 @@ describe("testDiagnosticMockService", () => {
 
     expect(resultatFinal).toMatchObject({
       niveau: "C2",
-      score: 10,
-      total: 10,
+      score: 12,
+      total: 12,
       lacunes: [],
     });
     expect(resultatFinal?.competences.map(({ competence }) => competence)).toEqual([
@@ -88,5 +90,56 @@ describe("testDiagnosticMockService", () => {
     await expect(testDiagnosticMockService.demarrer("zh", "professionnel", [])).rejects.toEqual(
       new ApiError(404, "Aucune question n'est disponible pour cette langue."),
     );
+  });
+});
+
+/** Répond à la question : bonne réponse (ou réponse libre valide) si `juste`, sinon la première option fausse. */
+async function repondre(idSession: string, question: Question, juste: boolean): Promise<RetourReponse> {
+  if (question.typeReponse === "texte") return testDiagnosticMockService.repondre(idSession, question.id, { type: "texte", texte: "Une réponse." });
+  if (question.typeReponse === "audio") return testDiagnosticMockService.repondre(idSession, question.id, { type: "audio", audio: new Blob(["son"]) });
+  const bonne = QUESTIONS_TEST.en.find((item) => item.id === question.id)!.bonneReponse;
+  return testDiagnosticMockService.repondre(idSession, question.id, { type: "choix", choix: juste ? bonne : (bonne + 1) % 4 });
+}
+
+describe("test simulé en quatre étapes", () => {
+  it("propose les langues avec le nombre de questions de leur plan", async () => {
+    const langues = await testDiagnosticMockService.langues();
+    expect(langues.find((l) => l.code === "en")).toMatchObject({ nombreQuestions: 12, disponible: true });
+    expect(langues.find((l) => l.code === "it")).toMatchObject({ nombreQuestions: 0, disponible: false });
+  });
+
+  it("enchaîne QCM, compréhension orale, expression orale puis écrite, et termine avec un résultat", async () => {
+    const session = await testDiagnosticMockService.demarrer("en", "professionnel", []);
+    expect(session.plan.map((p) => p.etape)).toEqual(["qcm", "comprehension_orale", "expression_orale", "expression_ecrite"]);
+
+    const etapes: string[] = [];
+    let question: Question | null = session.question;
+    let retour: RetourReponse | null = null;
+    while (question) {
+      etapes.push(etapeDe(question.competence));
+      retour = await repondre(session.id, question, true);
+      question = retour.questionSuivante;
+    }
+
+    expect(etapes).toEqual([...Array(8).fill("qcm"), "comprehension_orale", "comprehension_orale", "expression_orale", "expression_ecrite"]);
+    expect(retour?.resultat).toMatchObject({ score: 12, total: 12 });
+  });
+
+  it("choisit les sujets d'expression au niveau atteint pendant le QCM", async () => {
+    const session = await testDiagnosticMockService.demarrer("en", "professionnel", []);
+    let question: Question | null = session.question;
+    const sujets: Question[] = [];
+    while (question) {
+      if (question.typeReponse !== "choix") sujets.push(question);
+      // Toutes les réponses à choix sont fausses : le niveau estimé descend au plus bas
+      question = (await repondre(session.id, question, false)).questionSuivante;
+    }
+    expect(sujets.map((s) => s.niveau)).toEqual(["A2", "A2"]);
+  });
+
+  it("termine avant la fin quand le temps est écoulé, les questions sans réponse comptant comme fausses", async () => {
+    const session = await testDiagnosticMockService.demarrer("en", "professionnel", []);
+    await repondre(session.id, session.question, true);
+    await expect(testDiagnosticMockService.terminer(session.id)).resolves.toMatchObject({ score: 1, total: 12 });
   });
 });

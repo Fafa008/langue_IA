@@ -8,6 +8,8 @@ export const etatInitial = (langue: string | null): EtatTest => ({
   niveaux: [],
   numeroQuestion: 0,
   totalQuestions: 0,
+  plan: [],
+  debut: null,
   courante: null,
   questionsRestantes: [],
   choisie: null,
@@ -38,6 +40,8 @@ export function reducteur(etat: EtatTest, action: ActionTest): EtatTest {
         niveaux: session.niveaux,
         numeroQuestion: session.numeroQuestion,
         totalQuestions: session.totalQuestions,
+        plan: session.plan,
+        debut: action.debut,
         courante: session.question,
         questionsRestantes: session.questions?.filter((question) => question.id !== session.question.id) ?? [],
         choisie: null,
@@ -86,8 +90,9 @@ export function reducteur(etat: EtatTest, action: ActionTest): EtatTest {
         ],
       };
     }
+    // Fin normale après la dernière réponse, ou anticipée quand le temps est écoulé
     case "terminer":
-      if (etat.phase !== "retour" || etat.retour?.questionSuivante) return etat;
+      if (etat.phase !== "question" && etat.phase !== "retour") return etat;
       return {
         ...etat,
         phase: "resultat",

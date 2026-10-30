@@ -511,6 +511,23 @@ question n'a encore été enregistrée pour cette combinaison.
 ```
 
 Une question peut également contenir `support`, `audio_url` ou `audio_texte`. Les champs sans valeur sont omis.
+
+Le frontend range les questions en quatre étapes d'après leur `competence`, dans cet ordre :
+
+| Étape | Compétences | Réponse |
+|---|---|---|
+| QCM : grammaire et lexique | `grammaire`, `lecture` | `choix` |
+| Compréhension orale | `ecoute` | `choix`, après écoute de `audio_url` (deux écoutes au plus) |
+| Expression orale | `oral` | `audio` |
+| Expression écrite | `ecrit` | `texte` |
+
+Le test dure 15 minutes au total. À la fin du temps, le frontend appelle
+`POST /diagnostic/tentatives/{id_tentative}/terminer`, même si des questions restent sans réponse.
+
+Deux champs facultatifs, prévus pour le backend, précisent ce qui est attendu :
+
+- `duree_minimale_secondes` : durée de parole minimale d'une question `oral` (30 secondes par défaut) ;
+- `mots_minimum` : nombre de mots minimal d'une question `ecrit` (30 par défaut).
 La route ne renvoie aucune correction ni bonne réponse. Erreurs : **401** session absente ou invalide, **403** rôle
 autre qu'`APPRENANT`, **404** langue ou niveau inconnu, **422** niveau connu mais non ouvert pour cette langue.
 

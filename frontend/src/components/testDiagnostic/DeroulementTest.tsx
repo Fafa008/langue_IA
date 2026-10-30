@@ -1,25 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Clock } from "lucide-react";
 import Alert from "@/components/ui/Alert";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useTempsRestant } from "@/hooks/useTempsRestant";
 import { useTestDiagnostic } from "@/hooks/useTestDiagnostic";
 import { getErrorMessage } from "@/lib/api-client";
-import { libelleLangue } from "@/lib/languages";
+import { DUREE_TEST_MINUTES, etapeDe, positionEtape } from "@/lib/etapesTest";
 import { ROUTES } from "@/lib/routes";
 import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnostic.store";
-import BoutonRetour from "./BoutonRetour";
-import LevelScale from "./LevelScale";
+import EnteteEtape from "./EnteteEtape";
 import QuestionCard from "./QuestionCard";
 
-/** Page du test : question courante, correction et progression, jusqu'au résultat. */
+/**
+ * Page du test : les étapes s'enchaînent (QCM, compréhension orale, expression orale, expression écrite)
+ * sous un compte à rebours de 15 minutes ; à zéro, le test est terminé avec les réponses déjà données.
+ */
 export default function DeroulementTest() {
   const router = useRouter();
   const test = useTestDiagnostic();
   const { etat } = test;
   const [confirmerAbandon, setConfirmerAbandon] = useState(false);
   const sansSession = !useTestDiagnosticStore(selectTestEnCours);
+  const secondesRestantes = useTempsRestant(etat.debut, DUREE_TEST_MINUTES);
+  const tempsEcoule = secondesRestantes === 0;
+  const finAutomatiqueLancee = useRef(false);
 
   useEffect(() => router.prefetch(ROUTES.apprenant.testDiagnostic.resultats), [router]);
 
@@ -31,18 +38,35 @@ export default function DeroulementTest() {
       : ROUTES.apprenant.testDiagnostic.demarrage);
   }, [sansSession, etat.phase, etat.resultat, router]);
 
+  // Temps écoulé : le test se termine une fois, avec les réponses déjà enregistrées.
+  useEffect(() => {
+    if (!tempsEcoule || sansSession || finAutomatiqueLancee.current) return;
+    finAutomatiqueLancee.current = true;
+    test.terminer();
+  }, [tempsEcoule, sansSession, test]);
+
   if (sansSession || !etat.courante || !etat.langue) return null;
 
-  const libelle = libelleLangue(etat.langue);
-
+  const etape = etapeDe(etat.courante.competence);
   const enRetour = etat.phase === "retour" && etat.retour !== null;
-  const progression = etat.totalQuestions > 0
-    ? etat.numeroQuestion - (enRetour ? 0 : 1)
-    : 0;
+  const derniere = etat.numeroQuestion >= etat.totalQuestions;
+  const occupe = test.reponseEnCours || test.terminaisonEnCours;
 
   return (
     <div className="mx-auto max-w-2xl">
-      <BoutonRetour onClick={() => setConfirmerAbandon(true)} libelle="Quitter le test" disabled={test.reponseEnCours || test.terminaisonEnCours} />
+      <EnteteEtape
+        etape={etape}
+        position={positionEtape(etat.plan, etape)}
+        progression={{
+          numero: etat.numeroQuestion,
+          faites: etat.numeroQuestion - (enRetour ? 0 : 1),
+          total: etat.totalQuestions,
+        }}
+        secondesRestantes={secondesRestantes}
+        onQuitter={() => setConfirmerAbandon(true)}
+        quitterDesactive={occupe}
+      />
+
       {confirmerAbandon && (
         <ConfirmDialog
           title="Quitter le test ?"
@@ -55,27 +79,16 @@ export default function DeroulementTest() {
           }}
         />
       )}
-      <div className="mb-2 flex justify-between text-small font-semibold">
-        <span data-testid="progress-label">
-          Question {etat.numeroQuestion} sur {etat.totalQuestions}
-        </span>
-        <span className="text-content-secondary">{libelle}</span>
-      </div>
-      <div
-        role="progressbar"
-        aria-label="Progression du test"
-        aria-valuemin={0}
-        aria-valuemax={etat.totalQuestions}
-        aria-valuenow={progression}
-        className="h-2 overflow-hidden rounded-full bg-border"
-      >
-        <div
-          className="h-full bg-primary transition-all"
-          style={{ width: `${(progression / etat.totalQuestions) * 100}%` }}
-        />
-      </div>
 
-      <LevelScale niveau={etat.courante.niveau} niveaux={etat.niveaux} />
+      {tempsEcoule && (
+        <div role="alert" className="mb-4 flex items-start gap-3 rounded-card border border-warning bg-warning/10 p-4" data-testid="temps-ecoule">
+          <Clock size={20} aria-hidden className="mt-0.5 shrink-0 text-warning" />
+          <p className="text-content">
+            <span className="font-semibold">Le temps est écoulé.</span>{" "}
+            {test.terminaisonEnCours ? "Calcul de votre résultat…" : "Vos réponses déjà validées sont prises en compte."}
+          </p>
+        </div>
+      )}
 
       <QuestionCard
         key={etat.courante.id}
@@ -90,8 +103,10 @@ export default function DeroulementTest() {
             : undefined
         }
         envoiEnCours={test.reponseEnCours}
+        derniere={derniere}
+        bloquee={tempsEcoule}
         onChoixChange={test.choisirReponse}
-        onTexteChange={(texte) => test.choisirTexte(texte)}
+        onTexteChange={test.choisirTexte}
         onAudioEnregistre={test.choisirAudio}
         onValider={test.repondre}
         onValiderTexte={test.repondreTexte}
@@ -106,17 +121,16 @@ export default function DeroulementTest() {
           </button>
         </Alert>
       )}
-
       {test.erreurTerminaison && (
         <Alert className="mt-4">
           {getErrorMessage(test.erreurTerminaison)}{" "}
-          <button type="button" onClick={test.reessayerTerminaison} className="underline">
+          <button type="button" onClick={test.terminer} className="underline">
             Réessayer le calcul
           </button>
         </Alert>
       )}
 
-      {enRetour && etat.retour && (
+      {enRetour && etat.retour && !tempsEcoule && (
         <div
           role="status"
           data-testid="feedback"
@@ -139,7 +153,7 @@ export default function DeroulementTest() {
             </div>
           ) : (
             <div>
-              <p className="font-semibold">Réponse reçue</p>
+              <p className="font-semibold">Réponse enregistrée</p>
               <p className="mt-1 text-content-secondary">{etat.retour.evaluation}</p>
               {etat.retour.typeReponse === "audio" && etat.retour.scorePrononciation !== undefined && (
                 <p className="mt-2 text-small">Évaluation de la prononciation : {etat.retour.scorePrononciation} / 100</p>
@@ -149,9 +163,7 @@ export default function DeroulementTest() {
           <button type="button" className="btn-primary mt-4 w-full" onClick={test.suivante} disabled={test.terminaisonEnCours}>
             {test.terminaisonEnCours
               ? "Calcul du score…"
-              : etat.retour.questionSuivante
-                ? "Question suivante"
-                : etat.retour.resultat ? "Voir mon résultat" : "Terminer"}
+              : etat.retour.questionSuivante ? "Question suivante" : "Finaliser le test"}
           </button>
         </div>
       )}
