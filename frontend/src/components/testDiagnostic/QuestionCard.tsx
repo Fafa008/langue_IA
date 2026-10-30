@@ -1,13 +1,12 @@
 "use client";
 
-import type { CodeLangue } from "@/types/langue";
 import type { Question } from "@/types/test-diagnostic";
 import ListeningAudio from "./ListeningAudio";
 import SpeechRecorder from "./SpeechRecorder";
 
 interface QuestionCardProps {
   question: Question;
-  langue: CodeLangue;
+  langue: string;
   choisie: number | null;
   /** Présent une fois la réponse validée. */
   retour?: { choisie: number; bonneReponse: number };

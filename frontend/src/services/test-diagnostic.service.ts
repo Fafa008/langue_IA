@@ -1,9 +1,10 @@
 import { apiRequest } from "@/lib/api-client";
 import { API_MOCK } from "@/lib/env";
 import { testDiagnosticMockService } from "@/mocks/test-diagnostic.mock";
-import type { CodeLangue } from "@/types/langue";
 import {
+  type CadreReference,
   type CompetenceTest,
+  type LangueDiagnostic,
   type ObjectifFormation,
   type Question,
   type ReponseTest,
@@ -25,9 +26,18 @@ interface QuestionDto {
   audio_texte?: string | null;
 }
 
+interface LangueDiagnosticDto {
+  code: string;
+  libelle: string;
+  cadre: CadreReference;
+  niveaux: string[];
+  nombre_questions: number;
+  disponible: boolean;
+}
+
 interface SessionTestDto {
   id_tentative: number;
-  code_langue: CodeLangue;
+  code_langue: string;
   code_niveau: string;
 }
 
@@ -44,7 +54,7 @@ interface ScoreDiagnosticDto {
   max_score: number;
   percentage: number;
   level: string;
-  framework: "CECRL" | "HSK";
+  framework: CadreReference;
 }
 
 export interface ReponseProgression {
@@ -54,7 +64,9 @@ export interface ReponseProgression {
 }
 
 export interface TestDiagnosticGateway {
-  demarrer(langue: CodeLangue, objectif: ObjectifFormation, creneaux: string[]): Promise<SessionTest>;
+  /** Langues proposées sur l'écran d'accueil, avec leur échelle et leur disponibilité. */
+  langues(): Promise<LangueDiagnostic[]>;
+  demarrer(langue: string, objectif: ObjectifFormation, creneaux: string[]): Promise<SessionTest>;
   repondre(
     idSession: string,
     idQuestion: string,
@@ -77,8 +89,23 @@ const toQuestion = (dto: QuestionDto): Question => ({
   audioTexte: dto.audio_texte ?? undefined,
 });
 
+const toLangue = (dto: LangueDiagnosticDto): LangueDiagnostic => ({
+  code: dto.code,
+  libelle: dto.libelle,
+  cadre: dto.cadre,
+  niveaux: dto.niveaux,
+  nombreQuestions: dto.nombre_questions,
+  // Une langue sans question ne peut pas être évaluée, quoi qu'en dise le drapeau
+  disponible: dto.disponible && dto.nombre_questions > 0,
+});
+
 export const httpTestDiagnosticService = {
-  async demarrer(langue: CodeLangue, _objectif: ObjectifFormation, _creneaux: string[]): Promise<SessionTest> {
+  async langues(): Promise<LangueDiagnostic[]> {
+    const dtos = await apiRequest<LangueDiagnosticDto[]>(ENDPOINTS.diagnostic.langues);
+    return dtos.map(toLangue);
+  },
+
+  async demarrer(langue: string, _objectif: ObjectifFormation, _creneaux: string[]): Promise<SessionTest> {
     const tentative = await apiRequest<SessionTestDto>(ENDPOINTS.diagnostic.tentatives, {
       method: "POST",
       body: { code_langue: langue },
@@ -176,6 +203,7 @@ export const httpTestDiagnosticService = {
 
 /** En mode API simulée, le mock conserve l'évaluation de démonstration. */
 export const testDiagnosticService: TestDiagnosticGateway = {
+  langues: () => API_MOCK ? testDiagnosticMockService.langues() : httpTestDiagnosticService.langues(),
   demarrer: (...args) => API_MOCK
     ? testDiagnosticMockService.demarrer(...args)
     : httpTestDiagnosticService.demarrer(...args),

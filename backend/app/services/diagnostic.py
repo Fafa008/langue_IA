@@ -1,8 +1,9 @@
 """Opérations métier et persistance du test de diagnostic."""
 
+from dataclasses import dataclass
 from enum import Enum
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -21,6 +22,19 @@ class CodeErreurDiagnostic(str, Enum):
     CHOIX_INVALIDE = "choix_invalide"
     AUDIO_NON_DISPONIBLE = "audio_non_disponible"
     REPONSE_DIFFERENTE = "reponse_differente"
+
+
+TYPES_ENREGISTRABLES = ("choix", "texte")
+"""Types de questions posées pendant le test (l'audio attend un stockage des médias)."""
+
+
+@dataclass(frozen=True)
+class LangueDiagnostic:
+    """Langue proposée sur l'écran d'accueil du test, avec ce qu'un apprenant peut en attendre."""
+
+    langue: Langue
+    niveau_depart: Niveau | None
+    nombre_questions: int
 
 
 class ErreurDiagnostic(Exception):
@@ -51,25 +65,40 @@ def lister_questions(db: Session, code_langue: str, code_niveau: str) -> tuple[N
     return niveau, list(questions)
 
 
+def _questions_par_niveau(db: Session, langue: Langue) -> dict[int, int]:
+    """Nombre de questions enregistrables de la langue, pour chacun de ses niveaux ouverts."""
+    lignes = db.execute(
+        select(Question.id_niveau, func.count())
+        .where(
+            Question.id_langue == langue.id_langue,
+            Question.id_niveau.in_([niveau.id_niveau for niveau in langue.niveaux]),
+            Question.type_reponse.in_(TYPES_ENREGISTRABLES),
+        )
+        .group_by(Question.id_niveau)
+    ).all()
+    return {id_niveau: nombre for id_niveau, nombre in lignes}
+
+
+def _niveau_de_depart(db: Session, langue: Langue) -> tuple[Niveau | None, int]:
+    """Premier niveau ouvert qui possède des questions enregistrables, et son nombre de questions."""
+    questions = _questions_par_niveau(db, langue)
+    niveau = next((niveau for niveau in langue.niveaux if questions.get(niveau.id_niveau)), None)
+    return niveau, questions.get(niveau.id_niveau, 0) if niveau else 0
+
+
+def lister_langues(db: Session) -> list[LangueDiagnostic]:
+    """Toutes les langues, triées par libellé, avec leur niveau de départ et le nombre de questions du test."""
+    langues = db.scalars(select(Langue).order_by(Langue.libelle)).all()
+    return [LangueDiagnostic(langue, *_niveau_de_depart(db, langue)) for langue in langues]
+
+
 def creer_tentative(db: Session, id_apprenant: int, code_langue: str) -> TestDiagnostic:
     """Crée une tentative au premier niveau ouvert qui possède des questions enregistrables."""
     langue = db.scalar(select(Langue).where(Langue.code == code_langue))
     if langue is None:
         raise ErreurDiagnostic(CodeErreurDiagnostic.LANGUE_INCONNUE)
 
-    niveaux_ouverts = langue.niveaux
-    niveaux_avec_questions = set(
-        db.scalars(
-            select(Question.id_niveau)
-            .where(
-                Question.id_langue == langue.id_langue,
-                Question.id_niveau.in_([niveau.id_niveau for niveau in niveaux_ouverts]),
-                Question.type_reponse.in_(("choix", "texte")),
-            )
-            .distinct()
-        ).all()
-    )
-    niveau = next((niveau for niveau in niveaux_ouverts if niveau.id_niveau in niveaux_avec_questions), None)
+    niveau, _ = _niveau_de_depart(db, langue)
     if niveau is None:
         raise ErreurDiagnostic(CodeErreurDiagnostic.AUCUNE_QUESTION)
 

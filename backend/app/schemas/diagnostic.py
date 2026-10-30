@@ -19,6 +19,17 @@ class QuestionOut(BaseModel):
     audio_texte: str | None = None
 
 
+class LangueDiagnosticOut(BaseModel):
+    """Langue proposée sur l'écran d'accueil du test de positionnement."""
+
+    code: str
+    libelle: str
+    cadre: Literal["CECRL", "HSK"]
+    niveaux: list[str] = Field(description="Niveaux ouverts pour la langue, du plus bas au plus haut")
+    nombre_questions: int = Field(description="Questions posées pendant le test (0 si aucune)")
+    disponible: bool = Field(description="Faux tant qu'aucune question n'est disponible : « Bientôt disponible »")
+
+
 class ReponseCreate(BaseModel):
     """Réponse fournie par l'apprenant pour une question d'une tentative en cours."""
 

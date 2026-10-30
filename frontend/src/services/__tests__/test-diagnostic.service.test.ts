@@ -11,6 +11,23 @@ beforeEach(() => {
 });
 
 describe("httpTestDiagnosticService", () => {
+  it("charge les langues du test et ne propose que celles qui ont des questions", async () => {
+    const fetchMock = mockFetch({
+      body: [
+        { code: "en", libelle: "Anglais", cadre: "CECRL", niveaux: ["A1", "A2"], nombre_questions: 12, disponible: true },
+        { code: "es", libelle: "Espagnol", cadre: "CECRL", niveaux: ["A1"], nombre_questions: 0, disponible: true },
+      ],
+    });
+
+    await expect(httpTestDiagnosticService.langues()).resolves.toEqual([
+      { code: "en", libelle: "Anglais", cadre: "CECRL", niveaux: ["A1", "A2"], nombreQuestions: 12, disponible: true },
+      { code: "es", libelle: "Espagnol", cadre: "CECRL", niveaux: ["A1"], nombreQuestions: 0, disponible: false },
+    ]);
+    const { url, init, headers } = fetchCall(fetchMock);
+    expect([url, init.method ?? "GET"]).toEqual([`${API}/diagnostic/langues`, "GET"]);
+    expect(headers.Authorization).toBe("Bearer jwt-test");
+  });
+
   it("crée une tentative puis charge les questions de son niveau", async () => {
     const fetchMock = mockFetch({
       status: 201,
@@ -151,6 +168,10 @@ describe("httpTestDiagnosticService", () => {
     jest.resetModules();
     try {
       const { testDiagnosticService } = await import("@/services/test-diagnostic.service");
+      const langues = await testDiagnosticService.langues();
+      expect(langues.find((l) => l.code === "en")).toMatchObject({ cadre: "CECRL", disponible: true });
+      expect(langues.find((l) => l.code === "zh")).toMatchObject({ cadre: "HSK", disponible: false, nombreQuestions: 0 });
+
       const session = await testDiagnosticService.demarrer("en", "professionnel", []);
       const question = QUESTIONS_TEST.en.find((item) => item.id === session.question.id);
       if (!question) throw new Error(`Question de test absente : ${session.question.id}`);

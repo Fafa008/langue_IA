@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { configureApiClient, isRetryable } from "@/lib/api-client";
 import { useAuthStore } from "@/store/auth.store";
+import { useTestDiagnosticStore } from "@/store/test-diagnostic.store";
 
 function createQueryClient() {
   return new QueryClient({
@@ -23,6 +24,7 @@ export default function Providers({ children }: { children: ReactNode }) {
       // redirigent vers la connexion (voir components/layout/RequireAuth)
       onUnauthorized: () => {
         useAuthStore.getState().clearSession();
+        useTestDiagnosticStore.getState().reinitialiser();
         queryClient.clear();
       },
     });

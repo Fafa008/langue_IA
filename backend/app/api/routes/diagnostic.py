@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Path, Query, status
 from app.api.deps import DbSession, UtilisateurConnecte
 from app.models import Question, Reponse, Role
 from app.schemas.diagnostic import (
+    LangueDiagnosticOut,
     QuestionOut,
     ReponseCreate,
     ReponseOut,
@@ -25,9 +26,12 @@ from app.services.diagnostic import (
     enregistrer_reponse as enregistrer_reponse_service,
 )
 from app.services.diagnostic import (
+    lister_langues as lister_langues_service,
+)
+from app.services.diagnostic import (
     lister_questions as lister_questions_service,
 )
-from app.services.scoring import CodeErreurScoring, ErreurScoring
+from app.services.scoring import CodeErreurScoring, ErreurScoring, cadre_de_langue
 from app.services.scoring import terminer_tentative as terminer_tentative_service
 
 router = APIRouter(tags=["diagnostic"])
@@ -109,6 +113,25 @@ def _reponse_out(reponse: Reponse) -> ReponseOut:
         id_question=str(reponse.id_question),
         reponse_fournie=reponse.reponse_fournie,
     )
+
+
+@router.get("/diagnostic/langues", response_model=list[LangueDiagnosticOut])
+def lister_langues(db: DbSession, utilisateur: UtilisateurConnecte) -> list[LangueDiagnosticOut]:
+    """Langues proposées sur l'écran d'accueil du test, avec leur échelle et leur disponibilité."""
+    if utilisateur.role != Role.APPRENANT:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Droits insuffisants.")
+
+    return [
+        LangueDiagnosticOut(
+            code=item.langue.code,
+            libelle=item.langue.libelle,
+            cadre=cadre_de_langue(item.langue.code).value,
+            niveaux=[niveau.code for niveau in item.langue.niveaux],
+            nombre_questions=item.nombre_questions,
+            disponible=item.niveau_depart is not None,
+        )
+        for item in lister_langues_service(db)
+    ]
 
 
 @router.get("/diagnostic/questions", response_model=list[QuestionOut], response_model_exclude_none=True)
