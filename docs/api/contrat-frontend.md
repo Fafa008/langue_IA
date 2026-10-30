@@ -604,6 +604,33 @@ cadre de référence retournés par le backend. Les réponses détaillées (`eva
 future évaluation IA. La progression fixe et les champs de personnalisation `objectif` et `creneaux` ne sont pas
 encore pilotés ou persistés par le backend.
 
+#### Analyse par le LLM : lenteur, indisponibilité, résultat en attente
+
+Quand l'évaluation des réponses écrites et orales sera confiée au service IA, cette route pourra répondre avant la fin
+de l'analyse :
+
+**202** :
+
+```json
+{ "id_tentative": 42, "statut": "en_attente" }
+```
+
+Le frontend affiche alors « Résultat en attente » et rappelle la même route toutes les 10 secondes, ou quand
+l'apprenant clique sur « Vérifier mon résultat », jusqu'à recevoir le **200** ci-dessus. La route doit donc rester
+idempotente : une tentative déjà terminée renvoie son résultat.
+
+Délais côté frontend :
+
+- **60 secondes** pour cette route et pour `POST /diagnostic/reponse` d'une réponse `texte`, qui peut être évaluée
+  par le LLM ;
+- **15 secondes** pour les autres appels.
+
+Au-delà, la requête est abandonnée et l'apprenant voit un message clair et un bouton « Réessayer ». Ses réponses
+déjà saisies restent affichées.
+
+Les messages d'erreur du test ne reprennent jamais le champ `detail`, un code HTTP ni un message technique : le
+backend peut y mettre des informations de diagnostic sans risque qu'elles soient montrées à l'apprenant.
+
 ## Formateurs — rôle `ADMINISTRATEUR`
 
 > Routes implémentées dans `backend/app/api/routes/formateurs.py`.

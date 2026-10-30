@@ -153,17 +153,44 @@ describe("httpTestDiagnosticService", () => {
     });
 
     await expect(httpTestDiagnosticService.terminer("42")).resolves.toEqual({
-      niveau: "B2",
-      score: 66.67,
-      total: 100,
-      cadre: "CECRL",
-      competences: [],
-      lacunes: [],
+      statut: "termine",
+      resultat: {
+        niveau: "B2",
+        score: 66.67,
+        total: 100,
+        cadre: "CECRL",
+        competences: [],
+        lacunes: [],
+      },
     });
     expect(fetchCall(fetchMock)).toMatchObject({
       url: `${API}/diagnostic/tentatives/42/terminer`,
       init: { method: "POST" },
     });
+  });
+
+  it("signale un résultat en attente quand l'analyse par le LLM n'est pas terminée (202)", async () => {
+    mockFetch({ status: 202, body: { id_tentative: 42, statut: "en_attente" } });
+    await expect(httpTestDiagnosticService.terminer("42")).resolves.toEqual({ statut: "en_attente" });
+  });
+
+  it("laisse 60 secondes à l'analyse finale avant d'abandonner", async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted")))),
+    ) as unknown as typeof fetch;
+    let terminee = false;
+
+    const terminaison = httpTestDiagnosticService.terminer("42");
+    terminaison.catch(() => { terminee = true; });
+    jest.advanceTimersByTime(15_000);
+    await Promise.resolve();
+    expect(terminee).toBe(false);
+    jest.advanceTimersByTime(45_000);
+
+    await expect(terminaison).rejects.toMatchObject({ status: 0, delaiDepasse: true });
+    jest.useRealTimers();
   });
 
   it("refuse un résultat de scoring incohérent avec la tentative", async () => {

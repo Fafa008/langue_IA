@@ -24,6 +24,8 @@ function questionPublique(question: Question) {
     support: question.support,
     audio_url: question.audioUrl,
     audio_texte: question.audioTexte,
+    duree_minimale_secondes: question.dureeMinimaleSecondes,
+    mots_minimum: question.motsMinimum,
   };
 }
 
@@ -34,6 +36,17 @@ const LANGUES_API = [
   { code: "zh", libelle: "Chinois" },
   { code: "es", libelle: "Espagnol" },
 ];
+
+/** Sujet d'expression écrite ajouté au test quand l'option `avecRedaction` est active. */
+const REDACTION: QuestionMock = {
+  id: "e2e-ecrit",
+  niveau: "A1",
+  competence: "ecrit",
+  typeReponse: "texte",
+  enonce: "Présentez-vous en quelques phrases.",
+  motsMinimum: 5,
+  bonneReponse: 0,
+};
 
 /** Premier niveau ayant des questions enregistrables, et ces questions (même règle que le backend). */
 function niveauDeDepart(langue: string) {
@@ -46,15 +59,46 @@ function niveauDeDepart(langue: string) {
   return { niveau, questions };
 }
 
+export interface OptionsApiDiagnostic {
+  /** La première réponse échoue (503). */
+  failFirstAnswer?: boolean;
+  /** La première réponse n'obtient jamais de réponse du serveur (délai dépassé côté client). */
+  premiereReponseSansReponse?: boolean;
+  /** GET /diagnostic/langues échoue (503). */
+  languesEnErreur?: boolean;
+  /**
+   * Première demande de résultat : « panne » (500 avec un détail technique qui ne doit pas s'afficher),
+   * « en_attente » (202, analyse LLM non terminée) ou « sans_reponse » (délai dépassé).
+   */
+  premiereTerminaison?: "panne" | "en_attente" | "sans_reponse";
+  /** Ajoute un sujet d'expression écrite après les questions à choix. */
+  avecRedaction?: boolean;
+}
+
+/** Détail renvoyé par la panne simulée : il ne doit jamais apparaître à l'écran. */
+export const DETAIL_TECHNIQUE = "Traceback: LLMTimeoutError at llm_client.py:42 (OPENAI_API_KEY=sk-secret)";
+
 /** Faux backend du flux API : conserve les réponses et renvoie le résultat de scoring à la clôture. */
 export async function mockTestDiagnosticApi(
   page: Page,
-  { failFirstAnswer = false, languesEnErreur = false }: { failFirstAnswer?: boolean; languesEnErreur?: boolean } = {},
+  {
+    failFirstAnswer = false,
+    premiereReponseSansReponse = false,
+    languesEnErreur = false,
+    premiereTerminaison,
+    avecRedaction = false,
+  }: OptionsApiDiagnostic = {},
 ) {
   const tentatives = new Map<number, TentativeE2E>();
   let idTentative = 0;
   let idReponse = 0;
   let firstAnswerFails = failFirstAnswer;
+  let reponseSansReponse = premiereReponseSansReponse;
+  let terminaisonSpeciale = premiereTerminaison;
+  const questionsDuTest = (langue: string) => {
+    const { niveau, questions } = niveauDeDepart(langue);
+    return { niveau, questions: avecRedaction && niveau ? [...questions, REDACTION] : questions };
+  };
 
   await page.route("**/api/v1/diagnostic/**", async (route) => {
     if (await handlePreflight(route)) return;
@@ -68,7 +112,7 @@ export async function mockTestDiagnosticApi(
       }
       await json(route, 200, LANGUES_API.map(({ code, libelle }) => {
         const cadre = cadreDeLangue(code);
-        const { questions } = niveauDeDepart(code);
+        const { questions } = questionsDuTest(code);
         return {
           code,
           libelle,
@@ -83,7 +127,7 @@ export async function mockTestDiagnosticApi(
 
     if (request.method() === "POST" && url.pathname === "/api/v1/diagnostic/tentatives") {
       const { code_langue: langue } = request.postDataJSON() as { code_langue: string };
-      const { niveau, questions } = niveauDeDepart(langue);
+      const { niveau, questions } = questionsDuTest(langue);
       if (!niveau) {
         await json(route, 404, { detail: "Aucune question enregistrable n'est disponible pour cette langue." });
         return;
@@ -102,13 +146,19 @@ export async function mockTestDiagnosticApi(
     }
 
     if (request.method() === "GET" && url.pathname === "/api/v1/diagnostic/questions") {
-      const { niveau, questions: enregistrables } = niveauDeDepart(url.searchParams.get("code_langue") ?? "");
+      const { niveau, questions: enregistrables } = questionsDuTest(url.searchParams.get("code_langue") ?? "");
       const questions = niveau === url.searchParams.get("code_niveau") ? enregistrables.map(questionPublique) : [];
       await json(route, 200, questions);
       return;
     }
 
     if (request.method() === "POST" && url.pathname === "/api/v1/diagnostic/reponse") {
+      if (reponseSansReponse) {
+        // Le serveur ne répond jamais : le client abandonne au bout de son délai
+        reponseSansReponse = false;
+        await new Promise(() => {});
+        return;
+      }
       if (firstAnswerFails) {
         firstAnswerFails = false;
         await json(route, 503, { detail: "Service temporairement indisponible" });
@@ -143,6 +193,20 @@ export async function mockTestDiagnosticApi(
 
     const terminaison = url.pathname.match(/^\/api\/v1\/diagnostic\/tentatives\/(\d+)\/terminer$/);
     if (request.method() === "POST" && terminaison) {
+      const speciale = terminaisonSpeciale;
+      terminaisonSpeciale = undefined;
+      if (speciale === "sans_reponse") {
+        await new Promise(() => {});
+        return;
+      }
+      if (speciale === "panne") {
+        await json(route, 500, { detail: DETAIL_TECHNIQUE });
+        return;
+      }
+      if (speciale === "en_attente") {
+        await json(route, 202, { id_tentative: Number(terminaison[1]), statut: "en_attente" });
+        return;
+      }
       const tentative = tentatives.get(Number(terminaison[1]));
       if (!tentative) {
         await json(route, 404, { detail: "Tentative introuvable." });

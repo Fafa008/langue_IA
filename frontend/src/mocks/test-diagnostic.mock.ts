@@ -8,6 +8,7 @@ import {
   type CompetenceResultat,
   type CompetenceTest,
   type EtapePlan,
+  type IssueTerminaison,
   type LangueDiagnostic,
   type ObjectifFormation,
   type Question,
@@ -57,6 +58,10 @@ interface SessionMock {
   terminee: boolean;
   derniereReponse: { idQuestion: string; reponse: ReponseTest; retour: RetourReponse } | null;
 }
+
+/** Démonstration : l'analyse d'une réponse libre par le LLM prend un peu de temps. */
+const DUREE_ANALYSE_MS = 1200;
+const analyseSimulee = () => new Promise((resolve) => setTimeout(resolve, DUREE_ANALYSE_MS));
 
 const sessions = new Map<string, SessionMock>();
 let prochainId = 1;
@@ -213,6 +218,7 @@ export const testDiagnosticMockService = {
       throw new ApiError(422, "La réponse sélectionnée est invalide.");
     }
 
+    if (question.typeReponse !== "choix") await analyseSimulee();
     const correcte = reponse.type === "choix" && reponse.choix === question.bonneReponse;
     // Démonstration : une réponse libre non vide est considérée comme réussie, en attendant l'évaluation par l'IA
     const reussie = question.typeReponse === "choix" ? correcte : reponseLibreValide;
@@ -247,10 +253,11 @@ export const testDiagnosticMockService = {
   },
 
   /** Fin anticipée (temps écoulé) : résultat d'après les réponses déjà données. */
-  async terminer(idSession: string): Promise<ResultatTest> {
+  async terminer(idSession: string): Promise<IssueTerminaison> {
     const session = sessions.get(idSession);
     if (!session) throw new ApiError(404, "Session de test introuvable.");
     session.terminee = true;
-    return calculerResultat(session);
+    await analyseSimulee();
+    return { statut: "termine", resultat: calculerResultat(session) };
   },
 };

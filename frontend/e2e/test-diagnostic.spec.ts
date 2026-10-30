@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ACCESS_TOKEN, loginAs, type UtilisateurDto } from "./support/session";
-import { mockTestDiagnosticApi } from "./support/test-diagnostic-api";
+import { ACCESS_TOKEN, json, loginAs, type UtilisateurDto } from "./support/session";
+import { DETAIL_TECHNIQUE, mockTestDiagnosticApi, type OptionsApiDiagnostic } from "./support/test-diagnostic-api";
 
 const URL_TEST = "/espace/apprenant/test-diagnostic";
 /** Les trois pages du module : démarrage, test, résultats. */
@@ -21,7 +21,7 @@ const APPRENANT: UtilisateurDto = {
 async function ouvrir(
   page: Page,
   langue?: string,
-  options?: { failFirstAnswer?: boolean; languesEnErreur?: boolean },
+  options?: OptionsApiDiagnostic,
 ) {
   await mockTestDiagnosticApi(page, options);
   await loginAs(page, APPRENANT);
@@ -211,6 +211,8 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
     await expect(page.getByTestId("feedback")).toContainText("score sera calculé à la fin");
     await expect(page.getByTestId("feedback")).not.toContainText("Bonne réponse");
+    // Une réponse validée ne peut pas être renvoyée
+    await expect(page.getByRole("button", { name: /Valider et/ })).toHaveCount(0);
     await page.getByRole("button", { name: "Question suivante" }).click();
 
     await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-a1-2");
@@ -238,7 +240,9 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     });
     await demarrer(page);
     await repondre(page);
-    await expect(page.getByRole("alert").filter({ hasText: "Le serveur rencontre un problème" })).toBeVisible();
+    await expect(page.getByTestId("erreur-diagnostic")).toContainText(
+      "Votre réponse n'a pas pu être envoyée. Le service est momentanément indisponible.",
+    );
     await page.getByRole("button", { name: "Réessayer" }).click();
     await expect.poll(() => statutsReponses).toEqual([503, 201]);
     await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
@@ -277,5 +281,134 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     await expectSansDebordement(page);
     await repondre(page);
     await expectSansDebordement(page);
+  });
+});
+
+test.describe("États de l'analyse quand le LLM est lent ou indisponible", () => {
+  /** Répond aux deux questions à choix du test d'anglais et clique sur « Finaliser le test ». */
+  async function finaliser(page: Page) {
+    await repondre(page);
+    await page.getByRole("button", { name: "Question suivante" }).click();
+    await repondre(page);
+    await page.getByRole("button", { name: "Finaliser le test" }).click();
+  }
+
+  test("affiche un indicateur de chargement pendant l'analyse des réponses", async ({ page }) => {
+    await ouvrir(page, "en");
+    // Le service d'analyse met un peu de temps à répondre
+    await page.route("**/api/v1/diagnostic/tentatives/*/terminer", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.fallback();
+    });
+    await demarrer(page);
+    await finaliser(page);
+    await expect(page.getByTestId("analyse-en-cours")).toContainText("Analyse de vos réponses");
+    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
+  });
+
+  test("API en timeout sur une réponse : message clair, réponse conservée, nouvelle tentative", async ({ page }) => {
+    await page.clock.install();
+    await ouvrir(page, "en", { premiereReponseSansReponse: true });
+    await demarrer(page);
+    await repondre(page);
+    await expect(page.getByTestId("analyse-en-cours")).toBeVisible();
+
+    await page.clock.fastForward("00:16");
+    const erreur = page.getByTestId("erreur-diagnostic");
+    await expect(erreur).toContainText("prend plus de temps que prévu");
+    await expect(erreur).toContainText("Vos réponses déjà saisies sont conservées");
+    await expect(page.getByTestId("option-0").getByRole("radio")).toBeChecked();
+
+    await erreur.getByRole("button", { name: "Réessayer" }).click();
+    await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
+  });
+
+  test("API en timeout pendant l'analyse finale : nouvelle tentative jusqu'au résultat", async ({ page }) => {
+    await page.clock.install();
+    await ouvrir(page, "en", { premiereTerminaison: "sans_reponse" });
+    await demarrer(page);
+    await finaliser(page);
+    await expect(page.getByTestId("analyse-en-cours")).toBeVisible();
+
+    await page.clock.fastForward("01:01");
+    const erreur = page.getByTestId("erreur-diagnostic");
+    await expect(erreur).toContainText("L'analyse de vos réponses prend plus de temps que prévu");
+    await erreur.getByRole("button", { name: "Réessayer" }).click();
+    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
+  });
+
+  test("panne du service d'analyse : aucun détail technique ni secret affiché", async ({ page }) => {
+    await ouvrir(page, "en", { premiereTerminaison: "panne" });
+    await demarrer(page);
+    await finaliser(page);
+
+    const erreur = page.getByTestId("erreur-diagnostic");
+    await expect(erreur).toContainText("L'analyse de vos réponses n'a pas pu aboutir");
+    await expect(page.locator("body")).not.toContainText("Traceback");
+    await expect(page.locator("body")).not.toContainText("sk-secret");
+    await expect(page.locator("body")).not.toContainText(DETAIL_TECHNIQUE);
+    await expect(erreur).not.toContainText("500");
+    // La question est déjà envoyée : seule la nouvelle tentative est proposée
+    await expect(page.getByRole("button", { name: /Valider et/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Finaliser le test" })).toHaveCount(0);
+
+    await erreur.getByRole("button", { name: "Réessayer" }).click();
+    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
+  });
+
+  test("résultat en attente : vérification manuelle puis automatique", async ({ page }) => {
+    await page.clock.install();
+    await ouvrir(page, "en", { premiereTerminaison: "en_attente" });
+    await demarrer(page);
+    await finaliser(page);
+
+    const attente = page.getByTestId("resultat-en-attente");
+    await expect(attente).toContainText("Résultat en attente");
+    await expect(attente).toContainText("vos réponses sont enregistrées");
+    await expect(attente.getByRole("button", { name: "Vérifier mon résultat" })).toBeEnabled();
+
+    // Sans action de l'apprenant, le résultat est redemandé au bout de 10 secondes
+    await page.clock.fastForward("00:11");
+    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
+  });
+
+  test("le bouton « Vérifier mon résultat » redemande le résultat tout de suite", async ({ page }) => {
+    await ouvrir(page, "en", { premiereTerminaison: "en_attente" });
+    await demarrer(page);
+    await finaliser(page);
+    await page.getByTestId("resultat-en-attente").getByRole("button", { name: "Vérifier mon résultat" }).click();
+    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
+  });
+
+  test("une erreur sur une réponse écrite conserve le texte saisi", async ({ page }) => {
+    await ouvrir(page, "en", { avecRedaction: true });
+    let echec = true;
+    await page.route("**/api/v1/diagnostic/reponse", async (route) => {
+      const corps = route.request().method() === "POST" ? route.request().postDataJSON() : null;
+      if (echec && corps?.id_question === "e2e-ecrit") {
+        echec = false;
+        await json(route, 503, { detail: DETAIL_TECHNIQUE });
+        return;
+      }
+      await route.fallback();
+    });
+    await demarrer(page);
+    await repondre(page);
+    await page.getByRole("button", { name: "Question suivante" }).click();
+    await repondre(page);
+    await page.getByRole("button", { name: "Question suivante" }).click();
+
+    await expect(page.getByRole("heading", { name: /Expression écrite/ })).toBeVisible();
+    const texte = "Je m'appelle Rova et j'apprends l'anglais pour mon travail.";
+    await page.getByLabel("Votre réponse").fill(texte);
+    await page.getByRole("button", { name: "Valider et finaliser" }).click();
+
+    const erreur = page.getByTestId("erreur-diagnostic");
+    await expect(erreur).toContainText("Votre réponse n'a pas pu être envoyée");
+    await expect(erreur).not.toContainText("Traceback");
+    await expect(page.getByLabel("Votre réponse")).toHaveValue(texte);
+
+    await erreur.getByRole("button", { name: "Réessayer" }).click();
+    await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
   });
 });

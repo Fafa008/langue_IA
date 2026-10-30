@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Alert from "@/components/ui/Alert";
 import { useLanguesDiagnostic, useTestDiagnostic } from "@/hooks/useTestDiagnostic";
-import { getErrorMessage } from "@/lib/api-client";
+import { messageErreurDiagnostic } from "@/lib/erreursDiagnostic";
 import { API_MOCK } from "@/lib/env";
 import { libelleLangue } from "@/lib/languages";
 import { DUREE_TEST_MINUTES } from "@/lib/etapesTest";
@@ -75,7 +75,7 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
         </Alert>
       )}
       {test.erreurDemarrage && !test.langueIndisponible && (
-        <Alert className="mt-4">{getErrorMessage(test.erreurDemarrage)}</Alert>
+        <Alert className="mt-4">{messageErreurDiagnostic(test.erreurDemarrage, "demarrage")}</Alert>
       )}
     </>
   );
@@ -130,7 +130,7 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
           </p>
         ) : langues.isError ? (
           <Alert>
-            Les langues n&apos;ont pas pu être chargées. {getErrorMessage(langues.error)}{" "}
+            {messageErreurDiagnostic(langues.error, "langues")}{" "}
             <button type="button" onClick={() => langues.refetch()} className="underline">
               Réessayer
             </button>
