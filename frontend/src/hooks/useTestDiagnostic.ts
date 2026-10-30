@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/queryKeys";
 import { ApiError } from "@/lib/api-client";
 import { ROUTES } from "@/lib/routes";
 import { testDiagnosticService, type ReponseProgression } from "@/services/test-diagnostic.service";
 import { useTestDiagnosticStore } from "@/store/test-diagnostic.store";
-import type { CodeLangue } from "@/types/langue";
 import type { EtatTest, PersonnalisationTest, ReponseTest } from "@/types/test-diagnostic";
 
 interface EnvoiReponse {
@@ -27,6 +27,15 @@ function reponseSaisie(etat: EtatTest): ReponseTest | null {
   return null;
 }
 
+/** Langues proposées sur l'écran d'accueil du test (chargées une fois par session de navigation). */
+export function useLanguesDiagnostic() {
+  return useQuery({
+    queryKey: queryKeys.languesDiagnostic,
+    queryFn: () => testDiagnosticService.langues(),
+    staleTime: Infinity,
+  });
+}
+
 /**
  * Actions du test de positionnement. L'état vit dans le store unique, les appels API passent par le service,
  * et chaque fin d'étape mène à la page suivante : démarrage → test → résultats.
@@ -37,7 +46,7 @@ export function useTestDiagnostic() {
   const dispatch = useTestDiagnosticStore((s) => s.dispatch);
 
   const demarrage = useMutation({
-    mutationFn: ({ langue, personnalisation }: { langue: CodeLangue; personnalisation: PersonnalisationTest }) =>
+    mutationFn: ({ langue, personnalisation }: { langue: string; personnalisation: PersonnalisationTest }) =>
       testDiagnosticService.demarrer(langue, personnalisation.objectif, personnalisation.creneaux),
   });
   const reponse = useMutation({
@@ -56,7 +65,7 @@ export function useTestDiagnostic() {
 
   /* Démarrage */
 
-  const choisirLangue = (langue: CodeLangue) => {
+  const choisirLangue = (langue: string) => {
     reinitialiserRequetes();
     dispatch({ type: "choisirLangue", langue });
   };
@@ -65,6 +74,8 @@ export function useTestDiagnostic() {
     dispatch({ type: "personnaliser", personnalisation });
 
   const demarrer = () => {
+    // Sans langue choisie, le test ne peut pas démarrer (le bouton est désactivé à l'écran)
+    if (!etat.langue) return;
     demarrage.mutate({ langue: etat.langue, personnalisation: etat.personnalisation }, {
       onSuccess: (session) => {
         dispatch({ type: "demarrer", session });

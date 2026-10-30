@@ -1,7 +1,6 @@
-import type { CodeLangue } from "@/types/langue";
 import type { ActionTest, EtatTest } from "@/types/test-diagnostic";
 
-export const etatInitial = (langue: CodeLangue): EtatTest => ({
+export const etatInitial = (langue: string | null): EtatTest => ({
   phase: "intro",
   langue,
   personnalisation: { objectif: "professionnel", creneaux: [] },

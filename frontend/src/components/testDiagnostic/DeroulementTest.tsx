@@ -18,7 +18,6 @@ export default function DeroulementTest() {
   const router = useRouter();
   const test = useTestDiagnostic();
   const { etat } = test;
-  const libelle = libelleLangue(etat.langue);
   const [confirmerAbandon, setConfirmerAbandon] = useState(false);
   const sansSession = !useTestDiagnosticStore(selectTestEnCours);
 
@@ -32,7 +31,9 @@ export default function DeroulementTest() {
       : ROUTES.apprenant.testDiagnostic.demarrage);
   }, [sansSession, etat.phase, etat.resultat, router]);
 
-  if (sansSession || !etat.courante) return null;
+  if (sansSession || !etat.courante || !etat.langue) return null;
+
+  const libelle = libelleLangue(etat.langue);
 
   const enRetour = etat.phase === "retour" && etat.retour !== null;
   const progression = etat.totalQuestions > 0

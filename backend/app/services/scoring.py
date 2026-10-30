@@ -39,6 +39,11 @@ class ErreurScoring(Exception):
         super().__init__(code.value)
 
 
+def cadre_de_langue(code_langue: str) -> CadreReference:
+    """Le chinois est évalué sur l'échelle HSK, les autres langues sur le CECRL."""
+    return CadreReference.HSK if code_langue == "zh" else CadreReference.CECRL
+
+
 def niveau_de_reference(pourcentage: Decimal, cadre: CadreReference) -> str:
     """Convertit un pourcentage en niveau selon la grille CECRL ou HSK."""
     for seuil, niveau_cecrl, niveau_hsk in SEUILS_NIVEAUX:
@@ -70,7 +75,7 @@ def terminer_tentative(
     if langue is None:
         raise ErreurScoring(CodeErreurScoring.TENTATIVE_INCONNUE)
 
-    cadre = CadreReference.HSK if langue.code == "zh" else CadreReference.CECRL
+    cadre = cadre_de_langue(langue.code)
     if tentative.statut == StatutDiagnostic.TERMINE:
         if tentative.score is None or tentative.niveau_final is None:
             raise ErreurScoring(CodeErreurScoring.TENTATIVE_TERMINEE)

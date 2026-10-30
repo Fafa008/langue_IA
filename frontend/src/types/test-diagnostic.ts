@@ -1,5 +1,3 @@
-import type { CodeLangue } from "@/types/langue";
-
 export type ObjectifFormation = "professionnel" | "personnel" | "scolaire";
 export type CreneauPresence = "matin" | "apres_midi" | "soiree";
 export type CompetenceTest = "grammaire" | "lecture" | "ecoute" | "ecrit" | "oral";
@@ -18,6 +16,23 @@ export interface Question {
   audioTexte?: string;
 }
 
+/** Référentiel des niveaux : CECRL (A1 à C2) ou HSK pour le chinois (HSK 1 à 6). */
+export type CadreReference = "CECRL" | "HSK";
+
+/** Langue proposée sur l'écran d'accueil du test (GET /diagnostic/langues). */
+export interface LangueDiagnostic {
+  /** Code de la langue en base (« en »), envoyé à la création de la tentative. */
+  code: string;
+  libelle: string;
+  cadre: CadreReference;
+  /** Niveaux ouverts pour la langue, du plus bas au plus haut. */
+  niveaux: string[];
+  /** Questions posées pendant le test (0 si la langue n'en a pas encore). */
+  nombreQuestions: number;
+  /** Faux tant qu'aucune question n'est disponible : la langue est affichée « Bientôt disponible ». */
+  disponible: boolean;
+}
+
 export interface PersonnalisationTest {
   objectif: ObjectifFormation;
   creneaux: CreneauPresence[];
@@ -30,7 +45,7 @@ export type ReponseTest =
 
 export interface SessionTest {
   id: string;
-  langue: CodeLangue;
+  langue: string;
   niveaux: string[];
   numeroQuestion: number;
   totalQuestions: number;
@@ -70,7 +85,7 @@ export interface ResultatTest {
   niveau: string;
   score: number;
   total: number;
-  cadre?: "CECRL" | "HSK";
+  cadre?: CadreReference;
   competences: CompetenceResultat[];
   lacunes: CompetenceTest[];
 }
@@ -95,7 +110,8 @@ export interface ReponseEnregistree {
 
 export interface EtatTest {
   phase: PhaseTest;
-  langue: CodeLangue;
+  /** Langue choisie sur l'écran d'accueil ; null tant que l'apprenant n'en a pas choisi. */
+  langue: string | null;
   personnalisation: PersonnalisationTest;
   sessionId: string | null;
   niveaux: string[];
@@ -113,7 +129,7 @@ export interface EtatTest {
 }
 
 export type ActionTest =
-  | { type: "choisirLangue"; langue: CodeLangue }
+  | { type: "choisirLangue"; langue: string }
   | { type: "personnaliser"; personnalisation: PersonnalisationTest }
   | { type: "retourIntroduction" }
   | { type: "demarrer"; session: SessionTest }

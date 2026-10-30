@@ -11,7 +11,7 @@ export const LANGUES: (Langue & { flag: string; natif: string })[] = [
 ];
 
 /** "zh" → « Mandarin » (le code est renvoyé tel quel s'il est inconnu). */
-export function libelleLangue(code: CodeLangue): string {
+export function libelleLangue(code: string): string {
   return LANGUES.find((l) => l.code === code)?.libelle ?? code;
 }
 

@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { etatInitial, reducteur } from "@/lib/testAdaptatif";
-import type { CodeLangue } from "@/types/langue";
 import type { ActionTest, EtatTest } from "@/types/test-diagnostic";
 
 interface TestDiagnosticState {
@@ -12,9 +11,6 @@ interface TestDiagnosticState {
   reinitialiser: () => void;
 }
 
-/** Langue proposée tant que ni l'URL ni le profil n'en indiquent une. */
-export const LANGUE_PAR_DEFAUT: CodeLangue = "en";
-
 /**
  * Store unique du test de positionnement, partagé par les pages démarrage, test et résultats.
  * Il est conservé dans sessionStorage pour survivre à un rechargement de page ; l'enregistrement
@@ -23,9 +19,10 @@ export const LANGUE_PAR_DEFAUT: CodeLangue = "en";
 export const useTestDiagnosticStore = create<TestDiagnosticState>()(
   persist(
     (set) => ({
-      etat: etatInitial(LANGUE_PAR_DEFAUT),
+      // Aucune langue tant que l'apprenant n'en a pas choisi une sur l'écran d'accueil
+      etat: etatInitial(null),
       dispatch: (action) => set((s) => ({ etat: reducteur(s.etat, action) })),
-      reinitialiser: () => set({ etat: etatInitial(LANGUE_PAR_DEFAUT) }),
+      reinitialiser: () => set({ etat: etatInitial(null) }),
     }),
     {
       name: "digitheque-test-diagnostic",

@@ -3,33 +3,57 @@
 import Image from "next/image";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
-import { LANGUES } from "@/lib/languages";
-import type { CodeLangue } from "@/types/langue";
+import { drapeauLangue } from "@/lib/languages";
+import { descriptionEchelle } from "@/lib/referentiels";
+import type { LangueDiagnostic } from "@/types/test-diagnostic";
 
 interface ChoixLangueTestProps {
-  value: CodeLangue;
-  onChange: (code: CodeLangue) => void;
+  langues: LangueDiagnostic[];
+  /** Code de la langue choisie, null tant qu'aucune ne l'est. */
+  value: string | null;
+  onChange: (code: string) => void;
+  /** Id du titre qui nomme la liste (« 1. Choisissez la langue »). */
+  labelledBy: string;
   disabled?: boolean;
 }
 
 /** « Français » → « francais » : recherche insensible à la casse et aux accents. */
 const normaliser = (texte: string) => texte.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-function Drapeau({ src, taille }: { src: string; taille: number }) {
+/** Drapeau de la langue, ou son code (« ES ») pour une langue sans drapeau. */
+function Pastille({ code, taille }: { code: string; taille: number }) {
+  const drapeau = drapeauLangue(code);
+  if (drapeau) {
+    return (
+      <Image
+        src={drapeau}
+        alt=""
+        width={taille}
+        height={taille}
+        style={{ width: taille, height: taille }}
+        className="shrink-0 rounded-full object-cover ring-1 ring-border"
+      />
+    );
+  }
   return (
-    <Image
-      src={src}
-      alt=""
-      width={taille}
-      height={taille}
+    <span
+      aria-hidden
       style={{ width: taille, height: taille }}
-      className="shrink-0 rounded-full object-cover ring-1 ring-border"
-    />
+      className="flex shrink-0 items-center justify-center rounded-full bg-primary/10 text-[0.625rem] font-bold uppercase text-primary"
+    >
+      {code}
+    </span>
   );
 }
 
-/** Langue du test : liste déroulante avec drapeaux et recherche, préselectionnée par la page. */
-export default function ChoixLangueTest({ value, onChange, disabled = false }: ChoixLangueTestProps) {
+const sousTitre = (langue: LangueDiagnostic) =>
+  langue.disponible ? descriptionEchelle(langue.cadre, langue.niveaux) : "Bientôt disponible";
+
+/**
+ * Langue du test : liste déroulante avec drapeaux, échelle et recherche.
+ * Une langue sans question est affichée « Bientôt disponible » et ne peut pas être choisie.
+ */
+export default function ChoixLangueTest({ langues, value, onChange, labelledBy, disabled = false }: ChoixLangueTestProps) {
   const id = useId();
   const conteneur = useRef<HTMLDivElement>(null);
   const champRecherche = useRef<HTMLInputElement>(null);
@@ -37,8 +61,8 @@ export default function ChoixLangueTest({ value, onChange, disabled = false }: C
   const [recherche, setRecherche] = useState("");
   const [active, setActive] = useState(0);
 
-  const selection = LANGUES.find((l) => l.code === value);
-  const resultats = LANGUES.filter((l) => normaliser(l.libelle).includes(normaliser(recherche.trim())));
+  const selection = langues.find((l) => l.code === value);
+  const resultats = langues.filter((l) => normaliser(l.libelle).includes(normaliser(recherche.trim())));
 
   useEffect(() => {
     if (!ouvert) return;
@@ -52,12 +76,13 @@ export default function ChoixLangueTest({ value, onChange, disabled = false }: C
 
   const ouvrir = () => {
     setRecherche("");
-    setActive(Math.max(0, LANGUES.findIndex((l) => l.code === value)));
+    setActive(Math.max(0, langues.findIndex((l) => l.code === value)));
     setOuvert(true);
   };
 
-  const choisir = (code: CodeLangue) => {
-    onChange(code);
+  const choisir = (langue: LangueDiagnostic) => {
+    if (!langue.disponible) return;
+    onChange(langue.code);
     setOuvert(false);
   };
 
@@ -70,7 +95,7 @@ export default function ChoixLangueTest({ value, onChange, disabled = false }: C
     } else if (e.key === "Enter") {
       e.preventDefault();
       const langue = resultats[active];
-      if (langue) choisir(langue.code);
+      if (langue) choisir(langue);
     } else if (e.key === "Escape") {
       setOuvert(false);
     }
@@ -78,22 +103,22 @@ export default function ChoixLangueTest({ value, onChange, disabled = false }: C
 
   return (
     <div ref={conteneur} className="relative">
-      <p id={`${id}-label`} className="mb-1.5 block font-medium text-content">
-        Langue du test
-      </p>
       <button
         type="button"
         data-testid="language-select"
         aria-haspopup="listbox"
         aria-expanded={ouvert}
-        aria-labelledby={`${id}-label ${id}-valeur`}
+        aria-labelledby={`${labelledBy} ${id}-valeur`}
         disabled={disabled}
         onClick={() => (ouvert ? setOuvert(false) : ouvrir())}
-        className="input flex items-center gap-3 pr-10 text-left disabled:cursor-wait disabled:opacity-60"
+        className="input flex h-auto min-h-[3.5rem] items-center gap-3 py-2 pr-10 text-left disabled:cursor-wait disabled:opacity-60"
       >
-        {selection && <Drapeau src={selection.flag} taille={24} />}
-        <span id={`${id}-valeur`} className="font-semibold text-content">
-          {selection?.libelle ?? "Choisissez une langue"}
+        {selection && <Pastille code={selection.code} taille={28} />}
+        <span id={`${id}-valeur`} className="flex flex-col">
+          <span className={selection ? "font-semibold text-content" : "text-content-secondary"}>
+            {selection?.libelle ?? "Choisissez une langue"}
+          </span>
+          {selection && <span className="text-small text-content-secondary">{sousTitre(selection)}</span>}
         </span>
         <ChevronDown
           size={18}
@@ -125,24 +150,28 @@ export default function ChoixLangueTest({ value, onChange, disabled = false }: C
             />
           </div>
 
-          <ul id={`${id}-liste`} role="listbox" aria-label="Langues disponibles" className="mt-2 max-h-64 overflow-y-auto">
-            {resultats.map(({ code, libelle, flag }, index) => {
-              const selectionnee = code === value;
+          <ul id={`${id}-liste`} role="listbox" aria-label="Langues proposées" className="mt-2 max-h-72 overflow-y-auto">
+            {resultats.map((langue, index) => {
+              const selectionnee = langue.code === value;
               return (
                 <li
-                  key={code}
-                  id={`${id}-${code}`}
+                  key={langue.code}
+                  id={`${id}-${langue.code}`}
                   role="option"
                   aria-selected={selectionnee}
-                  data-testid={`language-option-${code}`}
+                  aria-disabled={!langue.disponible}
+                  data-testid={`language-option-${langue.code}`}
                   onMouseEnter={() => setActive(index)}
-                  onClick={() => choisir(code)}
-                  className={`flex cursor-pointer items-center gap-3 rounded-btn px-3 py-2.5 ${
-                    index === active ? "bg-background" : ""
-                  }`}
+                  onClick={() => choisir(langue)}
+                  className={`flex items-center gap-3 rounded-btn px-3 py-2.5 ${
+                    langue.disponible ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+                  } ${index === active ? "bg-background" : ""}`}
                 >
-                  <Drapeau src={flag} taille={28} />
-                  <span className={`flex-1 ${selectionnee ? "font-semibold text-primary" : "text-content"}`}>{libelle}</span>
+                  <Pastille code={langue.code} taille={28} />
+                  <span className="flex flex-1 flex-col">
+                    <span className={selectionnee ? "font-semibold text-primary" : "text-content"}>{langue.libelle}</span>
+                    <span className="text-small text-content-secondary">{sousTitre(langue)}</span>
+                  </span>
                   {selectionnee && <Check size={18} aria-hidden className="text-primary" />}
                 </li>
               );
