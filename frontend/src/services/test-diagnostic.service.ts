@@ -5,6 +5,7 @@ import { testDiagnosticMockService } from "@/mocks/test-diagnostic.mock";
 import {
   type CadreReference,
   type CompetenceTest,
+  type IssueTerminaison,
   type LangueDiagnostic,
   type ObjectifFormation,
   type Question,
@@ -60,6 +61,18 @@ interface ScoreDiagnosticDto {
   framework: CadreReference;
 }
 
+/** 202 : l'analyse des réponses n'est pas terminée, le résultat sera disponible plus tard. */
+interface AnalyseEnAttenteDto {
+  id_tentative: number;
+  statut: "en_attente";
+}
+
+/**
+ * Délai laissé au service d'analyse (LLM) pour évaluer une réponse libre ou clore le test.
+ * Au-delà, l'apprenant garde ses réponses et peut réessayer.
+ */
+export const TIMEOUT_ANALYSE_MS = 60_000;
+
 export interface ReponseProgression {
   numeroQuestion: number;
   totalQuestions: number;
@@ -77,7 +90,7 @@ export interface TestDiagnosticGateway {
     valeurChoix?: string,
     progression?: ReponseProgression,
   ): Promise<RetourReponse>;
-  terminer(idSession: string): Promise<ResultatTest>;
+  terminer(idSession: string): Promise<IssueTerminaison>;
 }
 
 const toQuestion = (dto: QuestionDto): Question => ({
@@ -157,6 +170,8 @@ export const httpTestDiagnosticService = {
     }
     const dto = await apiRequest<ReponseDto>(ENDPOINTS.diagnostic.reponse, {
       method: "POST",
+      // Une réponse écrite peut être évaluée par le LLM avant d'être confirmée
+      timeoutMs: reponse.type === "texte" ? TIMEOUT_ANALYSE_MS : undefined,
       body: {
         id_tentative: tentativeId,
         id_question: idQuestion,
@@ -175,15 +190,19 @@ export const httpTestDiagnosticService = {
     };
   },
 
-  async terminer(idSession: string): Promise<ResultatTest> {
+  async terminer(idSession: string): Promise<IssueTerminaison> {
     const tentativeId = Number(idSession);
     if (!Number.isSafeInteger(tentativeId) || tentativeId <= 0) {
       throw new Error("Identifiant de tentative invalide.");
     }
-    const dto = await apiRequest<ScoreDiagnosticDto>(ENDPOINTS.diagnostic.terminerTentative(tentativeId), {
-      method: "POST",
-    });
-    if (
+    const dto = await apiRequest<ScoreDiagnosticDto | AnalyseEnAttenteDto>(
+      ENDPOINTS.diagnostic.terminerTentative(tentativeId),
+      { method: "POST", timeoutMs: TIMEOUT_ANALYSE_MS },
+    );
+    if ("statut" in dto && dto.statut === "en_attente" && dto.id_tentative === tentativeId) {
+      return { statut: "en_attente" };
+    }
+    if ("statut" in dto || (
       dto.id_tentative !== tentativeId
       || !Number.isFinite(dto.score)
       || !Number.isFinite(dto.percentage)
@@ -194,16 +213,19 @@ export const httpTestDiagnosticService = {
       || dto.percentage > 100
       || !dto.level
       || (dto.framework !== "CECRL" && dto.framework !== "HSK")
-    ) {
+    )) {
       throw new Error("Le résultat de scoring renvoyé par le serveur est invalide.");
     }
     return {
-      niveau: dto.level,
-      score: dto.percentage,
-      total: dto.max_score,
-      cadre: dto.framework,
-      competences: [],
-      lacunes: [],
+      statut: "termine",
+      resultat: {
+        niveau: dto.level,
+        score: dto.percentage,
+        total: dto.max_score,
+        cadre: dto.framework,
+        competences: [],
+        lacunes: [],
+      },
     };
   },
 };

@@ -123,15 +123,19 @@ export function useTestDiagnostic() {
     if (saisie) envoyer(saisie);
   };
 
-  /* Fin du test : le résultat vient de la dernière réponse (mode démo) ou du calcul de score du backend. */
+  /*
+   * Fin du test : le résultat vient de la dernière réponse (mode démo) ou du backend.
+   * Si l'analyse par le LLM n'est pas finie, le backend répond « en attente » : on redemandera le résultat.
+   */
 
   const afficherResultat = () => router.push(ROUTES.apprenant.testDiagnostic.resultats);
 
   const terminer = () => {
     if (!etat.sessionId) return;
     terminaison.mutate(etat.sessionId, {
-      onSuccess: (resultat) => {
-        dispatch({ type: "terminer", resultat });
+      onSuccess: (issue) => {
+        if (issue.statut === "en_attente") return;
+        dispatch({ type: "terminer", resultat: issue.resultat });
         afficherResultat();
       },
     });
@@ -188,5 +192,7 @@ export function useTestDiagnostic() {
     erreurReponse: reponse.error,
     terminaisonEnCours: terminaison.isPending,
     erreurTerminaison: terminaison.error,
+    /** Le test est fini mais le résultat n'est pas encore prêt (analyse par le LLM en cours). */
+    resultatEnAttente: terminaison.data?.statut === "en_attente",
   };
 }

@@ -2,6 +2,7 @@
 
 import { compterMots, DUREE_ORALE_MINIMALE_SECONDES, ETAPES, etapeDe, MOTS_ECRITS_MINIMUM } from "@/lib/etapesTest";
 import type { Question } from "@/types/test-diagnostic";
+import AnalyseEnCours from "./AnalyseEnCours";
 import EnregistrementOral from "./EnregistrementOral";
 import ListeningAudio from "./ListeningAudio";
 import RedactionEcrite from "./RedactionEcrite";
@@ -17,7 +18,7 @@ interface QuestionCardProps {
   envoiEnCours: boolean;
   /** Dernière question du test : le bouton annonce la fin. */
   derniere?: boolean;
-  /** Temps écoulé : plus aucune réponse n'est possible. */
+  /** Plus aucune réponse possible : réponse déjà validée (en attente de la suite) ou temps écoulé. */
   bloquee?: boolean;
   onValider: (choix: number) => void;
   onChoixChange: (choix: number) => void;
@@ -150,7 +151,15 @@ export default function QuestionCard({
           {derniere ? "Valider et finaliser" : "Valider et continuer"}
         </button>
       )}
-      {envoiEnCours && <p role="status" className="mt-6 text-center text-content-secondary">Envoi de votre réponse…</p>}
+      {envoiEnCours && (question.typeReponse === "choix" ? (
+        <AnalyseEnCours compact titre="Enregistrement de votre réponse" message="Un instant…" />
+      ) : (
+        <AnalyseEnCours
+          compact
+          titre="Analyse de votre réponse"
+          message="Votre réponse est en cours d'analyse. Elle reste affichée jusqu'à la confirmation."
+        />
+      ))}
     </section>
   );
 }

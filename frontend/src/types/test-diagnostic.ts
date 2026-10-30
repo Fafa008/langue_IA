@@ -108,6 +108,14 @@ export interface ResultatTest {
   lacunes: CompetenceTest[];
 }
 
+/**
+ * Issue de la fin du test : le résultat, ou « en attente » tant que le service d'analyse (LLM)
+ * n'a pas fini d'évaluer les réponses écrites et orales.
+ */
+export type IssueTerminaison =
+  | { statut: "termine"; resultat: ResultatTest }
+  | { statut: "en_attente" };
+
 export interface CompetenceResultat {
   competence: CompetenceTest;
   score: number;

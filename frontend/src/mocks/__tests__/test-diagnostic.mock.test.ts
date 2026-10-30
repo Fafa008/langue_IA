@@ -140,6 +140,9 @@ describe("test simulé en quatre étapes", () => {
   it("termine avant la fin quand le temps est écoulé, les questions sans réponse comptant comme fausses", async () => {
     const session = await testDiagnosticMockService.demarrer("en", "professionnel", []);
     await repondre(session.id, session.question, true);
-    await expect(testDiagnosticMockService.terminer(session.id)).resolves.toMatchObject({ score: 1, total: 12 });
+    await expect(testDiagnosticMockService.terminer(session.id)).resolves.toMatchObject({
+      statut: "termine",
+      resultat: { score: 1, total: 12 },
+    });
   });
 });
