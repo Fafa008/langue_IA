@@ -1,106 +1,104 @@
 "use client";
 
-import Alert from "@/components/ui/Alert";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { useTestDiagnostic } from "@/hooks/useTestDiagnostic";
-import { getErrorMessage } from "@/lib/api-client";
+import Alert from "@/components/ui/Alert";
+import { useLanguesDiagnostic, useTestDiagnostic } from "@/hooks/useTestDiagnostic";
+import { messageErreurDiagnostic } from "@/lib/erreursDiagnostic";
 import { API_MOCK } from "@/lib/env";
 import { libelleLangue } from "@/lib/languages";
-import type { CodeLangue } from "@/types/langue";
+import { DUREE_TEST_MINUTES } from "@/lib/etapesTest";
+import { ROUTES } from "@/lib/routes";
+import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnostic.store";
+import BoutonRetour from "./BoutonRetour";
 import ChoixLangueTest from "./ChoixLangueTest";
-import LevelScale from "./LevelScale";
 import PersonalisationForm from "./PersonalisationForm";
-import QuestionCard from "./QuestionCard";
-import TestResult from "./TestResult";
 
-export default function PlacementTest({ langueInitiale }: { langueInitiale: CodeLangue }) {
-  const test = useTestDiagnostic(langueInitiale);
+const CONSIGNES = [
+  `Le test dure ${DUREE_TEST_MINUTES} minutes et comporte 4 étapes : grammaire et lexique, compréhension orale, expression orale, expression écrite.`,
+  "Répondez seul, sans dictionnaire ni traducteur. Prévoyez des écouteurs et un micro.",
+  "Pour les questions à choix, une seule réponse est correcte.",
+  "Chaque réponse est enregistrée dès que vous la validez : relisez-la avant de valider.",
+  "Restez sur la page : si vous la quittez, vous reprendrez le test là où vous en étiez.",
+];
+
+/** Chiffre clé du test (« 10 questions »), « – » tant qu'aucune langue n'est choisie. */
+function Chiffre({ valeur, libelle }: { valeur: string | number | null; libelle: string }) {
+  return (
+    <div className="flex flex-col-reverse rounded-btn bg-background p-4 text-center">
+      <dt className="text-small text-content-secondary">{libelle}</dt>
+      <dd className="text-h3 font-bold text-content">{valeur ?? "–"}</dd>
+    </div>
+  );
+}
+
+/**
+ * Écran d'accueil du test : choix de la langue (chargée depuis l'API), consignes et durée estimée,
+ * puis personnalisation, jusqu'à la création de la tentative.
+ */
+export default function PlacementTest({ langueDemandee }: { langueDemandee?: string }) {
+  const router = useRouter();
+  const test = useTestDiagnostic();
+  const langues = useLanguesDiagnostic();
   const { etat } = test;
-  const libelle = libelleLangue(etat.langue);
+  const enCours = useTestDiagnosticStore(selectTestEnCours);
+  // Langue choisie et réellement disponible : sans elle, le test ne peut pas démarrer
+  const langueChoisie = langues.data?.find((l) => l.code === etat.langue && l.disponible) ?? null;
 
-  if (etat.phase === "intro") {
-    return (
-      <div className="mx-auto max-w-2xl">
-        <p className="eyebrow">Test de positionnement</p>
-        <h1 className="mt-2">Évaluons votre niveau</h1>
-        <p className="mb-6 mt-1 text-content-secondary">
-          Choisissez la langue que vous souhaitez évaluer.
-        </p>
+  // Page suivante chargée d'avance : pas d'attente au démarrage du test.
+  useEffect(() => router.prefetch(ROUTES.apprenant.testDiagnostic.test), [router]);
 
-        <ChoixLangueTest value={etat.langue} onChange={test.choisirLangue} disabled={test.demarrageEnCours} />
+  // Arrivée sur la page : un test commencé reprend, un test terminé laisse place à un nouveau.
+  useEffect(() => {
+    const store = useTestDiagnosticStore.getState();
+    if (selectTestEnCours(store)) router.replace(ROUTES.apprenant.testDiagnostic.test);
+    else if (store.etat.phase === "resultat") store.dispatch({ type: "recommencer" });
+  }, [router]);
 
-        <ul className="card mt-6 space-y-2">
-          <li>Grammaire, compréhension écrite et orale, expression écrite et orale</li>
-          <li>La difficulté s&apos;adapte à vos réponses et à votre objectif</li>
-        </ul>
+  // La langue de l'URL (?langue=en) est présélectionnée si elle est disponible.
+  useEffect(() => {
+    const demandee = langues.data?.find((l) => l.code === langueDemandee && l.disponible);
+    const { etat: actuel, dispatch } = useTestDiagnosticStore.getState();
+    if (demandee && actuel.phase === "intro" && actuel.langue !== demandee.code) {
+      dispatch({ type: "choisirLangue", langue: demandee.code });
+    }
+  }, [langues.data, langueDemandee]);
 
-        {API_MOCK && (
-          <p role="note" className="mt-4 rounded-btn border border-border bg-background p-3 text-small text-content-secondary">
-            Mode démonstration : l’évaluation des réponses écrites et orales est simulée jusqu’à la connexion du service IA.
-          </p>
-        )}
-        {!API_MOCK && (
-          <p role="note" className="mt-4 rounded-btn border border-border bg-background p-3 text-small text-content-secondary">
-            Vos réponses seront enregistrées et le score déterministe calculé à la fin. Le service IA pourra ensuite compléter l’évaluation et adapter le parcours.
-          </p>
-        )}
+  if (enCours) return null;
 
-        {test.langueIndisponible && (
-          <Alert className="mt-4">
-            Le test de {libelle.toLowerCase()} n&apos;est pas encore disponible.
-          </Alert>
-        )}
-        {test.erreurDemarrage && !test.langueIndisponible && (
-          <Alert className="mt-4">{getErrorMessage(test.erreurDemarrage)}</Alert>
-        )}
-
-        <button type="button" className="btn-primary mt-6 w-full" onClick={() => test.personnaliser(etat.personnalisation.objectif, etat.personnalisation.creneaux)}>
-          Continuer
-        </button>
-      </div>
-    );
-  }
+  const erreurs = (
+    <>
+      {test.langueIndisponible && (
+        <Alert className="mt-4">
+          Le test de {libelleLangue(etat.langue ?? "").toLowerCase()} n&apos;est pas encore disponible.
+        </Alert>
+      )}
+      {test.erreurDemarrage && !test.langueIndisponible && (
+        <Alert className="mt-4">{messageErreurDiagnostic(test.erreurDemarrage, "demarrage")}</Alert>
+      )}
+    </>
+  );
 
   if (etat.phase === "personnalisation") {
     return (
       <div className="mx-auto max-w-3xl">
+        <BoutonRetour onClick={test.retourIntroduction} libelle="Retour au choix de la langue" disabled={test.demarrageEnCours} />
         <p className="eyebrow">Personnalisation de votre parcours</p>
         <h1 className="mt-2">Quelques questions avant de commencer…</h1>
-        <p className="mb-6 mt-2 text-content-secondary">
-          Ces informations aident l’IA à adapter le test et vos formateurs à cibler vos ateliers.
-        </p>
 
-        <section className="card">
-          <PersonalisationForm
-            value={etat.personnalisation}
-            disabled={test.demarrageEnCours}
-            onChange={(personnalisation) => test.personnaliser(personnalisation.objectif, personnalisation.creneaux)}
-          />
+        <section className="card mt-6">
+          <PersonalisationForm value={etat.personnalisation} disabled={test.demarrageEnCours} onChange={test.personnaliser} />
         </section>
 
-        {test.langueIndisponible && (
-          <Alert className="mt-4">
-            Le test de {libelle.toLowerCase()} n&apos;est pas encore disponible.
-          </Alert>
-        )}
-        {test.erreurDemarrage && !test.langueIndisponible && (
-          <Alert className="mt-4">{getErrorMessage(test.erreurDemarrage)}</Alert>
-        )}
+        {erreurs}
 
-        <div className="mt-6 flex flex-col-reverse justify-between gap-3 sm:flex-row">
-          <button
-            type="button"
-            className="btn-secondary"
-            disabled={test.demarrageEnCours}
-            onClick={test.retourIntroduction}
-          >
-            Quitter
-          </button>
+        <div className="mt-6 flex justify-end">
           <button
             type="button"
             className="btn-primary"
             disabled={test.demarrageEnCours || test.langueIndisponible}
-            onClick={() => test.demarrer(etat.personnalisation)}
+            onClick={test.demarrer}
           >
             {test.demarrageEnCours
               ? "Préparation du test…"
@@ -108,148 +106,78 @@ export default function PlacementTest({ langueInitiale }: { langueInitiale: Code
                 ? "Test indisponible"
                 : test.erreurDemarrage
                   ? "Réessayer"
-                  : <>Commencer le test IA <ArrowRight size={18} aria-hidden="true" /></>}
+                  : <>Lancer le test <ArrowRight size={18} aria-hidden="true" /></>}
           </button>
         </div>
       </div>
     );
   }
-
-  if (etat.phase === "resultat" && etat.resultat) {
-    return (
-      <TestResult
-        libelleLangue={libelle}
-        resultat={etat.resultat}
-        onRecommencer={test.recommencer}
-      />
-    );
-  }
-
-  if (!etat.courante || !etat.sessionId) {
-    return (
-      <div className="mx-auto max-w-2xl">
-        <Alert>La session de test est incomplète. Veuillez recommencer.</Alert>
-        <button type="button" className="btn-secondary mt-4" onClick={test.recommencer}>
-          Recommencer le test
-        </button>
-      </div>
-    );
-  }
-
-  const enRetour = etat.phase === "retour" && etat.retour !== null;
-  const progression = etat.totalQuestions > 0
-    ? etat.numeroQuestion - (enRetour ? 0 : 1)
-    : 0;
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-2 flex justify-between text-small font-semibold">
-        <span data-testid="progress-label">
-          Question {etat.numeroQuestion} sur {etat.totalQuestions}
-        </span>
-        <span className="text-content-secondary">{libelle}</span>
-      </div>
-      <div
-        role="progressbar"
-        aria-label="Progression du test"
-        aria-valuemin={0}
-        aria-valuemax={etat.totalQuestions}
-        aria-valuenow={progression}
-        className="h-2 overflow-hidden rounded-full bg-border"
+    <div className="mx-auto max-w-3xl">
+      <BoutonRetour href={ROUTES.apprenant.dashboard} libelle="Retour à mon espace" />
+      <p className="eyebrow">Test de positionnement</p>
+      <h1 className="mt-2">Évaluez votre niveau</h1>
+      <p className="mt-2 text-content-secondary">
+        Un test court pour situer votre niveau et construire un parcours adapté. Commencez par choisir la langue à évaluer.
+      </p>
+
+      <section className="card mt-6" aria-labelledby="etape-langue">
+        <h2 id="etape-langue" className="mb-4 text-h3 text-content">1. Choisissez la langue</h2>
+        {langues.isPending ? (
+          <p role="status" className="input flex min-h-[3.5rem] animate-pulse items-center text-content-secondary">
+            Chargement des langues…
+          </p>
+        ) : langues.isError ? (
+          <Alert>
+            {messageErreurDiagnostic(langues.error, "langues")}{" "}
+            <button type="button" onClick={() => langues.refetch()} className="underline">
+              Réessayer
+            </button>
+          </Alert>
+        ) : (
+          <ChoixLangueTest
+            langues={langues.data}
+            value={etat.langue}
+            onChange={test.choisirLangue}
+            labelledBy="etape-langue"
+          />
+        )}
+      </section>
+
+      <section className="card mt-6" aria-labelledby="etape-consignes">
+        <h2 id="etape-consignes" className="mb-4 text-h3 text-content">2. Avant de commencer</h2>
+        <ul className="list-inside list-disc space-y-2 text-content" data-testid="consignes">
+          {CONSIGNES.map((consigne) => <li key={consigne}>{consigne}</li>)}
+        </ul>
+        <dl className="mt-6 grid grid-cols-3 gap-3" data-testid="chiffres-test">
+          <Chiffre valeur={langueChoisie?.nombreQuestions ?? null} libelle="questions" />
+          <Chiffre valeur={langueChoisie ? `${DUREE_TEST_MINUTES} min` : null} libelle="de durée estimée" />
+          <Chiffre valeur={langueChoisie?.niveaux.length ?? null} libelle="niveaux estimés" />
+        </dl>
+      </section>
+
+      {API_MOCK && (
+        <p role="note" className="mt-4 rounded-btn border border-border bg-background p-3 text-small text-content-secondary">
+          Mode démonstration : l’évaluation des réponses écrites et orales est simulée jusqu’à la connexion du service IA.
+        </p>
+      )}
+
+      {erreurs}
+
+      <button
+        type="button"
+        className="btn-primary mt-6 w-full"
+        disabled={!langueChoisie}
+        aria-describedby={langueChoisie ? undefined : "aide-demarrage"}
+        onClick={() => test.personnaliser(etat.personnalisation)}
       >
-        <div
-          className="h-full bg-primary transition-all"
-          style={{ width: `${(progression / etat.totalQuestions) * 100}%` }}
-        />
-      </div>
-
-      <LevelScale niveau={etat.courante.niveau} niveaux={etat.niveaux} />
-
-      <QuestionCard
-        key={etat.courante.id}
-        question={etat.courante}
-        langue={etat.langue}
-        choisie={etat.choisie}
-        reponseLibre={etat.texteSaisi}
-        audioEnregistre={etat.audioEnregistre}
-        retour={
-          enRetour && etat.retour?.typeReponse === "choix" && etat.choisie !== null
-            ? { choisie: etat.choisie, bonneReponse: etat.retour.bonneReponse }
-            : undefined
-        }
-        envoiEnCours={test.reponseEnCours}
-        onChoixChange={test.choisirReponse}
-        onTexteChange={(texte) => test.choisirTexte(texte)}
-        onAudioEnregistre={test.choisirAudio}
-        onValider={test.repondre}
-        onValiderTexte={test.repondreTexte}
-        onValiderAudio={test.repondreAudio}
-      />
-
-      {test.erreurReponse && (
-        <Alert className="mt-4">
-          {getErrorMessage(test.erreurReponse)}{" "}
-          <button type="button" onClick={test.reessayerReponse} className="underline">
-            Réessayer
-          </button>
-        </Alert>
-      )}
-      {test.erreurTerminaison && (
-        <Alert className="mt-4">
-          {getErrorMessage(test.erreurTerminaison)}{" "}
-          <button type="button" onClick={test.reessayerTerminaison} className="underline">
-            Réessayer le calcul
-          </button>
-        </Alert>
-      )}
-
-      {enRetour && etat.retour && (
-        <div
-          role="status"
-          data-testid="feedback"
-          className={`mt-4 rounded-card border bg-surface p-4 ${
-            etat.retour.typeReponse === "choix"
-              ? etat.retour.correcte ? "border-success" : "border-error"
-              : "border-primary"
-          }`}
-        >
-          {etat.retour.typeReponse === "choix" ? (
-            <p className={`font-semibold ${etat.retour.correcte ? "text-success" : "text-error"}`}>
-              {etat.retour.correcte
-                ? "Bonne réponse"
-                : `Réponse incorrecte. Bonne réponse : ${etat.courante.choix?.[etat.retour.bonneReponse]}`}
-            </p>
-          ) : etat.retour.typeReponse === "en_attente" ? (
-            <div>
-              <p className="font-semibold">Réponse enregistrée</p>
-              <p className="mt-1 text-content-secondary">
-                Cette réponse est enregistrée. Le score sera calculé à la fin du test.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <p className="font-semibold">Réponse reçue</p>
-              <p className="mt-1 text-content-secondary">{etat.retour.evaluation}</p>
-              {etat.retour.typeReponse === "audio" && etat.retour.scorePrononciation !== undefined && (
-                <p className="mt-2 text-small">Évaluation de la prononciation : {etat.retour.scorePrononciation} / 100</p>
-              )}
-            </div>
-          )}
-          <button
-            type="button"
-            className="btn-primary mt-4 w-full"
-            onClick={test.suivante}
-            disabled={test.terminaisonEnCours}
-          >
-            {test.terminaisonEnCours
-              ? "Calcul du score…"
-              : etat.retour.resultat
-              ? "Voir mon résultat"
-              : etat.retour.typeReponse === "en_attente" && !etat.retour.questionSuivante
-                ? "Terminer"
-                : "Question suivante"}
-          </button>
-        </div>
+        Commencer le test <ArrowRight size={18} aria-hidden="true" />
+      </button>
+      {!langueChoisie && (
+        <p id="aide-demarrage" className="mt-2 text-center text-small text-content-secondary">
+          Choisissez une langue pour commencer.
+        </p>
       )}
     </div>
   );

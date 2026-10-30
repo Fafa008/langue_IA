@@ -89,7 +89,26 @@ describe("apiRequest", () => {
     const request = apiRequest("/x");
     jest.advanceTimersByTime(15_000);
 
-    await expect(request).rejects.toEqual(new ApiError(0, "Le serveur ne répond pas."));
+    await expect(request).rejects.toEqual(new ApiError(0, "Le serveur ne répond pas.", undefined, true));
+    jest.useRealTimers();
+  });
+
+  it("accepte un délai plus long pour une requête lente (analyse par le LLM)", async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted")))),
+    ) as unknown as typeof fetch;
+    let terminee = false;
+
+    const request = apiRequest("/x", { timeoutMs: 60_000 });
+    request.catch(() => { terminee = true; });
+    jest.advanceTimersByTime(15_000);
+    await Promise.resolve();
+    expect(terminee).toBe(false);
+    jest.advanceTimersByTime(45_000);
+
+    await expect(request).rejects.toMatchObject({ status: 0, delaiDepasse: true });
     jest.useRealTimers();
   });
 });

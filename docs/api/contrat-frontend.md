@@ -431,6 +431,43 @@ apprenant. Les questions sans réponse comptent comme incorrectes. Si une clé m
 option, la clôture est refusée. Le futur service IA pourra enrichir ou compléter cette première évaluation, sans
 remplacer le contrat de persistance des réponses. Aucune suppression automatique n'est configurée.
 
+### `GET /diagnostic/langues` — rôle `APPRENANT`
+
+Langues proposées sur l'écran d'accueil du test, triées par libellé.
+
+**200** :
+
+```json
+[
+  {
+    "code": "en",
+    "libelle": "Anglais",
+    "cadre": "CECRL",
+    "niveaux": ["A1", "A2", "B1", "B2", "C1", "C2"],
+    "nombre_questions": 10,
+    "disponible": true
+  },
+  {
+    "code": "zh",
+    "libelle": "Chinois",
+    "cadre": "HSK",
+    "niveaux": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"],
+    "nombre_questions": 0,
+    "disponible": false
+  }
+]
+```
+
+- `cadre` vaut `HSK` pour le chinois (`zh`) et `CECRL` pour les autres langues : c'est aussi le référentiel du score
+  final.
+- `niveaux` liste les niveaux ouverts pour la langue, du plus bas au plus haut.
+- `nombre_questions` compte les questions à choix ou à réponse textuelle du niveau de départ, c'est-à-dire le niveau
+  que `POST /diagnostic/tentatives` choisira. C'est le nombre de questions du test.
+- `disponible` vaut `false` tant que la langue n'a aucune question de ce type. Le frontend l'affiche alors
+  « Bientôt disponible » et ne permet pas de la choisir.
+
+Erreurs : **401** session absente ou invalide, **403** rôle autre qu'`APPRENANT`.
+
 ### `POST /diagnostic/tentatives` — rôle `APPRENANT`
 
 Crée une tentative pour la langue demandée. Le backend choisit le premier niveau ouvert qui possède au moins une
@@ -474,6 +511,23 @@ question n'a encore été enregistrée pour cette combinaison.
 ```
 
 Une question peut également contenir `support`, `audio_url` ou `audio_texte`. Les champs sans valeur sont omis.
+
+Le frontend range les questions en quatre étapes d'après leur `competence`, dans cet ordre :
+
+| Étape | Compétences | Réponse |
+|---|---|---|
+| QCM : grammaire et lexique | `grammaire`, `lecture` | `choix` |
+| Compréhension orale | `ecoute` | `choix`, après écoute de `audio_url` (deux écoutes au plus) |
+| Expression orale | `oral` | `audio` |
+| Expression écrite | `ecrit` | `texte` |
+
+Le test dure 15 minutes au total. À la fin du temps, le frontend appelle
+`POST /diagnostic/tentatives/{id_tentative}/terminer`, même si des questions restent sans réponse.
+
+Deux champs facultatifs, prévus pour le backend, précisent ce qui est attendu :
+
+- `duree_minimale_secondes` : durée de parole minimale d'une question `oral` (30 secondes par défaut) ;
+- `mots_minimum` : nombre de mots minimal d'une question `ecrit` (30 par défaut).
 La route ne renvoie aucune correction ni bonne réponse. Erreurs : **401** session absente ou invalide, **403** rôle
 autre qu'`APPRENANT`, **404** langue ou niveau inconnu, **422** niveau connu mais non ouvert pour cette langue.
 
@@ -549,6 +603,33 @@ Après l'enregistrement de la dernière réponse, le frontend appelle cette rout
 cadre de référence retournés par le backend. Les réponses détaillées (`evaluation`) restent disponibles pour une
 future évaluation IA. La progression fixe et les champs de personnalisation `objectif` et `creneaux` ne sont pas
 encore pilotés ou persistés par le backend.
+
+#### Analyse par le LLM : lenteur, indisponibilité, résultat en attente
+
+Quand l'évaluation des réponses écrites et orales sera confiée au service IA, cette route pourra répondre avant la fin
+de l'analyse :
+
+**202** :
+
+```json
+{ "id_tentative": 42, "statut": "en_attente" }
+```
+
+Le frontend affiche alors « Résultat en attente » et rappelle la même route toutes les 10 secondes, ou quand
+l'apprenant clique sur « Vérifier mon résultat », jusqu'à recevoir le **200** ci-dessus. La route doit donc rester
+idempotente : une tentative déjà terminée renvoie son résultat.
+
+Délais côté frontend :
+
+- **60 secondes** pour cette route et pour `POST /diagnostic/reponse` d'une réponse `texte`, qui peut être évaluée
+  par le LLM ;
+- **15 secondes** pour les autres appels.
+
+Au-delà, la requête est abandonnée et l'apprenant voit un message clair et un bouton « Réessayer ». Ses réponses
+déjà saisies restent affichées.
+
+Les messages d'erreur du test ne reprennent jamais le champ `detail`, un code HTTP ni un message technique : le
+backend peut y mettre des informations de diagnostic sans risque qu'elles soient montrées à l'apprenant.
 
 ## Formateurs — rôle `ADMINISTRATEUR`
 

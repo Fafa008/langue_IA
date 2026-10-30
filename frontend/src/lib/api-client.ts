@@ -17,7 +17,7 @@ export const HTTP_STATUS = {
   CONFLICT: 409,
 } as const;
 
-/** Au-delà, la requête est abandonnée et l'utilisateur voit un message d'erreur. */
+/** Au-delà, la requête est abandonnée et l'utilisateur voit un message d'erreur (réglable par requête). */
 const TIMEOUT_MS = 15_000;
 
 export class ApiError extends Error {
@@ -27,6 +27,8 @@ export class ApiError extends Error {
     message: string,
     /** Message d'erreur renvoyé par le backend (champ `detail`), s'il y en a un. */
     public readonly detail?: string,
+    /** Vrai si la requête a été abandonnée faute de réponse dans le délai (status 0). */
+    public readonly delaiDepasse = false,
   ) {
     super(message);
     this.name = "ApiError";
@@ -60,6 +62,8 @@ export interface RequestOptions {
    * et un 401 y signifie « identifiants incorrects », pas « session expirée ».
    */
   auth?: boolean;
+  /** Délai avant abandon, en millisecondes (15 s par défaut ; plus long pour une analyse par le LLM). */
+  timeoutMs?: number;
 }
 
 /** « /api/v1/users » + { page: 2, search: "" } → « http://…/api/v1/users?page=2 » */
@@ -83,7 +87,10 @@ async function readErrorDetail(res: Response): Promise<string | undefined> {
   }
 }
 
-export async function apiRequest<T>(path: string, { method = "GET", body, query, auth = true }: RequestOptions = {}): Promise<T> {
+export async function apiRequest<T>(
+  path: string,
+  { method = "GET", body, query, auth = true, timeoutMs = TIMEOUT_MS }: RequestOptions = {},
+): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   // Un FormData (envoi de fichier) fixe lui-même son Content-Type multipart
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
@@ -92,7 +99,7 @@ export async function apiRequest<T>(path: string, { method = "GET", body, query,
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
   try {
     res = await fetch(buildUrl(path, query), {
@@ -102,7 +109,9 @@ export async function apiRequest<T>(path: string, { method = "GET", body, query,
       signal: controller.signal,
     });
   } catch {
-    throw new ApiError(0, controller.signal.aborted ? "Le serveur ne répond pas." : "Impossible de joindre le serveur.");
+    throw controller.signal.aborted
+      ? new ApiError(0, "Le serveur ne répond pas.", undefined, true)
+      : new ApiError(0, "Impossible de joindre le serveur.");
   } finally {
     clearTimeout(timer);
   }

@@ -11,6 +11,23 @@ beforeEach(() => {
 });
 
 describe("httpTestDiagnosticService", () => {
+  it("charge les langues du test et ne propose que celles qui ont des questions", async () => {
+    const fetchMock = mockFetch({
+      body: [
+        { code: "en", libelle: "Anglais", cadre: "CECRL", niveaux: ["A1", "A2"], nombre_questions: 12, disponible: true },
+        { code: "es", libelle: "Espagnol", cadre: "CECRL", niveaux: ["A1"], nombre_questions: 0, disponible: true },
+      ],
+    });
+
+    await expect(httpTestDiagnosticService.langues()).resolves.toEqual([
+      { code: "en", libelle: "Anglais", cadre: "CECRL", niveaux: ["A1", "A2"], nombreQuestions: 12, disponible: true },
+      { code: "es", libelle: "Espagnol", cadre: "CECRL", niveaux: ["A1"], nombreQuestions: 0, disponible: false },
+    ]);
+    const { url, init, headers } = fetchCall(fetchMock);
+    expect([url, init.method ?? "GET"]).toEqual([`${API}/diagnostic/langues`, "GET"]);
+    expect(headers.Authorization).toBe("Bearer jwt-test");
+  });
+
   it("crée une tentative puis charge les questions de son niveau", async () => {
     const fetchMock = mockFetch({
       status: 201,
@@ -36,6 +53,7 @@ describe("httpTestDiagnosticService", () => {
       niveaux: ["A1"],
       numeroQuestion: 1,
       totalQuestions: 1,
+      plan: [{ etape: "qcm", nombreQuestions: 1 }],
       question: {
         id: "1",
         niveau: "A1",
@@ -65,6 +83,30 @@ describe("httpTestDiagnosticService", () => {
       "GET",
     ]);
     expect(debut.headers.Authorization).toBeDefined();
+  });
+
+  it("range les questions dans l'ordre des étapes et en déduit le plan du test", async () => {
+    const question = (id_question: string, competence: string, type_reponse = "choix") => ({
+      id_question, niveau: "A1", competence, type_reponse, enonce: id_question, choix: ["a", "b"],
+    });
+    mockFetch({ status: 201, body: { id_tentative: 7, code_langue: "en", code_niveau: "A1" } }, {
+      body: [
+        question("ecrit", "ecrit", "texte"),
+        question("oral", "oral", "audio"),
+        question("ecoute", "ecoute"),
+        question("grammaire", "grammaire"),
+        question("lecture", "lecture"),
+      ],
+    });
+
+    const session = await httpTestDiagnosticService.demarrer("en", "professionnel", []);
+
+    expect(session.questions?.map((q) => q.id)).toEqual(["grammaire", "lecture", "ecoute", "ecrit"]);
+    expect(session.plan).toEqual([
+      { etape: "qcm", nombreQuestions: 2 },
+      { etape: "comprehension_orale", nombreQuestions: 1 },
+      { etape: "expression_ecrite", nombreQuestions: 1 },
+    ]);
   });
 
   it("enregistre la réponse sans simuler son évaluation", async () => {
@@ -111,17 +153,44 @@ describe("httpTestDiagnosticService", () => {
     });
 
     await expect(httpTestDiagnosticService.terminer("42")).resolves.toEqual({
-      niveau: "B2",
-      score: 66.67,
-      total: 100,
-      cadre: "CECRL",
-      competences: [],
-      lacunes: [],
+      statut: "termine",
+      resultat: {
+        niveau: "B2",
+        score: 66.67,
+        total: 100,
+        cadre: "CECRL",
+        competences: [],
+        lacunes: [],
+      },
     });
     expect(fetchCall(fetchMock)).toMatchObject({
       url: `${API}/diagnostic/tentatives/42/terminer`,
       init: { method: "POST" },
     });
+  });
+
+  it("signale un résultat en attente quand l'analyse par le LLM n'est pas terminée (202)", async () => {
+    mockFetch({ status: 202, body: { id_tentative: 42, statut: "en_attente" } });
+    await expect(httpTestDiagnosticService.terminer("42")).resolves.toEqual({ statut: "en_attente" });
+  });
+
+  it("laisse 60 secondes à l'analyse finale avant d'abandonner", async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted")))),
+    ) as unknown as typeof fetch;
+    let terminee = false;
+
+    const terminaison = httpTestDiagnosticService.terminer("42");
+    terminaison.catch(() => { terminee = true; });
+    jest.advanceTimersByTime(15_000);
+    await Promise.resolve();
+    expect(terminee).toBe(false);
+    jest.advanceTimersByTime(45_000);
+
+    await expect(terminaison).rejects.toMatchObject({ status: 0, delaiDepasse: true });
+    jest.useRealTimers();
   });
 
   it("refuse un résultat de scoring incohérent avec la tentative", async () => {
@@ -151,6 +220,10 @@ describe("httpTestDiagnosticService", () => {
     jest.resetModules();
     try {
       const { testDiagnosticService } = await import("@/services/test-diagnostic.service");
+      const langues = await testDiagnosticService.langues();
+      expect(langues.find((l) => l.code === "en")).toMatchObject({ cadre: "CECRL", disponible: true });
+      expect(langues.find((l) => l.code === "zh")).toMatchObject({ cadre: "HSK", disponible: false, nombreQuestions: 0 });
+
       const session = await testDiagnosticService.demarrer("en", "professionnel", []);
       const question = QUESTIONS_TEST.en.find((item) => item.id === session.question.id);
       if (!question) throw new Error(`Question de test absente : ${session.question.id}`);

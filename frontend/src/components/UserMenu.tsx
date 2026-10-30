@@ -1,20 +1,32 @@
 "use client";
 import { ChevronDown, LayoutDashboard, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import Avatar from "@/components/ui/Avatar";
 import { useLogout } from "@/hooks/useAuth";
 import { useDismiss } from "@/hooks/useDismiss";
-import { ACCUEIL_PAR_ROLE } from "@/lib/navigation";
+import { ACCUEIL_PAR_ROLE, NAVIGATION } from "@/lib/navigation";
 import { ROUTES } from "@/lib/routes";
 import { ROLE_LABELS } from "@/lib/roles";
 import type { Utilisateur } from "@/types/utilisateur";
 
-/** Avatar de l'utilisateur connecté (à droite de l'en-tête) et son menu déroulant. */
+const ITEM = "flex items-center gap-3 px-4 py-2.5 text-content hover:bg-background hover:text-primary";
+
+/**
+ * Avatar de l'utilisateur connecté (à droite de l'en-tête) et son menu déroulant.
+ * Sur mobile, le menu reprend aussi les rubriques de l'espace (la navigation latérale y est masquée).
+ */
 export default function UserMenu({ utilisateur }: { utilisateur: Utilisateur }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const logout = useLogout();
+  const pathname = usePathname();
+  const fermer = () => setOpen(false);
+  // « Mon espace » et « Mon profil » sont déjà proposés plus bas
+  const rubriques = NAVIGATION[utilisateur.role].filter(
+    ({ href, bientot }) => !bientot && href !== ACCUEIL_PAR_ROLE[utilisateur.role] && href !== ROUTES.profil,
+  );
 
   const refs = useRef([ref]).current;
   useDismiss(open, refs, useCallback(() => setOpen(false), []));
@@ -27,11 +39,10 @@ export default function UserMenu({ utilisateur }: { utilisateur: Utilisateur }) 
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Menu du compte"
-        className="flex items-center gap-3 rounded-full p-1 pr-2 transition-colors hover:bg-background"
+        className="flex items-center gap-1 rounded-full p-1 transition-colors hover:bg-background"
       >
         <Avatar prenom={utilisateur.prenom} nom={utilisateur.nom} photoUrl={utilisateur.photoUrl} size={44} />
-        <span className="hidden font-medium text-content sm:inline">{utilisateur.prenom}</span>
-        <ChevronDown size={18} className={`text-content transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+        <ChevronDown size={16} className={`text-content transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
       </button>
 
       {open && (
@@ -44,21 +55,28 @@ export default function UserMenu({ utilisateur }: { utilisateur: Utilisateur }) 
               {ROLE_LABELS[utilisateur.role]} · {utilisateur.email}
             </p>
           </div>
-          <Link
-            role="menuitem"
-            href={ACCUEIL_PAR_ROLE[utilisateur.role]}
-            onClick={() => setOpen(false)}
-            className="mt-1 flex items-center gap-3 px-4 py-2.5 text-content hover:bg-background hover:text-primary"
-          >
+          {rubriques.length > 0 && (
+            <div className="border-b border-border py-1 lg:hidden">
+              {rubriques.map(({ label, href, icon: Icon }) => (
+                <Link
+                  key={href}
+                  role="menuitem"
+                  href={href}
+                  onClick={fermer}
+                  aria-current={pathname === href ? "page" : undefined}
+                  className={`${ITEM} ${pathname === href ? "font-semibold text-primary" : ""}`}
+                >
+                  <Icon size={18} aria-hidden />
+                  {label}
+                </Link>
+              ))}
+            </div>
+          )}
+          <Link role="menuitem" href={ACCUEIL_PAR_ROLE[utilisateur.role]} onClick={fermer} className={`mt-1 ${ITEM}`}>
             <LayoutDashboard size={18} aria-hidden />
             Mon espace
           </Link>
-          <Link
-            role="menuitem"
-            href={ROUTES.profil}
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-4 py-2.5 text-content hover:bg-background hover:text-primary"
-          >
+          <Link role="menuitem" href={ROUTES.profil} onClick={fermer} className={ITEM}>
             <UserRound size={18} aria-hidden />
             Mon profil
           </Link>

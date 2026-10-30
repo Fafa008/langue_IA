@@ -16,6 +16,8 @@ export const queryKeys = {
   formateurs: (filtres: FormateursFiltres) => ["formateurs", filtres] as const,
   /** Toutes les langues, pour les choisir dans un formulaire. */
   languesChoix: ["langues", "choix"] as const,
+  /** Langues proposées sur l'écran d'accueil du test de positionnement. */
+  languesDiagnostic: ["diagnostic", "langues"] as const,
   statistiquesAdmin: ["statistiques-admin"] as const,
   inscriptions: (jours: PeriodeInscriptions) => ["inscriptions", jours] as const,
 };
