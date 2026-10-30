@@ -78,7 +78,7 @@ export function useTestDiagnostic() {
     if (!etat.langue) return;
     demarrage.mutate({ langue: etat.langue, personnalisation: etat.personnalisation }, {
       onSuccess: (session) => {
-        dispatch({ type: "demarrer", session });
+        dispatch({ type: "demarrer", session, debut: Date.now() });
         router.push(ROUTES.apprenant.testDiagnostic.test);
       },
     });
@@ -169,7 +169,7 @@ export function useTestDiagnostic() {
       reponse.reset();
       dispatch({ type: "choisirTexte", texte });
     },
-    choisirAudio: (audio: Blob) => {
+    choisirAudio: (audio: Blob | null) => {
       reponse.reset();
       dispatch({ type: "choisirAudio", audio });
     },
@@ -178,7 +178,8 @@ export function useTestDiagnostic() {
     repondreAudio,
     reessayerReponse,
     suivante,
-    reessayerTerminaison: terminer,
+    /** Termine le test maintenant (temps écoulé, ou nouvel essai après une erreur de calcul). */
+    terminer,
     recommencer,
     demarrageEnCours: demarrage.isPending,
     erreurDemarrage: demarrage.error,
