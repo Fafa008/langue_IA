@@ -431,6 +431,43 @@ apprenant. Les questions sans réponse comptent comme incorrectes. Si une clé m
 option, la clôture est refusée. Le futur service IA pourra enrichir ou compléter cette première évaluation, sans
 remplacer le contrat de persistance des réponses. Aucune suppression automatique n'est configurée.
 
+### `GET /diagnostic/langues` — rôle `APPRENANT`
+
+Langues proposées sur l'écran d'accueil du test, triées par libellé.
+
+**200** :
+
+```json
+[
+  {
+    "code": "en",
+    "libelle": "Anglais",
+    "cadre": "CECRL",
+    "niveaux": ["A1", "A2", "B1", "B2", "C1", "C2"],
+    "nombre_questions": 10,
+    "disponible": true
+  },
+  {
+    "code": "zh",
+    "libelle": "Chinois",
+    "cadre": "HSK",
+    "niveaux": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"],
+    "nombre_questions": 0,
+    "disponible": false
+  }
+]
+```
+
+- `cadre` vaut `HSK` pour le chinois (`zh`) et `CECRL` pour les autres langues : c'est aussi le référentiel du score
+  final.
+- `niveaux` liste les niveaux ouverts pour la langue, du plus bas au plus haut.
+- `nombre_questions` compte les questions à choix ou à réponse textuelle du niveau de départ, c'est-à-dire le niveau
+  que `POST /diagnostic/tentatives` choisira. C'est le nombre de questions du test.
+- `disponible` vaut `false` tant que la langue n'a aucune question de ce type. Le frontend l'affiche alors
+  « Bientôt disponible » et ne permet pas de la choisir.
+
+Erreurs : **401** session absente ou invalide, **403** rôle autre qu'`APPRENANT`.
+
 ### `POST /diagnostic/tentatives` — rôle `APPRENANT`
 
 Crée une tentative pour la langue demandée. Le backend choisit le premier niveau ouvert qui possède au moins une

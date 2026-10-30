@@ -1,5 +1,4 @@
 import { expect, test, type Page } from "@playwright/test";
-import type { CodeLangue } from "../src/types/langue";
 import { ACCESS_TOKEN, loginAs, type UtilisateurDto } from "./support/session";
 import { mockTestDiagnosticApi } from "./support/test-diagnostic-api";
 
@@ -18,19 +17,23 @@ const APPRENANT: UtilisateurDto = {
   date_inscription: "2026-10-07T10:00:00Z",
 };
 
+/** Ouvre l'écran d'accueil, avec la langue présélectionnée par l'URL si elle est donnée. */
 async function ouvrir(
   page: Page,
-  langue: CodeLangue,
-  options?: { failFirstAnswer?: boolean },
+  langue?: string,
+  options?: { failFirstAnswer?: boolean; languesEnErreur?: boolean },
 ) {
   await mockTestDiagnosticApi(page, options);
   await loginAs(page, APPRENANT);
-  await page.goto(`${URL_TEST}?langue=${langue}`);
+  await page.goto(langue ? `${URL_TEST}?langue=${langue}` : URL_TEST);
 }
 
+const boutonCommencer = (page: Page) => page.getByRole("button", { name: "Commencer le test", exact: true });
+
+/** Accueil → personnalisation → création de la tentative. */
 async function demarrer(page: Page) {
-  await page.getByRole("button", { name: /Continuer/ }).click();
-  await page.getByRole("button", { name: /Commencer le test IA/ }).click();
+  await boutonCommencer(page).click();
+  await page.getByRole("button", { name: /Lancer le test/ }).click();
   await expect(page).toHaveURL(`${URL_TEST}/test`);
 }
 
@@ -75,17 +78,68 @@ test.describe("Accès au module Diagnostic", () => {
     await demarrer(page);
     await repondre(page);
     await expect(page.getByTestId("feedback")).toBeVisible();
-    // tentative, questions, réponse
-    expect(autorisations.length).toBeGreaterThanOrEqual(3);
+    // langues, tentative, questions, réponse
+    expect(autorisations.length).toBeGreaterThanOrEqual(4);
     expect(new Set(autorisations)).toEqual(new Set([`Bearer ${ACCESS_TOKEN}`]));
   });
 });
 
-test.describe("Test de positionnement — réponses et score déterministe", () => {
+test.describe("Écran d'accueil du diagnostic", () => {
+  test("liste les langues chargées depuis l'API, avec leur échelle", async ({ page }) => {
+    const appelsLangues = page.waitForRequest((request) => request.url().endsWith("/api/v1/diagnostic/langues"));
+    await ouvrir(page);
+    await appelsLangues;
+    await page.getByTestId("language-select").click();
+    await expect(page.getByRole("option")).toHaveCount(4);
+    await expect(page.getByTestId("language-option-en")).toContainText("Échelle CECRL, A1 à C2");
+    await expect(page.getByTestId("language-option-fr")).toContainText("Échelle CECRL, A1 à C2");
+    await expect(page.getByTestId("language-option-zh")).toContainText("Bientôt disponible");
+    await expect(page.getByTestId("language-option-es")).toContainText("Espagnol");
+    await expect(page.getByTestId("language-option-es")).toContainText("Bientôt disponible");
+  });
+
+  test("affiche les consignes avant le démarrage", async ({ page }) => {
+    await ouvrir(page);
+    await expect(page.getByRole("heading", { name: "Évaluez votre niveau" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "2. Avant de commencer" })).toBeVisible();
+    await expect(page.getByTestId("consignes").getByRole("listitem")).toHaveCount(4);
+    await expect(page.getByTestId("consignes")).toContainText("sans dictionnaire ni traducteur");
+  });
+
+  test("ne permet pas de démarrer sans langue choisie", async ({ page }) => {
+    await ouvrir(page);
+    await expect(page.getByTestId("language-select")).toContainText("Choisissez une langue");
+    await expect(boutonCommencer(page)).toBeDisabled();
+    await expect(page.getByText("Choisissez une langue pour commencer.")).toBeVisible();
+    await expect(page.getByTestId("chiffres-test").getByRole("definition")).toHaveText(["–", "–", "–"]);
+  });
+
+  test("une langue « Bientôt disponible » ne peut pas être choisie", async ({ page }) => {
+    await ouvrir(page, "zh");
+    await expect(page.getByTestId("language-select")).toContainText("Choisissez une langue");
+    await page.getByTestId("language-select").click();
+    await expect(page.getByTestId("language-option-zh")).toHaveAttribute("aria-disabled", "true");
+    // Clic forcé : l'option est désactivée, le clic ne doit rien choisir
+    await page.getByTestId("language-option-zh").click({ force: true });
+    await expect(page.getByTestId("language-select")).toContainText("Choisissez une langue");
+    await expect(boutonCommencer(page)).toBeDisabled();
+  });
+
+  test("le choix d'une langue affiche le nombre de questions, la durée et les niveaux", async ({ page }) => {
+    await ouvrir(page);
+    await page.getByTestId("language-select").click();
+    await page.getByTestId("language-option-en").click();
+    const chiffres = page.getByTestId("chiffres-test");
+    await expect(chiffres.getByRole("term")).toHaveText(["questions", "de durée estimée", "niveaux estimés"]);
+    await expect(chiffres.getByRole("definition")).toHaveText(["2", "2 min", "6"]);
+    await expect(boutonCommencer(page)).toBeEnabled();
+    await expect(page.getByText("Choisissez une langue pour commencer.")).toHaveCount(0);
+  });
+
   test("préselectionne la langue indiquée dans l'URL", async ({ page }) => {
     await ouvrir(page, "fr");
     await expect(page.getByTestId("language-select")).toContainText("Français");
-    await expect(page.getByRole("button", { name: /Continuer/ })).toBeEnabled();
+    await expect(boutonCommencer(page)).toBeEnabled();
   });
 
   test("permet de chercher et changer la langue avant de commencer", async ({ page }) => {
@@ -97,6 +151,28 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     await expect(page.getByTestId("language-select")).toContainText("Anglais");
   });
 
+  test("propose de réessayer si les langues ne se chargent pas", async ({ page }) => {
+    await ouvrir(page, undefined, { languesEnErreur: true });
+    const alerte = page.getByRole("alert").filter({ hasText: "Les langues n'ont pas pu être chargées" });
+    await expect(alerte).toBeVisible();
+    await expect(boutonCommencer(page)).toBeDisabled();
+    await page.unrouteAll({ behavior: "wait" });
+    await mockTestDiagnosticApi(page);
+    await alerte.getByRole("button", { name: "Réessayer" }).click();
+    await expect(page.getByTestId("language-select")).toBeVisible();
+  });
+
+  test("« Commencer le test » mène à la personnalisation, puis au test", async ({ page }) => {
+    await ouvrir(page, "en");
+    await boutonCommencer(page).click();
+    await expect(page.getByRole("heading", { name: /Quelques questions avant de commencer/ })).toBeVisible();
+    await page.getByTestId("test-back").click();
+    await expect(page.getByTestId("language-select")).toContainText("Anglais");
+    await demarrer(page);
+  });
+});
+
+test.describe("Test de positionnement — réponses et score déterministe", () => {
   test("crée une tentative et charge les questions depuis le backend", async ({ page }) => {
     await ouvrir(page, "en");
     await demarrer(page);
@@ -146,14 +222,6 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
   });
 
-  test("signale les langues sans question disponible", async ({ page }) => {
-    await ouvrir(page, "zh");
-    await page.getByRole("button", { name: /Continuer/ }).click();
-    await page.getByRole("button", { name: /Commencer le test IA/ }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "pas encore disponible" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Test indisponible" })).toBeDisabled();
-  });
-
   test("renvoie au démarrage si le test ou le résultat est ouvert sans tentative", async ({ page }) => {
     await ouvrir(page, "en");
     await page.goto(`${URL_TEST}/test`);
@@ -177,7 +245,7 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     await page.getByTestId("test-back").click();
     await page.getByRole("dialog").getByRole("button", { name: "Quitter le test" }).click();
     await expect(page).toHaveURL(URL_TEST);
-    await expect(page.getByRole("heading", { name: "Évaluons votre niveau" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Évaluez votre niveau" })).toBeVisible();
   });
 
   test("reste lisible sans défilement horizontal (desktop et mobile)", async ({ page }) => {

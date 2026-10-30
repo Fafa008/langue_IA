@@ -1,4 +1,4 @@
-import { LANGUE_PAR_DEFAUT, selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnostic.store";
+import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnostic.store";
 import type { SessionTest } from "@/types/test-diagnostic";
 
 const session: SessionTest = {
@@ -36,6 +36,6 @@ describe("store du test de positionnement", () => {
   it("repart d'un test vierge après réinitialisation", () => {
     useTestDiagnosticStore.getState().dispatch({ type: "demarrer", session });
     useTestDiagnosticStore.getState().reinitialiser();
-    expect(useTestDiagnosticStore.getState().etat).toMatchObject({ phase: "intro", langue: LANGUE_PAR_DEFAUT, sessionId: null });
+    expect(useTestDiagnosticStore.getState().etat).toMatchObject({ phase: "intro", langue: null, sessionId: null });
   });
 });

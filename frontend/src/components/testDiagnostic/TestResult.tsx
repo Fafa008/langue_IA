@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { BookOpenText, Headphones, MessageSquareText, Mic, TriangleAlert, type LucideIcon } from "lucide-react";
 import { useTestDiagnostic } from "@/hooks/useTestDiagnostic";
 import { libelleLangue as libelleDe } from "@/lib/languages";
+import { ECHELLES } from "@/lib/referentiels";
 import { ROUTES } from "@/lib/routes";
 import type { CompetenceTest } from "@/types/test-diagnostic";
 import BoutonRetour from "./BoutonRetour";
@@ -26,12 +27,6 @@ const COMPETENCES: Record<CompetenceTest, { label: string; Icone: LucideIcon }> 
   ecrit: { label: "Expression écrite", Icone: MessageSquareText },
   oral: { label: "Expression orale", Icone: Mic },
 };
-
-/** Échelle complète affichée sous le niveau, du plus bas au plus haut. */
-const ECHELLES = {
-  CECRL: ["A1", "A2", "B1", "B2", "C1", "C2"],
-  HSK: ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"],
-} as const;
 
 const pourcentage = (score: number, total: number) => (total ? Math.round((score / total) * 100) : 0);
 const nombre = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
@@ -68,7 +63,7 @@ export default function TestResult() {
 
   if (!resultat) return null;
 
-  const libelleLangue = libelleDe(etat.langue);
+  const libelleLangue = libelleDe(etat.langue ?? "");
   const scoreGlobal = pourcentage(resultat.score, resultat.total);
   const referentiel = resultat.cadre ?? (resultat.niveau.toUpperCase().startsWith("HSK") ? "HSK" : "CECRL");
   // La tentative ne connaît que son niveau de départ : l'échelle complète du référentiel est affichée.
