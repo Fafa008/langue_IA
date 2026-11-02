@@ -1,10 +1,12 @@
 import { ApiError } from "@/lib/api-client";
+import { LANGUES } from "@/lib/languages";
+import { cadreDeLangue, ECHELLES } from "@/lib/referentiels";
 import { QUESTIONS_TEST, type QuestionMock } from "@/mocks/questions-test.mock";
-import type { CodeLangue } from "@/types/langue";
 import {
   COMPETENCES_TEST,
   type CompetenceResultat,
   type CompetenceTest,
+  type LangueDiagnostic,
   type ObjectifFormation,
   type Question,
   type ReponseTest,
@@ -14,9 +16,13 @@ import {
 
 const MAX_QUESTIONS = 10;
 
+/** Banque de questions simulée d'une langue (vide pour une langue inconnue). */
+const banqueDe = (langue: string): QuestionMock[] =>
+  (QUESTIONS_TEST as Record<string, QuestionMock[] | undefined>)[langue] ?? [];
+
 interface SessionMock {
   id: string;
-  langue: CodeLangue;
+  langue: string;
   banque: QuestionMock[];
   niveaux: string[];
   total: number;
@@ -66,8 +72,16 @@ function creerScoresCompetences(): SessionMock["scoresCompetences"] {
 }
 
 export const testDiagnosticMockService = {
-  async demarrer(langue: CodeLangue, _objectif: ObjectifFormation, _creneaux: string[]): Promise<SessionTest> {
-    const banque = QUESTIONS_TEST[langue];
+  async langues(): Promise<LangueDiagnostic[]> {
+    return LANGUES.map(({ code, libelle }) => {
+      const cadre = cadreDeLangue(code);
+      const nombreQuestions = Math.min(MAX_QUESTIONS, banqueDe(code).length);
+      return { code, libelle, cadre, niveaux: [...ECHELLES[cadre]], nombreQuestions, disponible: nombreQuestions > 0 };
+    });
+  },
+
+  async demarrer(langue: string, _objectif: ObjectifFormation, _creneaux: string[]): Promise<SessionTest> {
+    const banque = banqueDe(langue);
     const niveaux = [...new Set(banque.map((question) => question.niveau))];
     if (banque.length === 0 || niveaux.length === 0) {
       throw new ApiError(404, "Aucune question n'est disponible pour cette langue.");

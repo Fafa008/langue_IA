@@ -1,5 +1,7 @@
 /** Espace connecté : un dossier par rôle (src/app/espace/admin, formateur, apprenant). */
 const ESPACE = "/espace";
+/** Module Diagnostic : src/app/espace/apprenant/test-diagnostic (démarrage, test, résultats). */
+const DIAGNOSTIC = `${ESPACE}/apprenant/test-diagnostic`;
 
 export const ROUTES = {
   home: "/",
@@ -11,7 +13,12 @@ export const ROUTES = {
   profil: `${ESPACE}/profil`,
   apprenant: {
     dashboard: `${ESPACE}/apprenant`,
-    testDiagnostic: `${ESPACE}/apprenant/test-diagnostic`,
+    testDiagnostic: {
+      /** Choix de la langue et personnalisation ; ?langue=de présélectionne la langue. */
+      demarrage: DIAGNOSTIC,
+      test: `${DIAGNOSTIC}/test`,
+      resultats: `${DIAGNOSTIC}/resultats`,
+    },
     mesCours: `${ESPACE}/apprenant/mes-cours`,
     ateliers: `${ESPACE}/apprenant/ateliers`,
     mesInscriptions: `${ESPACE}/apprenant/mes-inscriptions`,
