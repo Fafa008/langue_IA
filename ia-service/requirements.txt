@@ -1,3 +1,7 @@
-# Dépendances minimales du squelette (route /health) : à compléter par l'équipe du service
+# Dépendances du service IA.
+#
+# `pydantic` est épinglé sur la même version que le backend : les contrats internes et publics doivent accepter et
+# refuser exactement les mêmes valeurs.
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
+pydantic==2.10.4

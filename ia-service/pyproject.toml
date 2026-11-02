@@ -1,0 +1,14 @@
+# Configuration des outils du service IA (installation par requirements-dev.txt)
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]  # Depends(), Query()… en valeur par défaut : idiome FastAPI

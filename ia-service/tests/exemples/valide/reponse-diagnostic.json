@@ -1,0 +1,29 @@
+{
+  "request_id": "3f1c9b7e-6a2d-4f0e-9c1a-2b7d5e8f4a10",
+  "agent": "diagnostic",
+  "version_agent": "1.0.0",
+  "version_prompt": "diagnostic/evaluation@1.0.0",
+  "statut": "succes",
+  "resultat": {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_estime": "B2",
+    "phase_assimil": "active",
+    "points_faibles": [
+      {
+        "competence": "ecrit",
+        "description": "Emploi irrégulier des temps."
+      }
+    ],
+    "score_confiance": 0.78,
+    "niveau_preliminaire": "B1",
+    "ecart_avec_niveau_preliminaire": 1
+  },
+  "meta": {
+    "duree_ms": 1840,
+    "fournisseur": "factice",
+    "modele": "modele-test",
+    "version_corpus": "2026.10",
+    "empreinte_prompt": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}
