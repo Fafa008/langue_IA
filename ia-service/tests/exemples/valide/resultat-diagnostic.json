@@ -1,0 +1,15 @@
+{
+  "code_langue": "en",
+  "referentiel": "CECRL",
+  "niveau_estime": "B2",
+  "phase_assimil": "active",
+  "points_faibles": [
+    {
+      "competence": "ecrit",
+      "description": "Emploi irrégulier des temps."
+    }
+  ],
+  "score_confiance": 0.78,
+  "niveau_preliminaire": "B1",
+  "ecart_avec_niveau_preliminaire": 1
+}

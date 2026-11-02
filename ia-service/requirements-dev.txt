@@ -1,0 +1,6 @@
+# Outils de développement du service IA (tests et lint)
+-r requirements.txt
+
+pytest==8.3.4
+pytest-cov==6.0.0
+ruff==0.8.4
