@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import AnalyseEnCours from "@/components/testDiagnostic/AnalyseEnCours";
-import ErreurReessayable from "@/components/testDiagnostic/ErreurReessayable";
-import ResultatEnAttente from "@/components/testDiagnostic/ResultatEnAttente";
+import AnalyseEnCours from "@/components/pedagogie/testDiagnostic/AnalyseEnCours";
+import ErreurReessayable from "@/components/pedagogie/testDiagnostic/ErreurReessayable";
+import ResultatEnAttente from "@/components/pedagogie/testDiagnostic/ResultatEnAttente";
 
 describe("états de l'analyse", () => {
   it("rassure l'apprenant quand l'analyse dure plus longtemps que d'habitude", () => {

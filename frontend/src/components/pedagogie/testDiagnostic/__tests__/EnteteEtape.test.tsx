@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import EnteteEtape from "@/components/testDiagnostic/EnteteEtape";
+import EnteteEtape from "@/components/pedagogie/testDiagnostic/EnteteEtape";
 
 const props = {
   etape: "expression_orale" as const,
