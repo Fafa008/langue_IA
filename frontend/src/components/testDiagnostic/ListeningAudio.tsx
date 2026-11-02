@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { Headphones, Square, Volume2 } from "lucide-react";
-import type { CodeLangue } from "@/types/langue";
 
 interface ListeningAudioProps {
-  langue: CodeLangue;
+  langue: string;
   audioUrl?: string;
   audioTexte?: string;
 }
 
-const LOCALES: Record<CodeLangue, string> = {
+/** Voix de synthèse par langue ; pour une autre langue, le code seul (« es ») suffit au navigateur. */
+const LOCALES: Record<string, string> = {
   en: "en-US",
   fr: "fr-FR",
   zh: "zh-CN",
@@ -33,7 +33,7 @@ export default function ListeningAudio({ langue, audioUrl, audioTexte }: Listeni
     if (!syntheseDisponible || !audioTexte) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(audioTexte);
-    utterance.lang = LOCALES[langue];
+    utterance.lang = LOCALES[langue] ?? langue;
     utterance.rate = 0.9;
     utterance.onstart = () => setLectureEnCours(true);
     utterance.onend = () => setLectureEnCours(false);

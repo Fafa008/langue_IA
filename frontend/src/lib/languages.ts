@@ -1,16 +1,17 @@
 import type { CodeLangue, Langue } from "@/types/langue";
 
 // Liste statique en attendant un endpoint GET /langues côté backend
-export const LANGUES: (Langue & { flag: string })[] = [
-  { code: "fr", libelle: "Français", flag: "/flags/fr.jpg" },
-  { code: "en", libelle: "Anglais", flag: "/flags/gb.jpg" },
-  { code: "zh", libelle: "Mandarin", flag: "/flags/cn.jpg" },
-  { code: "it", libelle: "Italien", flag: "/flags/it.jpg" },
-  { code: "de", libelle: "Allemand", flag: "/flags/de.jpg" },
+// `natif` : nom de la langue dans cette langue, pour le choix de la langue d'affichage
+export const LANGUES: (Langue & { flag: string; natif: string })[] = [
+  { code: "fr", libelle: "Français", natif: "Français", flag: "/flags/fr.jpg" },
+  { code: "en", libelle: "Anglais", natif: "English", flag: "/flags/gb.jpg" },
+  { code: "zh", libelle: "Mandarin", natif: "中文", flag: "/flags/cn.jpg" },
+  { code: "it", libelle: "Italien", natif: "Italiano", flag: "/flags/it.jpg" },
+  { code: "de", libelle: "Allemand", natif: "Deutsch", flag: "/flags/de.jpg" },
 ];
 
 /** "zh" → « Mandarin » (le code est renvoyé tel quel s'il est inconnu). */
-export function libelleLangue(code: CodeLangue): string {
+export function libelleLangue(code: string): string {
   return LANGUES.find((l) => l.code === code)?.libelle ?? code;
 }
 

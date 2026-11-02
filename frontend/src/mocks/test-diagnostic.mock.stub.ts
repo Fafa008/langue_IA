@@ -3,6 +3,7 @@ const mockModeDisabled = (): never => {
 };
 
 export const testDiagnosticMockService = {
+  langues: mockModeDisabled,
   demarrer: mockModeDisabled,
   repondre: mockModeDisabled,
 };

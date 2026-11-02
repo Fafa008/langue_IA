@@ -49,6 +49,9 @@
   .btn-secondary {
     @apply btn border border-primary bg-surface text-primary hover:bg-background;
   }
+  .btn-danger {
+    @apply btn bg-error text-white hover:bg-error/90;
+  }
 
   /* Champ de saisie */
   .input {

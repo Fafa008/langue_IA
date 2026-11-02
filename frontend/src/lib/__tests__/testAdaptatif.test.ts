@@ -128,3 +128,14 @@ describe("état du test piloté par la session", () => {
     expect(reducteur(initial, { type: "suivante" })).toBe(initial);
   });
 });
+
+describe("réponses enregistrées", () => {
+  it("garde l'historique des réponses validées et le remet à zéro au démarrage", () => {
+    const enCours = reducteur(etatInitial("en"), { type: "demarrer", session });
+    const feedback = reducteur(enCours, { type: "repondre", choix: 0, retour });
+    expect(feedback.reponses).toEqual([
+      { idQuestion: "q-1", niveau: "B1", competence: "grammaire", typeReponse: "choix", correcte: true },
+    ]);
+    expect(reducteur(feedback, { type: "demarrer", session }).reponses).toEqual([]);
+  });
+});

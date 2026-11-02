@@ -6,6 +6,7 @@ import { ACCUEIL_PAR_ROLE } from "@/lib/navigation";
 import { ROUTES } from "@/lib/routes";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth.store";
+import { useTestDiagnosticStore } from "@/store/test-diagnostic.store";
 import type { LoginFormValues } from "@/types/auth";
 
 /*
@@ -59,6 +60,7 @@ export function useLogout() {
 
   return useCallback(() => {
     clearSession();
+    useTestDiagnosticStore.getState().reinitialiser();
     queryClient.removeQueries();
     router.push(ROUTES.login);
   }, [clearSession, queryClient, router]);

@@ -1,12 +1,12 @@
 import type { Page } from "@playwright/test";
+import { ECHELLES, cadreDeLangue } from "../../src/lib/referentiels";
 import { QUESTIONS_TEST, type QuestionMock } from "../../src/mocks/questions-test.mock";
-import type { CodeLangue } from "../../src/types/langue";
 import type { Question } from "../../src/types/test-diagnostic";
 import { handlePreflight, json } from "./session";
 
 interface TentativeE2E {
   id: number;
-  langue: CodeLangue;
+  langue: string;
   niveau: string;
   questions: QuestionMock[];
   reponses: Map<string, { id: number; valeur: string }>;
@@ -27,10 +27,29 @@ function questionPublique(question: Question) {
   };
 }
 
+/** Langues renvoyées par GET /diagnostic/langues : celles de la banque, plus l'espagnol sans questions (sans drapeau). */
+const LANGUES_API = [
+  { code: "en", libelle: "Anglais" },
+  { code: "fr", libelle: "Français" },
+  { code: "zh", libelle: "Chinois" },
+  { code: "es", libelle: "Espagnol" },
+];
+
+/** Premier niveau ayant des questions enregistrables, et ces questions (même règle que le backend). */
+function niveauDeDepart(langue: string) {
+  const banque = (QUESTIONS_TEST as Record<string, QuestionMock[] | undefined>)[langue] ?? [];
+  const niveaux = [...new Set(banque.map((question) => question.niveau))];
+  const niveau = niveaux.find((code) => banque.some(
+    (question) => question.niveau === code && question.typeReponse !== "audio",
+  ));
+  const questions = banque.filter((question) => question.niveau === niveau && question.typeReponse !== "audio");
+  return { niveau, questions };
+}
+
 /** Faux backend du flux API : conserve les réponses et renvoie le résultat de scoring à la clôture. */
 export async function mockTestDiagnosticApi(
   page: Page,
-  { failFirstAnswer = false }: { failFirstAnswer?: boolean } = {},
+  { failFirstAnswer = false, languesEnErreur = false }: { failFirstAnswer?: boolean; languesEnErreur?: boolean } = {},
 ) {
   const tentatives = new Map<number, TentativeE2E>();
   let idTentative = 0;
@@ -42,13 +61,29 @@ export async function mockTestDiagnosticApi(
     const request = route.request();
     const url = new URL(request.url());
 
+    if (request.method() === "GET" && url.pathname === "/api/v1/diagnostic/langues") {
+      if (languesEnErreur) {
+        await json(route, 503, { detail: "Service temporairement indisponible" });
+        return;
+      }
+      await json(route, 200, LANGUES_API.map(({ code, libelle }) => {
+        const cadre = cadreDeLangue(code);
+        const { questions } = niveauDeDepart(code);
+        return {
+          code,
+          libelle,
+          cadre,
+          niveaux: ECHELLES[cadre],
+          nombre_questions: questions.length,
+          disponible: questions.length > 0,
+        };
+      }));
+      return;
+    }
+
     if (request.method() === "POST" && url.pathname === "/api/v1/diagnostic/tentatives") {
-      const { code_langue: langue } = request.postDataJSON() as { code_langue: CodeLangue };
-      const banque = QUESTIONS_TEST[langue];
-      const niveaux = [...new Set(banque.map((question) => question.niveau))];
-      const niveau = niveaux.find((code) => banque.some(
-        (question) => question.niveau === code && question.typeReponse !== "audio",
-      ));
+      const { code_langue: langue } = request.postDataJSON() as { code_langue: string };
+      const { niveau, questions } = niveauDeDepart(langue);
       if (!niveau) {
         await json(route, 404, { detail: "Aucune question enregistrable n'est disponible pour cette langue." });
         return;
@@ -58,7 +93,7 @@ export async function mockTestDiagnosticApi(
         id,
         langue,
         niveau,
-        questions: banque.filter((question) => question.niveau === niveau && question.typeReponse !== "audio"),
+        questions,
         reponses: new Map(),
         statut: "EN_COURS",
       });
@@ -67,13 +102,8 @@ export async function mockTestDiagnosticApi(
     }
 
     if (request.method() === "GET" && url.pathname === "/api/v1/diagnostic/questions") {
-      const codeLangue = url.searchParams.get("code_langue") as CodeLangue | null;
-      const codeNiveau = url.searchParams.get("code_niveau");
-      const questions = codeLangue
-        ? QUESTIONS_TEST[codeLangue]
-          .filter((question) => question.niveau === codeNiveau && question.typeReponse !== "audio")
-          .map(questionPublique)
-        : [];
+      const { niveau, questions: enregistrables } = niveauDeDepart(url.searchParams.get("code_langue") ?? "");
+      const questions = niveau === url.searchParams.get("code_niveau") ? enregistrables.map(questionPublique) : [];
       await json(route, 200, questions);
       return;
     }

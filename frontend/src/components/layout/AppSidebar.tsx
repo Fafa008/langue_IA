@@ -42,7 +42,7 @@ export default function AppSidebar() {
       </nav>
 
       <div className="mt-auto rounded-card bg-primary/5 p-5 text-small text-content-secondary">
-        <Image src="/logo.jpg" alt="" width={40} height={40} className="mb-3 h-10 w-10 rounded-lg shadow-card" />
+        <Image src="/logo.jpg" alt="" width={40} height={40} className="mb-3 h-10 w-10 rounded-full object-cover shadow-card ring-2 ring-primary/15" />
         Apprendre aujourd&apos;hui, réussir demain.
       </div>
     </aside>
