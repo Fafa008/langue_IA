@@ -99,6 +99,49 @@ export type RetourReponse = RetourReponseBase & (
     }
 );
 
+/** Domaine d'un point faible repéré par l'analyse (le vocabulaire est distingué de la grammaire). */
+export type DomaineFaiblesse =
+  | "grammaire"
+  | "vocabulaire"
+  | "comprehension_ecrite"
+  | "comprehension_orale"
+  | "expression_ecrite"
+  | "expression_orale";
+
+export interface PointFaible {
+  domaine: DomaineFaiblesse;
+  /** Explication rédigée par l'analyse (LLM), si elle est fournie. */
+  detail?: string;
+}
+
+/**
+ * Phase de la méthode Assimil : imprégnation (phase passive : écouter, lire, répéter)
+ * puis activation (phase active : reformuler, produire).
+ */
+export type PhaseAssimil = "impregnation" | "activation";
+
+/** Descripteur du référentiel retrouvé par le RAG et cité pour justifier le niveau. */
+export interface SourceReferentiel {
+  id: string;
+  referentiel: CadreReference;
+  niveau: string;
+  competence?: string;
+  titre: string;
+  extrait: string;
+  /** Lien vers le document source (http ou https uniquement). */
+  url?: string;
+}
+
+/** Justification du niveau : synthèse rédigée par le LLM et descripteurs du référentiel sur lesquels elle s'appuie. */
+export interface Justification {
+  resume: string;
+  sources: SourceReferentiel[];
+}
+
+/**
+ * Résultat du test. Niveau et score sont toujours présents ; le reste dépend de l'analyse
+ * et peut manquer (analyse partielle, backend qui ne le fournit pas encore).
+ */
 export interface ResultatTest {
   niveau: string;
   score: number;
@@ -106,6 +149,9 @@ export interface ResultatTest {
   cadre?: CadreReference;
   competences: CompetenceResultat[];
   lacunes: CompetenceTest[];
+  pointsFaibles?: PointFaible[];
+  phaseAssimil?: PhaseAssimil;
+  justification?: Justification;
 }
 
 /**

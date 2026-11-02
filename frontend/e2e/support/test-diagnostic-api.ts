@@ -73,7 +73,41 @@ export interface OptionsApiDiagnostic {
   premiereTerminaison?: "panne" | "en_attente" | "sans_reponse";
   /** Ajoute un sujet d'expression écrite après les questions à choix. */
   avecRedaction?: boolean;
+  /** Le résultat inclut l'analyse détaillée (LLM + RAG) : compétences, points faibles, phase Assimil, justification. */
+  avecAnalyse?: boolean;
 }
+
+/** Analyse détaillée renvoyée avec `avecAnalyse` ; un lien `javascript:` vérifie qu'il n'est jamais cliquable. */
+export const ANALYSE_E2E = {
+  competences: [{ competence: "grammaire", score: 1, total: 2 }],
+  points_faibles: [
+    { domaine: "vocabulaire", detail: "Le vocabulaire reste limité aux situations du quotidien." },
+    { domaine: "expression_orale", detail: null },
+  ],
+  phase_assimil: "activation",
+  justification: {
+    resume: "Vos réponses correspondent aux descripteurs du niveau B1, avec un vocabulaire à enrichir.",
+    sources: [
+      {
+        id: 12,
+        referentiel: "CECRL",
+        niveau: "B1",
+        titre: "Échelle globale — niveau B1",
+        extrait: "Comprend l'essentiel de sujets familiers et produit un discours simple et cohérent.",
+        url: "https://www.coe.int/fr/web/common-european-framework-reference-languages",
+      },
+      {
+        id: 13,
+        referentiel: "CECRL",
+        niveau: "B1",
+        competence: "vocabulaire",
+        titre: "Étendue du vocabulaire",
+        extrait: "Possède un vocabulaire suffisant pour des besoins courants.",
+        url: "javascript:alert(1)",
+      },
+    ],
+  },
+};
 
 /** Détail renvoyé par la panne simulée : il ne doit jamais apparaître à l'écran. */
 export const DETAIL_TECHNIQUE = "Traceback: LLMTimeoutError at llm_client.py:42 (OPENAI_API_KEY=sk-secret)";
@@ -87,6 +121,7 @@ export async function mockTestDiagnosticApi(
     languesEnErreur = false,
     premiereTerminaison,
     avecRedaction = false,
+    avecAnalyse = false,
   }: OptionsApiDiagnostic = {},
 ) {
   const tentatives = new Map<number, TentativeE2E>();
@@ -238,6 +273,7 @@ export async function mockTestDiagnosticApi(
           ? ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"][["A1", "A2", "B1", "B2", "C1", "C2"].indexOf(level)]
           : level,
         framework: tentative.langue === "zh" ? "HSK" : "CECRL",
+        ...(avecAnalyse ? ANALYSE_E2E : {}),
       });
       return;
     }

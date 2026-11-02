@@ -3,10 +3,12 @@ import { ETAPES, etapeDe } from "@/lib/etapesTest";
 import { LANGUES } from "@/lib/languages";
 import { cadreDeLangue, ECHELLES } from "@/lib/referentiels";
 import { QUESTIONS_TEST, type QuestionMock } from "@/mocks/questions-test.mock";
+import { sourceDomaine, sourceNiveau } from "@/mocks/referentiel-rag.mock";
 import {
   COMPETENCES_TEST,
   type CompetenceResultat,
   type CompetenceTest,
+  type DomaineFaiblesse,
   type EtapePlan,
   type IssueTerminaison,
   type LangueDiagnostic,
@@ -106,6 +108,15 @@ function creerScoresCompetences(): SessionMock["scoresCompetences"] {
   };
 }
 
+/** Domaines signalés pour une compétence en lacune : le QCM de grammaire évalue aussi le vocabulaire. */
+const DOMAINES_DE_LACUNE: Record<CompetenceTest, DomaineFaiblesse[]> = {
+  grammaire: ["grammaire", "vocabulaire"],
+  lecture: ["comprehension_ecrite"],
+  ecoute: ["comprehension_orale"],
+  ecrit: ["expression_ecrite"],
+  oral: ["expression_orale"],
+};
+
 /** Résultat d'après les réponses données jusqu'ici (fin normale ou temps écoulé). */
 function calculerResultat(session: SessionMock): ResultatTest {
   const repondues = session.niveauxVises.length;
@@ -117,16 +128,30 @@ function calculerResultat(session: SessionMock): ResultatTest {
       ? session.niveaux[0]
       : session.niveaux[indexNiveau];
   const evaluees = COMPETENCES_TEST.filter((competence) => session.scoresCompetences[competence].total > 0);
+  const lacunes = evaluees.filter((competence) => {
+    const { score, total } = session.scoresCompetences[competence];
+    return score / total < 0.5;
+  });
+
+  // Démonstration de l'analyse LLM + RAG : points faibles expliqués, phase Assimil et descripteurs cités
+  const cadre = cadreDeLangue(session.langue);
+  const echelle = ECHELLES[cadre];
+  const faiblesses = lacunes.flatMap((competence) => DOMAINES_DE_LACUNE[competence])
+    .map((domaine) => ({ domaine, ...sourceDomaine(cadre, niveau, domaine) }));
   return {
     niveau,
     score: session.score,
     // Les questions sans réponse (temps écoulé) comptent comme fausses
     total: session.total,
     competences: evaluees.map<CompetenceResultat>((competence) => ({ competence, ...session.scoresCompetences[competence] })),
-    lacunes: evaluees.filter((competence) => {
-      const { score, total } = session.scoresCompetences[competence];
-      return score / total < 0.5;
-    }),
+    lacunes,
+    pointsFaibles: faiblesses.map(({ domaine, detail }) => ({ domaine, detail })),
+    phaseAssimil: echelle.indexOf(niveau) <= 1 ? "impregnation" : "activation",
+    justification: {
+      resume: `Avec ${session.score} bonne(s) réponse(s) sur ${session.total}, vos réponses correspondent aux descripteurs du niveau ${niveau}`
+        + (faiblesses.length > 0 ? ", avec des points à consolider." : ", sans point faible marqué."),
+      sources: [sourceNiveau(cadre, echelle, niveau), ...faiblesses.map(({ source }) => source)],
+    },
   };
 }
 

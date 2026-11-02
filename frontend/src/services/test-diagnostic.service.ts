@@ -1,11 +1,17 @@
 import { apiRequest } from "@/lib/api-client";
 import { API_MOCK } from "@/lib/env";
 import { planDepuisQuestions, trierParEtape } from "@/lib/etapesTest";
+import { DOMAINES, estLienSur, lacunesDe, PHASES } from "@/lib/resultatDiagnostic";
 import { testDiagnosticMockService } from "@/mocks/test-diagnostic.mock";
 import {
+  COMPETENCES_TEST,
   type CadreReference,
+  type CompetenceResultat,
   type CompetenceTest,
   type IssueTerminaison,
+  type Justification,
+  type PhaseAssimil,
+  type PointFaible,
   type LangueDiagnostic,
   type ObjectifFormation,
   type Question,
@@ -52,6 +58,16 @@ interface ReponseDto {
   reponse_fournie: string;
 }
 
+interface SourceReferentielDto {
+  id: string | number;
+  referentiel: CadreReference;
+  niveau: string;
+  competence?: string | null;
+  titre: string;
+  extrait: string;
+  url?: string | null;
+}
+
 interface ScoreDiagnosticDto {
   id_tentative: number;
   score: number;
@@ -59,6 +75,68 @@ interface ScoreDiagnosticDto {
   percentage: number;
   level: string;
   framework: CadreReference;
+  /* Analyse détaillée (LLM + RAG) : facultative, l'écran gère son absence. */
+  competences?: { competence: string; score: number; total: number }[] | null;
+  points_faibles?: { domaine: string; detail?: string | null }[] | null;
+  phase_assimil?: string | null;
+  justification?: { resume?: string | null; sources?: SourceReferentielDto[] | null } | null;
+}
+
+const texte = (valeur: unknown): string | undefined =>
+  typeof valeur === "string" && valeur.trim() ? valeur.trim() : undefined;
+
+/** Score par compétence : seules les compétences connues, avec un score entre 0 et un total positif, sont gardées. */
+function lireCompetences(dto: ScoreDiagnosticDto["competences"]): CompetenceResultat[] {
+  if (!Array.isArray(dto)) return [];
+  return dto.flatMap((item): CompetenceResultat[] => {
+    const competence = COMPETENCES_TEST.find((c) => c === item?.competence);
+    const { score, total } = item ?? {};
+    const valide = competence && Number.isFinite(score) && Number.isFinite(total) && total > 0 && score >= 0 && score <= total;
+    return valide ? [{ competence, score, total }] : [];
+  });
+}
+
+/** Points faibles valides seulement (domaine connu, une fois chacun) ; undefined si l'analyse n'en fournit pas. */
+function lirePointsFaibles(dto: ScoreDiagnosticDto["points_faibles"]): PointFaible[] | undefined {
+  if (!Array.isArray(dto)) return undefined;
+  const vus = new Set<string>();
+  return dto.flatMap((item): PointFaible[] => {
+    const domaine = DOMAINES.find((d) => d === item?.domaine);
+    if (!domaine || vus.has(domaine)) return [];
+    vus.add(domaine);
+    return [{ domaine, detail: texte(item.detail) }];
+  });
+}
+
+const lirePhase = (phase: unknown): PhaseAssimil | undefined => PHASES.find((p) => p === phase);
+
+/**
+ * Justification et sources du référentiel ; les sources incomplètes ou en double sont écartées,
+ * les liens non http(s) retirés.
+ */
+function lireJustification(dto: ScoreDiagnosticDto["justification"]): Justification | undefined {
+  const resume = texte(dto?.resume);
+  if (!resume) return undefined;
+  const vues = new Set<string>();
+  const sources = (Array.isArray(dto?.sources) ? dto.sources : []).flatMap((source) => {
+    const id = typeof source?.id === "number" ? String(source.id) : texte(source?.id);
+    const [titre, extrait, niveau] = [texte(source?.titre), texte(source?.extrait), texte(source?.niveau)];
+    if (!id || vues.has(id) || !titre || !extrait || !niveau || (source.referentiel !== "CECRL" && source.referentiel !== "HSK")) {
+      return [];
+    }
+    vues.add(id);
+    const url = texte(source.url);
+    return [{
+      id,
+      referentiel: source.referentiel,
+      niveau,
+      competence: texte(source.competence),
+      titre,
+      extrait,
+      url: estLienSur(url) ? url : undefined,
+    }];
+  });
+  return { resume, sources };
 }
 
 /** 202 : l'analyse des réponses n'est pas terminée, le résultat sera disponible plus tard. */
@@ -216,6 +294,7 @@ export const httpTestDiagnosticService = {
     )) {
       throw new Error("Le résultat de scoring renvoyé par le serveur est invalide.");
     }
+    const competences = lireCompetences(dto.competences);
     return {
       statut: "termine",
       resultat: {
@@ -223,8 +302,11 @@ export const httpTestDiagnosticService = {
         score: dto.percentage,
         total: dto.max_score,
         cadre: dto.framework,
-        competences: [],
-        lacunes: [],
+        competences,
+        lacunes: lacunesDe(competences),
+        pointsFaibles: lirePointsFaibles(dto.points_faibles),
+        phaseAssimil: lirePhase(dto.phase_assimil),
+        justification: lireJustification(dto.justification),
       },
     };
   },
