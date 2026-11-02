@@ -63,9 +63,12 @@ Les variables `NEXT_PUBLIC_*` sont intégrées au moment du build : redémarrer 
 ```
 src/
 ├── app/            # Pages (App Router) ; (auth)/ = écrans d'authentification
+│   └── espace/     # Espace connecté : un dossier par rôle (admin, formateur, apprenant)
+│       └── apprenant/(pedagogie)/test-diagnostic/
 ├── components/
 │   ├── ui/         # Composants génériques (Input, Button, FormField…)
-│   └── auth/       # Composants des écrans d'authentification
+│   ├── auth/       # Composants des écrans d'authentification
+│   └── pedagogie/  # Domaine Pédagogie, un dossier par module (testDiagnostic…)
 ├── hooks/          # Hooks React (formulaires, appels API via React Query)
 ├── services/       # Appels HTTP ; seul endroit qui connaît le format de l'API (snake_case)
 ├── mocks/          # Données simulées utilisées quand NEXT_PUBLIC_API_MOCK=true
@@ -74,5 +77,19 @@ src/
 └── types/          # Types métier, nommés d'après le diagramme de classes
 e2e/                # Tests Playwright
 ```
+
+### Rangement par domaine
+
+Les modules sont regroupés par domaine, d'après les paquetages du diagramme de classes (Pédagogie, Ateliers,
+Facturation, Intelligence Artificielle…). Dans `src/app`, un domaine est un **groupe de routes** entre parenthèses :
+il range le code sans apparaître dans l'URL. Par exemple, `app/espace/apprenant/(pedagogie)/test-diagnostic` est servi
+à `/espace/apprenant/test-diagnostic`. Les composants du module vont dans `components/<domaine>/<module>`.
+
+Les modules sont déplacés un à un, quand on les traite. À ce jour, seul le test diagnostic est rangé dans
+`(pedagogie)`. Pour ranger un module :
+
+1. déplacer ses pages avec `git mv` dans le groupe du domaine, sous le dossier du rôle ;
+2. déplacer ses composants dans `components/<domaine>/<module>` et mettre à jour les imports `@/components/…` ;
+3. laisser les URL de `lib/routes.ts` inchangées : seul le commentaire qui indique le dossier change.
 
 Règle : les composants n'appellent jamais `fetch` directement. Ils passent par un hook, qui utilise un service.

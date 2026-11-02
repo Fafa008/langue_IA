@@ -1,6 +1,6 @@
 /** Espace connecté : un dossier par rôle (src/app/espace/admin, formateur, apprenant). */
 const ESPACE = "/espace";
-/** Module Diagnostic : src/app/espace/apprenant/test-diagnostic (démarrage, test, résultats). */
+/** Module Diagnostic (domaine Pédagogie) : src/app/espace/apprenant/(pedagogie)/test-diagnostic (démarrage, test, résultats). */
 const DIAGNOSTIC = `${ESPACE}/apprenant/test-diagnostic`;
 
 export const ROUTES = {
