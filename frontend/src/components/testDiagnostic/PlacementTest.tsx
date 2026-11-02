@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Alert from "@/components/ui/Alert";
 import { useLanguesDiagnostic, useTestDiagnostic } from "@/hooks/useTestDiagnostic";
-import { getErrorMessage } from "@/lib/api-client";
+import { messageErreurDiagnostic } from "@/lib/erreursDiagnostic";
 import { API_MOCK } from "@/lib/env";
 import { libelleLangue } from "@/lib/languages";
-import { MINUTES_PAR_QUESTION } from "@/lib/referentiels";
+import { DUREE_TEST_MINUTES } from "@/lib/etapesTest";
 import { ROUTES } from "@/lib/routes";
 import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnostic.store";
 import BoutonRetour from "./BoutonRetour";
@@ -16,7 +16,8 @@ import ChoixLangueTest from "./ChoixLangueTest";
 import PersonalisationForm from "./PersonalisationForm";
 
 const CONSIGNES = [
-  "Répondez seul, sans dictionnaire ni traducteur.",
+  `Le test dure ${DUREE_TEST_MINUTES} minutes et comporte 4 étapes : grammaire et lexique, compréhension orale, expression orale, expression écrite.`,
+  "Répondez seul, sans dictionnaire ni traducteur. Prévoyez des écouteurs et un micro.",
   "Pour les questions à choix, une seule réponse est correcte.",
   "Chaque réponse est enregistrée dès que vous la validez : relisez-la avant de valider.",
   "Restez sur la page : si vous la quittez, vous reprendrez le test là où vous en étiez.",
@@ -74,7 +75,7 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
         </Alert>
       )}
       {test.erreurDemarrage && !test.langueIndisponible && (
-        <Alert className="mt-4">{getErrorMessage(test.erreurDemarrage)}</Alert>
+        <Alert className="mt-4">{messageErreurDiagnostic(test.erreurDemarrage, "demarrage")}</Alert>
       )}
     </>
   );
@@ -129,7 +130,7 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
           </p>
         ) : langues.isError ? (
           <Alert>
-            Les langues n&apos;ont pas pu être chargées. {getErrorMessage(langues.error)}{" "}
+            {messageErreurDiagnostic(langues.error, "langues")}{" "}
             <button type="button" onClick={() => langues.refetch()} className="underline">
               Réessayer
             </button>
@@ -151,10 +152,7 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
         </ul>
         <dl className="mt-6 grid grid-cols-3 gap-3" data-testid="chiffres-test">
           <Chiffre valeur={langueChoisie?.nombreQuestions ?? null} libelle="questions" />
-          <Chiffre
-            valeur={langueChoisie ? `${Math.ceil(langueChoisie.nombreQuestions * MINUTES_PAR_QUESTION)} min` : null}
-            libelle="de durée estimée"
-          />
+          <Chiffre valeur={langueChoisie ? `${DUREE_TEST_MINUTES} min` : null} libelle="de durée estimée" />
           <Chiffre valeur={langueChoisie?.niveaux.length ?? null} libelle="niveaux estimés" />
         </dl>
       </section>

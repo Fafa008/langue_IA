@@ -18,6 +18,3 @@ export function descriptionEchelle(cadre: CadreReference, niveaux: readonly stri
   const fin = cadre === "HSK" ? dernier.replace(/^HSK\s*/, "") : dernier;
   return `Échelle ${cadre}, ${premier} à ${fin}`;
 }
-
-/** Durée estimée du test : environ une minute par question. */
-export const MINUTES_PAR_QUESTION = 1;
