@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import RedactionEcrite from "@/components/testDiagnostic/RedactionEcrite";
+import RedactionEcrite from "@/components/pedagogie/testDiagnostic/RedactionEcrite";
 
 function Redaction({ motsMinimum }: { motsMinimum: number }) {
   const [texte, setTexte] = useState("");

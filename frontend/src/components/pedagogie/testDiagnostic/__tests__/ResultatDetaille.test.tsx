@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import CarteNiveau from "@/components/testDiagnostic/resultat/CarteNiveau";
-import JustificationNiveau from "@/components/testDiagnostic/resultat/JustificationNiveau";
-import PointsFaibles from "@/components/testDiagnostic/resultat/PointsFaibles";
+import CarteNiveau from "@/components/pedagogie/testDiagnostic/resultat/CarteNiveau";
+import JustificationNiveau from "@/components/pedagogie/testDiagnostic/resultat/JustificationNiveau";
+import PointsFaibles from "@/components/pedagogie/testDiagnostic/resultat/PointsFaibles";
 
 const justification = {
   resume: "Vos réponses correspondent aux descripteurs du niveau A2.",
