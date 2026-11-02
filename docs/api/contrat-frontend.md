@@ -604,6 +604,56 @@ cadre de référence retournés par le backend. Les réponses détaillées (`eva
 future évaluation IA. La progression fixe et les champs de personnalisation `objectif` et `creneaux` ne sont pas
 encore pilotés ou persistés par le backend.
 
+#### Analyse détaillée : points faibles, phase Assimil, justification (RAG)
+
+Champs **facultatifs** ajoutés à la réponse **200** quand l'analyse (LLM + RAG) est disponible. Chacun peut être
+absent ou `null` : l'écran de résultats affiche alors le niveau et le score, et signale « Résultat partiel » avec la
+liste des parties encore à venir. Le backend n'a donc pas besoin de tout fournir en même temps.
+
+```json
+{
+  "id_tentative": 42,
+  "score": 40.0,
+  "max_score": 100,
+  "percentage": 40.0,
+  "level": "A2",
+  "framework": "CECRL",
+  "competences": [
+    { "competence": "grammaire", "score": 4, "total": 5 },
+    { "competence": "oral", "score": 0, "total": 1 }
+  ],
+  "points_faibles": [
+    { "domaine": "vocabulaire", "detail": "Le vocabulaire reste limité aux situations du quotidien." },
+    { "domaine": "expression_orale", "detail": null }
+  ],
+  "phase_assimil": "impregnation",
+  "justification": {
+    "resume": "Vos réponses correspondent aux descripteurs du niveau A2, avec un vocabulaire à enrichir.",
+    "sources": [
+      {
+        "id": 12,
+        "referentiel": "CECRL",
+        "niveau": "A2",
+        "competence": null,
+        "titre": "Échelle globale — niveau A2",
+        "extrait": "Comprend des phrases isolées liées à des domaines familiers.",
+        "url": "https://www.coe.int/fr/web/common-european-framework-reference-languages"
+      }
+    ]
+  }
+}
+```
+
+| Champ | Valeurs | Traitement côté frontend |
+| --- | --- | --- |
+| `competences[].competence` | `grammaire`, `lecture`, `ecoute`, `ecrit`, `oral` | Score par compétence ; une compétence sous 50 % est une lacune. Entrée ignorée si la compétence est inconnue ou si `score` n'est pas entre 0 et `total` (> 0). |
+| `points_faibles[].domaine` | `grammaire`, `vocabulaire`, `comprehension_ecrite`, `comprehension_orale`, `expression_ecrite`, `expression_orale` | Domaine inconnu ou en double ignoré. `detail` (texte du LLM) est facultatif. Une liste vide signifie « aucun point faible » ; un champ absent signifie « pas encore connu » (le frontend se rabat alors sur les compétences en lacune). |
+| `phase_assimil` | `impregnation` (phase passive) ou `activation` (phase active) | Toute autre valeur est ignorée : la phase s'affiche « Non déterminée ». |
+| `justification.resume` | Synthèse du LLM | Sans résumé non vide, la justification entière est ignorée. |
+| `justification.sources[]` | Descripteurs du référentiel retrouvés par le RAG | `id` (entier ou chaîne), `referentiel` (`CECRL` ou `HSK`), `niveau`, `titre` et `extrait` sont obligatoires, sinon la source est écartée ; `id` en double écarté. `url` n'est rendue cliquable que si elle est en `http(s)`. |
+
+Les textes (`detail`, `resume`, `titre`, `extrait`) sont affichés tels quels, sans interprétation HTML.
+
 #### Analyse par le LLM : lenteur, indisponibilité, résultat en attente
 
 Quand l'évaluation des réponses écrites et orales sera confiée au service IA, cette route pourra répondre avant la fin

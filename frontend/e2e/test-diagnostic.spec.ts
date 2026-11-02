@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { ACCESS_TOKEN, json, loginAs, type UtilisateurDto } from "./support/session";
-import { DETAIL_TECHNIQUE, mockTestDiagnosticApi, type OptionsApiDiagnostic } from "./support/test-diagnostic-api";
+import { ANALYSE_E2E, DETAIL_TECHNIQUE, mockTestDiagnosticApi, type OptionsApiDiagnostic } from "./support/test-diagnostic-api";
 
 const URL_TEST = "/espace/apprenant/test-diagnostic";
 /** Les trois pages du module : démarrage, test, résultats. */
@@ -410,5 +410,62 @@ test.describe("États de l'analyse quand le LLM est lent ou indisponible", () =>
 
     await erreur.getByRole("button", { name: "Réessayer" }).click();
     await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
+  });
+});
+
+test.describe("Écran de résultats : niveau, phase Assimil, points faibles et justification", () => {
+  /** Répond aux deux questions à choix du test d'anglais (une juste, une fausse) et ouvre les résultats. */
+  async function obtenirResultat(page: Page, options?: OptionsApiDiagnostic) {
+    await ouvrir(page, "en", options);
+    await demarrer(page);
+    await repondre(page);
+    await page.getByRole("button", { name: "Question suivante" }).click();
+    await repondre(page);
+    await page.getByRole("button", { name: "Finaliser le test" }).click();
+    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
+  }
+
+  test("affiche l'analyse complète et rend les sources du référentiel consultables", async ({ page }) => {
+    await obtenirResultat(page, { avecAnalyse: true });
+
+    await expect(page.getByTestId("result-level")).toHaveText("B1");
+    await expect(page.getByTestId("result-phase")).toContainText("Activation");
+    await expect(page.getByTestId("result-phase")).toContainText("Phase active");
+    await expect(page.getByTestId("resultat-partiel")).toHaveCount(0);
+
+    await expect(page.getByTestId("result-competence-grammaire")).toContainText("1 / 2");
+    await expect(page.getByTestId("point-faible-vocabulaire")).toContainText(ANALYSE_E2E.points_faibles[0].detail!);
+    await expect(page.getByTestId("point-faible-expression_orale")).toContainText("Expression orale");
+
+    await expect(page.getByTestId("justification-resume")).toHaveText(ANALYSE_E2E.justification.resume);
+    await expect(page.getByRole("heading", { name: "Sources du référentiel (2)" })).toBeVisible();
+    const [globale, vocabulaire] = await page.getByTestId("source-referentiel").all();
+    await expect(globale.getByText(ANALYSE_E2E.justification.sources[0].extrait)).toBeHidden();
+    await globale.locator("summary").click();
+    await expect(globale.getByText(ANALYSE_E2E.justification.sources[0].extrait)).toBeVisible();
+    await expect(globale.getByRole("link", { name: /Consulter le référentiel/ }))
+      .toHaveAttribute("href", ANALYSE_E2E.justification.sources[0].url);
+    // Le lien `javascript:` renvoyé par l'API n'est jamais rendu
+    await vocabulaire.locator("summary").click();
+    await expect(vocabulaire.getByText(ANALYSE_E2E.justification.sources[1].extrait)).toBeVisible();
+    await expect(vocabulaire.getByRole("link")).toHaveCount(0);
+
+    await expectSansDebordement(page);
+  });
+
+  test("données incomplètes : le niveau reste affiché et les parties manquantes sont signalées", async ({ page }) => {
+    await obtenirResultat(page);
+
+    await expect(page.getByTestId("result-level")).toHaveText("B1");
+    const partiel = page.getByTestId("resultat-partiel");
+    await expect(partiel).toContainText("Résultat partiel");
+    await expect(partiel).toContainText("la phase Assimil");
+    await expect(partiel).toContainText("la justification du niveau");
+    await expect(page.getByTestId("result-phase")).toContainText("Non déterminée");
+    await expect(page.getByTestId("result-weaknesses")).toContainText("identifiés par l'analyse complète");
+    await expect(page.getByTestId("result-justification")).toContainText("sera disponible après l'analyse complète");
+    await expect(page.getByRole("link", { name: "Commencer mon parcours" })).toBeVisible();
+
+    await expectSansDebordement(page);
   });
 });

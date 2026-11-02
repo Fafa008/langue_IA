@@ -169,6 +169,114 @@ describe("httpTestDiagnosticService", () => {
     });
   });
 
+  it("lit l'analyse détaillée : points faibles, phase Assimil et sources du référentiel", async () => {
+    mockFetch({
+      body: {
+        id_tentative: 42, score: 40, max_score: 100, percentage: 40, level: "A2", framework: "CECRL",
+        points_faibles: [
+          { domaine: "vocabulaire", detail: "  Lexique limité.  " },
+          { domaine: "orthographe", detail: "domaine inconnu, ignoré" },
+          { domaine: "expression_orale" },
+        ],
+        phase_assimil: "impregnation",
+        justification: {
+          resume: "Vos réponses correspondent au niveau A2.",
+          sources: [
+            { id: "s1", referentiel: "CECRL", niveau: "A2", titre: "Échelle globale", extrait: "Comprend des phrases isolées.", url: "https://www.coe.int/cecrl" },
+            { id: "s2", referentiel: "CECRL", niveau: "A2", titre: "Lien piégé", extrait: "Extrait.", url: "javascript:alert(1)" },
+            { id: "s3", referentiel: "CECRL", niveau: "A2", titre: "", extrait: "Sans titre : écartée." },
+          ],
+        },
+      },
+    });
+
+    const issue = await httpTestDiagnosticService.terminer("42");
+
+    expect(issue).toMatchObject({
+      statut: "termine",
+      resultat: {
+        pointsFaibles: [{ domaine: "vocabulaire", detail: "Lexique limité." }, { domaine: "expression_orale" }],
+        phaseAssimil: "impregnation",
+        justification: {
+          resume: "Vos réponses correspondent au niveau A2.",
+          sources: [
+            { id: "s1", url: "https://www.coe.int/cecrl" },
+            { id: "s2", titre: "Lien piégé", url: undefined },
+          ],
+        },
+      },
+    });
+    if (issue.statut === "termine") expect(issue.resultat.justification?.sources).toHaveLength(2);
+  });
+
+  it("garde un résultat utilisable quand l'analyse détaillée manque ou est invalide", async () => {
+    mockFetch({
+      body: {
+        id_tentative: 42, score: 40, max_score: 100, percentage: 40, level: "A2", framework: "CECRL",
+        phase_assimil: "inconnue",
+        justification: { resume: "   ", sources: null },
+      },
+    });
+
+    const issue = await httpTestDiagnosticService.terminer("42");
+
+    expect(issue).toMatchObject({ statut: "termine", resultat: { niveau: "A2", score: 40 } });
+    if (issue.statut === "termine") {
+      expect(issue.resultat.pointsFaibles).toBeUndefined();
+      expect(issue.resultat.phaseAssimil).toBeUndefined();
+      expect(issue.resultat.justification).toBeUndefined();
+    }
+  });
+
+  it("lit le score par compétence et en déduit les lacunes, en écartant les valeurs invalides", async () => {
+    mockFetch({
+      body: {
+        id_tentative: 42, score: 40, max_score: 100, percentage: 40, level: "A2", framework: "CECRL",
+        competences: [
+          { competence: "grammaire", score: 4, total: 5 },
+          { competence: "oral", score: 0, total: 1 },
+          { competence: "dessin", score: 1, total: 1 },
+          { competence: "lecture", score: 3, total: 2 },
+          { competence: "ecoute", score: 1, total: 0 },
+        ],
+      },
+    });
+
+    const issue = await httpTestDiagnosticService.terminer("42");
+
+    expect(issue).toMatchObject({
+      statut: "termine",
+      resultat: {
+        competences: [{ competence: "grammaire", score: 4, total: 5 }, { competence: "oral", score: 0, total: 1 }],
+        lacunes: ["oral"],
+      },
+    });
+  });
+
+  it("écarte les doublons de l'analyse et accepte un identifiant de source numérique", async () => {
+    mockFetch({
+      body: {
+        id_tentative: 42, score: 40, max_score: 100, percentage: 40, level: "A2", framework: "CECRL",
+        points_faibles: [{ domaine: "grammaire", detail: "Accords." }, { domaine: "grammaire", detail: "Doublon." }],
+        phase_assimil: "toString",
+        justification: {
+          resume: "Niveau A2.",
+          sources: [
+            { id: 7, referentiel: "CECRL", niveau: "A2", titre: "Échelle globale", extrait: "Extrait." },
+            { id: "7", referentiel: "CECRL", niveau: "A2", titre: "Doublon", extrait: "Extrait." },
+          ],
+        },
+      },
+    });
+
+    const issue = await httpTestDiagnosticService.terminer("42");
+
+    if (issue.statut !== "termine") throw new Error("résultat attendu");
+    expect(issue.resultat.pointsFaibles).toEqual([{ domaine: "grammaire", detail: "Accords." }]);
+    expect(issue.resultat.phaseAssimil).toBeUndefined();
+    expect(issue.resultat.justification?.sources.map((source) => source.id)).toEqual(["7"]);
+  });
+
   it("signale un résultat en attente quand l'analyse par le LLM n'est pas terminée (202)", async () => {
     mockFetch({ status: 202, body: { id_tentative: 42, statut: "en_attente" } });
     await expect(httpTestDiagnosticService.terminer("42")).resolves.toEqual({ statut: "en_attente" });

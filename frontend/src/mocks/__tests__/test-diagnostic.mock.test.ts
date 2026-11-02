@@ -137,6 +137,20 @@ describe("test simulé en quatre étapes", () => {
     expect(sujets.map((s) => s.niveau)).toEqual(["A2", "A2"]);
   });
 
+  it("justifie le résultat simulé par des descripteurs et donne une phase Assimil", async () => {
+    const session = await testDiagnosticMockService.demarrer("en", "professionnel", []);
+    let question: Question | null = session.question;
+    let retour: RetourReponse | null = null;
+    while (question) {
+      retour = await repondre(session.id, question, false);
+      question = retour.questionSuivante;
+    }
+    const resultat = retour?.resultat;
+    expect(resultat?.phaseAssimil).toBe("impregnation");
+    expect(resultat?.pointsFaibles?.map((p) => p.domaine)).toEqual(expect.arrayContaining(["grammaire", "vocabulaire"]));
+    expect(resultat?.justification?.sources[0]).toMatchObject({ referentiel: "CECRL", niveau: resultat?.niveau });
+  });
+
   it("termine avant la fin quand le temps est écoulé, les questions sans réponse comptant comme fausses", async () => {
     const session = await testDiagnosticMockService.demarrer("en", "professionnel", []);
     await repondre(session.id, session.question, true);
