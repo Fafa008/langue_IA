@@ -3,6 +3,18 @@ export type CreneauPresence = "matin" | "apres_midi" | "soiree";
 export type CompetenceTest = "grammaire" | "lecture" | "ecoute" | "ecrit" | "oral";
 export const COMPETENCES_TEST = ["grammaire", "lecture", "ecoute", "ecrit", "oral"] as const;
 
+/**
+ * Les quatre étapes du test, dans l'ordre où elles sont passées :
+ * QCM (grammaire, lexique, compréhension écrite), compréhension orale, expression orale, expression écrite.
+ */
+export type EtapeTest = "qcm" | "comprehension_orale" | "expression_orale" | "expression_ecrite";
+
+/** Nombre de questions prévues pour une étape du test. */
+export interface EtapePlan {
+  etape: EtapeTest;
+  nombreQuestions: number;
+}
+
 /** Données publiques d'une question ; la bonne réponse n'est envoyée qu'après validation. */
 export interface Question {
   id: string;
@@ -14,6 +26,10 @@ export interface Question {
   support?: string;
   audioUrl?: string;
   audioTexte?: string;
+  /** Expression orale : durée de parole minimale, en secondes. */
+  dureeMinimaleSecondes?: number;
+  /** Expression écrite : nombre de mots minimal. */
+  motsMinimum?: number;
 }
 
 /** Référentiel des niveaux : CECRL (A1 à C2) ou HSK pour le chinois (HSK 1 à 6). */
@@ -49,6 +65,8 @@ export interface SessionTest {
   niveaux: string[];
   numeroQuestion: number;
   totalQuestions: number;
+  /** Étapes du test et nombre de questions de chacune, dans l'ordre. */
+  plan: EtapePlan[];
   question: Question;
   questions?: Question[];
 }
@@ -90,6 +108,14 @@ export interface ResultatTest {
   lacunes: CompetenceTest[];
 }
 
+/**
+ * Issue de la fin du test : le résultat, ou « en attente » tant que le service d'analyse (LLM)
+ * n'a pas fini d'évaluer les réponses écrites et orales.
+ */
+export type IssueTerminaison =
+  | { statut: "termine"; resultat: ResultatTest }
+  | { statut: "en_attente" };
+
 export interface CompetenceResultat {
   competence: CompetenceTest;
   score: number;
@@ -117,6 +143,9 @@ export interface EtatTest {
   niveaux: string[];
   numeroQuestion: number;
   totalQuestions: number;
+  plan: EtapePlan[];
+  /** Début du test (horodatage en ms) : sert au compte à rebours des 15 minutes. */
+  debut: number | null;
   courante: Question | null;
   questionsRestantes: Question[];
   choisie: number | null;
@@ -132,10 +161,11 @@ export type ActionTest =
   | { type: "choisirLangue"; langue: string }
   | { type: "personnaliser"; personnalisation: PersonnalisationTest }
   | { type: "retourIntroduction" }
-  | { type: "demarrer"; session: SessionTest }
+  | { type: "demarrer"; session: SessionTest; debut: number }
   | { type: "choisirReponse"; choix: number }
   | { type: "choisirTexte"; texte: string }
-  | { type: "choisirAudio"; audio: Blob }
+  /** null : enregistrement effacé (« Recommencer »). */
+  | { type: "choisirAudio"; audio: Blob | null }
   | { type: "repondre"; choix: number | null; retour: RetourReponse }
   | { type: "terminer"; resultat: ResultatTest }
   | { type: "suivante" }

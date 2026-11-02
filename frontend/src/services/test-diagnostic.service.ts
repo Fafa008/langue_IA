@@ -1,9 +1,11 @@
 import { apiRequest } from "@/lib/api-client";
 import { API_MOCK } from "@/lib/env";
+import { planDepuisQuestions, trierParEtape } from "@/lib/etapesTest";
 import { testDiagnosticMockService } from "@/mocks/test-diagnostic.mock";
 import {
   type CadreReference,
   type CompetenceTest,
+  type IssueTerminaison,
   type LangueDiagnostic,
   type ObjectifFormation,
   type Question,
@@ -24,6 +26,8 @@ interface QuestionDto {
   support?: string | null;
   audio_url?: string | null;
   audio_texte?: string | null;
+  duree_minimale_secondes?: number | null;
+  mots_minimum?: number | null;
 }
 
 interface LangueDiagnosticDto {
@@ -57,6 +61,18 @@ interface ScoreDiagnosticDto {
   framework: CadreReference;
 }
 
+/** 202 : l'analyse des réponses n'est pas terminée, le résultat sera disponible plus tard. */
+interface AnalyseEnAttenteDto {
+  id_tentative: number;
+  statut: "en_attente";
+}
+
+/**
+ * Délai laissé au service d'analyse (LLM) pour évaluer une réponse libre ou clore le test.
+ * Au-delà, l'apprenant garde ses réponses et peut réessayer.
+ */
+export const TIMEOUT_ANALYSE_MS = 60_000;
+
 export interface ReponseProgression {
   numeroQuestion: number;
   totalQuestions: number;
@@ -74,7 +90,7 @@ export interface TestDiagnosticGateway {
     valeurChoix?: string,
     progression?: ReponseProgression,
   ): Promise<RetourReponse>;
-  terminer(idSession: string): Promise<ResultatTest>;
+  terminer(idSession: string): Promise<IssueTerminaison>;
 }
 
 const toQuestion = (dto: QuestionDto): Question => ({
@@ -87,6 +103,8 @@ const toQuestion = (dto: QuestionDto): Question => ({
   support: dto.support ?? undefined,
   audioUrl: dto.audio_url ?? undefined,
   audioTexte: dto.audio_texte ?? undefined,
+  dureeMinimaleSecondes: dto.duree_minimale_secondes ?? undefined,
+  motsMinimum: dto.mots_minimum ?? undefined,
 });
 
 const toLangue = (dto: LangueDiagnosticDto): LangueDiagnostic => ({
@@ -115,7 +133,8 @@ export const httpTestDiagnosticService = {
       code_niveau: tentative.code_niveau,
     });
     const questionDtos = await apiRequest<QuestionDto[]>(`${ENDPOINTS.diagnostic.questions}?${params}`);
-    const questions = questionDtos.filter((question) => question.type_reponse !== "audio").map(toQuestion);
+    // Les réponses orales attendent le stockage des médias côté backend ; le reste suit l'ordre des étapes
+    const questions = trierParEtape(questionDtos.filter((question) => question.type_reponse !== "audio").map(toQuestion));
     if (questions.length === 0) {
       throw new Error("Aucune question textuelle ou à choix n'est disponible pour cette tentative.");
     }
@@ -125,6 +144,7 @@ export const httpTestDiagnosticService = {
       niveaux: [tentative.code_niveau],
       numeroQuestion: 1,
       totalQuestions: questions.length,
+      plan: planDepuisQuestions(questions),
       question: questions[0],
       questions,
     };
@@ -150,6 +170,8 @@ export const httpTestDiagnosticService = {
     }
     const dto = await apiRequest<ReponseDto>(ENDPOINTS.diagnostic.reponse, {
       method: "POST",
+      // Une réponse écrite peut être évaluée par le LLM avant d'être confirmée
+      timeoutMs: reponse.type === "texte" ? TIMEOUT_ANALYSE_MS : undefined,
       body: {
         id_tentative: tentativeId,
         id_question: idQuestion,
@@ -168,15 +190,19 @@ export const httpTestDiagnosticService = {
     };
   },
 
-  async terminer(idSession: string): Promise<ResultatTest> {
+  async terminer(idSession: string): Promise<IssueTerminaison> {
     const tentativeId = Number(idSession);
     if (!Number.isSafeInteger(tentativeId) || tentativeId <= 0) {
       throw new Error("Identifiant de tentative invalide.");
     }
-    const dto = await apiRequest<ScoreDiagnosticDto>(ENDPOINTS.diagnostic.terminerTentative(tentativeId), {
-      method: "POST",
-    });
-    if (
+    const dto = await apiRequest<ScoreDiagnosticDto | AnalyseEnAttenteDto>(
+      ENDPOINTS.diagnostic.terminerTentative(tentativeId),
+      { method: "POST", timeoutMs: TIMEOUT_ANALYSE_MS },
+    );
+    if ("statut" in dto && dto.statut === "en_attente" && dto.id_tentative === tentativeId) {
+      return { statut: "en_attente" };
+    }
+    if ("statut" in dto || (
       dto.id_tentative !== tentativeId
       || !Number.isFinite(dto.score)
       || !Number.isFinite(dto.percentage)
@@ -187,16 +213,19 @@ export const httpTestDiagnosticService = {
       || dto.percentage > 100
       || !dto.level
       || (dto.framework !== "CECRL" && dto.framework !== "HSK")
-    ) {
+    )) {
       throw new Error("Le résultat de scoring renvoyé par le serveur est invalide.");
     }
     return {
-      niveau: dto.level,
-      score: dto.percentage,
-      total: dto.max_score,
-      cadre: dto.framework,
-      competences: [],
-      lacunes: [],
+      statut: "termine",
+      resultat: {
+        niveau: dto.level,
+        score: dto.percentage,
+        total: dto.max_score,
+        cadre: dto.framework,
+        competences: [],
+        lacunes: [],
+      },
     };
   },
 };
@@ -211,6 +240,6 @@ export const testDiagnosticService: TestDiagnosticGateway = {
     ? testDiagnosticMockService.repondre(...args)
     : httpTestDiagnosticService.repondre(...args),
   terminer: (...args) => API_MOCK
-    ? Promise.reject(new Error("Le mode démonstration renvoie le résultat à la dernière réponse."))
+    ? testDiagnosticMockService.terminer(...args)
     : httpTestDiagnosticService.terminer(...args),
 };
