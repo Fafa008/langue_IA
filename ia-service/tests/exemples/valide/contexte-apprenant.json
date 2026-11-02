@@ -1,0 +1,11 @@
+{
+  "code_langue": "en",
+  "referentiel": "CECRL",
+  "niveau_preliminaire": "B1",
+  "memoire_pedagogique": {
+    "resume": "Deux sessions de conversation, bonnes bases lexicales.",
+    "points_forts": ["aisance à l'oral"],
+    "points_faibles": ["emploi des temps"],
+    "nb_activites": 12
+  }
+}

@@ -206,7 +206,9 @@ npm run test:e2e     # tests E2E Playwright (voir frontend/README.md)
 
 ```bash
 cd ia-service
-pytest
+pip install -r requirements-dev.txt
+pytest --cov=app --cov-report=term-missing
+ruff check . && ruff format --check .
 ```
 
 ### Tests manuels
@@ -233,7 +235,7 @@ précédente de la même branche.
 | `frontend`   | typage, lint, tests Jest, build de production                          | `cd frontend && npm run check && npm run build` |
 | `e2e`        | tests Playwright (bureau et mobile)                                    | `cd frontend && npm run test:e2e`               |
 | `backend`    | ruff (lint et formatage), pytest sur PostgreSQL, **couverture ≥ 70 %** | `make test`                                     |
-| `ia-service` | installation des dépendances, chargement de l'application              | —                                               |
+| `ia-service` | ruff, tests Pydantic, **couverture ≥ 70 %**, chargement              | `cd ia-service && pytest`                       |
 | `docker`     | build des images, démarrage de toute la stack, réponse des services    | `make up`                                       |
 
 En cas d'échec : ouvrir le job en rouge pour lire l'erreur. Le job `e2e` joint les traces Playwright (artefact

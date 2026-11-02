@@ -1,0 +1,11 @@
+{
+  "request_id": "3f1c9b7e-6a2d-4f0e-9c1a-2b7d5e8f4a10",
+  "agent": "diagnostic",
+  "statut": "erreur",
+  "erreur": {
+    "code": "LLM_TIMEOUT",
+    "message": "Le fournisseur LLM n'a pas répondu dans le délai imparti.",
+    "retryable": true,
+    "details": null
+  }
+}
