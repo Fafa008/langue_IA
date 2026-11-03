@@ -92,3 +92,9 @@ class ErreurAgentInconnu(ErreurServiceIA):
     """Aucun agent (ou aucune version demandée) n'est enregistré."""
 
     code = CodeErreur.AGENT_INCONNU
+
+
+class ErreurPromptIntrouvable(ErreurServiceIA):
+    """Prompt versionné absent ou non enregistré."""
+
+    code = CodeErreur.PROMPT_INTROUVABLE
