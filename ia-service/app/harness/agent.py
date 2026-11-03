@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app.core.erreurs import ErreurRegistre
 from app.llm.base import FournisseurLLM
+from app.prompts import RegistrePrompts
 from app.schemas.commun import CODE_AGENT_PATTERN, EMPREINTE_PATTERN, VERSION_PATTERN, VERSION_PROMPT_PATTERN
 from app.schemas.contexte import ContexteApprenant
 
@@ -27,6 +28,7 @@ class OutilsCommuns:
     """Outils partagés par tous les agents, injectés par le Harness."""
 
     client_llm: FournisseurLLM
+    registre_prompts: RegistrePrompts
     horloge: Callable[[], float]
 
 

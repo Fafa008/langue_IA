@@ -148,7 +148,8 @@ Bon à savoir :
   relancer `docker compose up --build` après un changement (en mode `dev`, un simple redémarrage suffit).
 - **Backend** : implémente le contrat du frontend (voir [`backend/README.md`](backend/README.md)). Au démarrage, il
   applique les migrations et crée les comptes de démonstration (`admin@digitheque.mg`, `Demo2026`…) si
-  `SEED_DEMO=true`. Tests : `make test`. Le **service IA** n'est encore qu'un squelette (route `/health`).
+  `SEED_DEMO=true`. Tests : `make test`. Le service IA expose `/health` et contient le Harness partagé ainsi que
+  les contrats et prompts versionnés ; l'agent diagnostic et son endpoint d'inférence restent à intégrer.
 - **Modèles IA** : déposer les fichiers entraînés dans `ia-service/models/` (non versionnés), montés en lecture seule.
 
 ### Installation manuelle

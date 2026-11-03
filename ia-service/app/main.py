@@ -16,17 +16,20 @@ from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_
 from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm.fabrique import obtenir_client, reinitialiser_client
+from app.prompts import RegistrePrompts
 
 
 @asynccontextmanager
 async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     """Construire les ressources partagées une seule fois, puis les libérer."""
+    registre_prompts = RegistrePrompts()
     client_llm = obtenir_client()
     registre_agents = RegistreAgents()
 
     app.state.client_llm = client_llm
     app.state.registre_agents = registre_agents
-    app.state.harness = Harness(registre_agents, client_llm)
+    app.state.registre_prompts = registre_prompts
+    app.state.harness = Harness(registre_agents, client_llm, registre_prompts=registre_prompts)
 
     try:
         yield

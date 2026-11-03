@@ -22,6 +22,7 @@ from app.harness.agent import ContexteExecution, DefinitionAgent, OutilsCommuns
 from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm.adaptateurs.factice import FakeLLMClient
+from app.prompts import RegistrePrompts
 from app.schemas.base import ModeleStrict
 from app.schemas.commun import CodeErreur, ReponseAgent, ReponseErreur, RequeteAgent
 from app.schemas.contexte import ContexteApprenant
@@ -73,6 +74,7 @@ def definition_executant(retour: object, *, erreur: Exception | None = None, bud
         assert isinstance(entree, Entree)
         assert isinstance(contexte.outils, OutilsCommuns)
         assert contexte.outils.client_llm is not None
+        assert isinstance(contexte.outils.registre_prompts, RegistrePrompts)
         assert contexte.request_id is not None
         return retour if isinstance(retour, Sortie) else Sortie(**retour)  # type: ignore[arg-type]
 

@@ -20,6 +20,7 @@ from app.core.gestionnaire_erreurs import code_pour, reponse_erreur_pour_code
 from app.harness.agent import ContexteExecution, OutilsCommuns
 from app.harness.registre import RegistreAgents
 from app.llm.base import FournisseurLLM
+from app.prompts import RegistrePrompts
 from app.schemas.commun import (
     CODE_AGENT_PATTERN,
     MetaExecution,
@@ -41,10 +42,12 @@ class Harness:
         registre: RegistreAgents,
         client_llm: FournisseurLLM,
         *,
+        registre_prompts: RegistrePrompts | None = None,
         horloge: Callable[[], float] = time.monotonic,
     ) -> None:
         self._registre = registre
         self._client_llm = client_llm
+        self._registre_prompts = registre_prompts or RegistrePrompts()
         self._horloge = horloge
 
     async def executer(
@@ -73,7 +76,11 @@ class Harness:
         except ValidationError:
             return self._erreur(requete, agent_affiche, CodeErreur.ENTREE_INVALIDE)
 
-        outils = OutilsCommuns(client_llm=self._client_llm, horloge=self._horloge)
+        outils = OutilsCommuns(
+            client_llm=self._client_llm,
+            registre_prompts=self._registre_prompts,
+            horloge=self._horloge,
+        )
         contexte = ContexteExecution(
             request_id=requete.request_id,
             contexte=requete.contexte,

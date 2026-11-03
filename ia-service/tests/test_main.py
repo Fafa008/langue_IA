@@ -11,6 +11,7 @@ from app.harness.registre import RegistreAgents
 from app.llm import fabrique
 from app.llm.adaptateurs.factice import FakeLLMClient
 from app.main import app
+from app.prompts import RegistrePrompts
 
 
 @pytest.fixture(autouse=True)
@@ -29,6 +30,7 @@ def test_health_et_lifespan(env_propre: pytest.MonkeyPatch) -> None:
         client_llm = app.state.client_llm
         assert isinstance(client_llm, FakeLLMClient)
         assert isinstance(app.state.registre_agents, RegistreAgents)
+        assert isinstance(app.state.registre_prompts, RegistrePrompts)
         assert isinstance(app.state.harness, Harness)
         assert client_llm.ferme is False
 

@@ -14,6 +14,8 @@ agents du Harness).
 - `app/llm/` : client LLM fournisseur-agnostique, fabrique, adaptateur `factice` et adaptateur `compatible-openai`
   (US-69).
 - `app/harness/` : définition d'agent, registre et pipeline commun d'exécution (US-69).
+- `app/prompts/` : registre partagé et ressources versionnées du prompt d'évaluation diagnostic (US70). Aucun agent
+  ni endpoint d'inférence n'est encore enregistré.
 
 ## Client LLM et Harness (US-69)
 
@@ -24,7 +26,7 @@ contrat `FournisseurLLM`. Aucun accès à la base de données, aucun stockage pe
 
 1. résolution de `(code, version)` dans le registre (dernière version SemVer si absente) ;
 2. revalidation de l'entrée contre le schéma de l'agent ;
-3. préparation des `OutilsCommuns` (client LLM partagé, horloge) et du `ContexteExecution` ;
+3. préparation des `OutilsCommuns` (client LLM partagé, registre de prompts, horloge) et du `ContexteExecution` ;
 4. exécution sous budget (`asyncio.timeout`) ;
 5. validation de la sortie de l'agent ;
 6. enveloppe `ReponseAgent` normalisée, ou `ReponseErreur` avec un code stable.
@@ -82,6 +84,27 @@ from app.llm.adaptateurs.factice import FakeLLMClient, ScenarioLLM
 client = FakeLLMClient([ScenarioLLM(reponse={"niveau_estime": "B2"})])
 ```
 
+### Prompts versionnés (US70)
+
+Le registre partagé charge et valide `diagnostic/evaluation@1.0.0` au démarrage. Il expose les deux messages prêts
+pour `FournisseurLLM`, la version, l'empreinte SHA-256, la température et le nombre maximal de tokens. Le template
+exige exactement les sept variables déclarées et sérialise chaque valeur dynamique en JSON, en échappant les
+marqueurs HTML susceptibles de fermer le bloc des données non fiables.
+
+```python
+rendu = contexte.outils.registre_prompts.rendre_evaluation_diagnostic(variables)
+resultat, meta = await contexte.outils.client_llm.generer_json(
+    rendu.messages,
+    schema=ResultatDiagnostic,
+    temperature=rendu.temperature,
+    max_tokens=rendu.max_tokens,
+)
+```
+
+Le prompt et ses variables sont détaillés dans
+[`docs/US-70-prompt-diagnostic.md`](docs/US-70-prompt-diagnostic.md). Le score préliminaire reste celui du backend ;
+en cas de preuves insuffisantes, le prompt applique une sortie prudente compatible avec le schéma Pydantic actuel.
+
 ### Correspondance des erreurs
 
 Le catalogue complet (messages publics, statuts HTTP, caractère rejouable) est décrit dans
@@ -97,6 +120,7 @@ Le catalogue complet (messages publics, statuts HTTP, caractère rejouable) est 
 | Clé refusée (401/403) | `LLM_AUTHENTIFICATION` | non |
 | Requête refusée (400/404/422/3xx) | `LLM_REQUETE_INVALIDE` | non |
 | Configuration LLM absente ou incohérente | `LLM_CONFIGURATION` | non |
+| Prompt versionné absent | `PROMPT_INTROUVABLE` | non |
 | JSON LLM ou sortie d'agent invalide | `LLM_REPONSE_INVALIDE` | oui |
 | Exception imprévue | `ERREUR_INTERNE` (message générique) | non |
 
