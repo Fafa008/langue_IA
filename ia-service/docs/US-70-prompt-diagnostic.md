@@ -60,7 +60,8 @@ La validation effective reste confiée au client LLM et au Harness, qui utilise 
 
 `RegistrePrompts` charge les ressources au démarrage, vérifie que le template contient exactement les sept variables
 déclarées, valide les exemples contre le schéma Pydantic et refuse une version inconnue. L'empreinte SHA-256 couvre
-le système, le template utilisateur et le fichier few-shot. Le rendu expose cette empreinte ainsi que
+le système, le template utilisateur et le fichier few-shot de la version. Le rendu US71 dérive ensuite l'empreinte
+transmise en y intégrant l'exemple effectivement sélectionné. Le rendu expose cette empreinte ainsi que
 `diagnostic/evaluation@1.0.0`, la température `0.2` et la limite `600` tokens.
 
 Exemple d'utilisation par un futur agent, sans créer de client ni de Harness :

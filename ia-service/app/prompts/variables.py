@@ -9,6 +9,8 @@ from app.schemas.contexte import ContexteApprenant
 from app.schemas.diagnostic import ResultatDiagnostic
 from app.schemas.regles import CodeLangue, CodeNiveau, Competence, Referentiel, erreur, niveaux_du_referentiel
 
+ScenarioDiagnostic = Literal["quotidien", "entretien", "examen"]
+
 
 class ReponseDiagnosticPrompt(ModeleStrict):
     """Réponse fournie par le backend, considérée comme une donnée non fiable."""
@@ -67,6 +69,7 @@ class EntreeExempleFewShot(ModeleStrict):
 class ExempleFewShot(ModeleStrict):
     """Exemple d'entrée et de sortie validé par le contrat Pydantic du diagnostic."""
 
+    scenario: ScenarioDiagnostic = "quotidien"
     entree: EntreeExempleFewShot
     sortie: ResultatDiagnostic
     justification: str = Field(min_length=1, max_length=500)
@@ -80,6 +83,7 @@ class ExempleFewShot(ModeleStrict):
 class VariablesEvaluationDiagnostic(ModeleStrict):
     """Variables dynamiques du prompt d'évaluation, contrôlées avant tout rendu."""
 
+    scenario: ScenarioDiagnostic = "quotidien"
     code_langue: CodeLangue
     referentiel: Referentiel
     reponses: list[ReponseDiagnosticPrompt] = Field(max_length=100)
@@ -100,6 +104,11 @@ class VariablesEvaluationDiagnostic(ModeleStrict):
         contexte = self.contexte_apprenant
         if self.code_langue != contexte.code_langue or self.referentiel != contexte.referentiel:
             raise erreur("La langue et le référentiel doivent correspondre au contexte apprenant.")
+        if self.exemples_few_shot is not None and any(
+            exemple.scenario != self.scenario or exemple.entree.contexte_apprenant.code_langue != self.code_langue
+            for exemple in self.exemples_few_shot
+        ):
+            raise erreur("Les exemples few-shot doivent correspondre au scénario et à la langue du diagnostic.")
         if any(
             descripteur.code_langue != self.code_langue or descripteur.referentiel != self.referentiel
             for descripteur in self.descripteurs_rag

@@ -16,6 +16,7 @@ agents du Harness).
 - `app/harness/` : définition d'agent, registre et pipeline commun d'exécution (US-69).
 - `app/prompts/` : registre partagé et ressources versionnées du prompt d'évaluation diagnostic (US70). Aucun agent
   ni endpoint d'inférence n'est encore enregistré.
+- `app/prompts/exemples/diagnostic/` : bibliothèque few-shot synthétique triée par scénario et langue (US71).
 
 ## Client LLM et Harness (US-69)
 
@@ -104,6 +105,19 @@ resultat, meta = await contexte.outils.client_llm.generer_json(
 Le prompt et ses variables sont détaillés dans
 [`docs/US-70-prompt-diagnostic.md`](docs/US-70-prompt-diagnostic.md). Le score préliminaire reste celui du backend ;
 en cas de preuves insuffisantes, le prompt applique une sortie prudente compatible avec le schéma Pydantic actuel.
+
+### Bibliothèque few-shot (US71)
+
+La bibliothèque versionnée couvre les scénarios `quotidien`, `entretien` et `examen` pour les cinq langues du
+référentiel. `BibliothequeFewShot.selectionner(scenario, code_langue)` valide le catalogue au démarrage puis
+retourne un unique exemple exact ; il n'y a pas de repli vers une autre langue ou un autre scénario. Le rendu du
+prompt sélectionne ces exemples automatiquement à partir de `VariablesEvaluationDiagnostic.scenario` et
+`code_langue`.
+
+Les exemples sont anonymes et synthétiques. Leurs descripteurs sont seulement illustratifs, pas des descripteurs
+officiels : le RAG reste l'unique source de référence normative. Voir
+[`docs/US-71-bibliotheque-few-shot.md`](docs/US-71-bibliotheque-few-shot.md) pour le schéma, la sélection, la
+validation et les limites.
 
 ### Correspondance des erreurs
 

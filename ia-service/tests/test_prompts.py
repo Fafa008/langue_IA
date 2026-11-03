@@ -60,7 +60,9 @@ def test_charge_et_rend_le_prompt_versionne_avec_toutes_les_variables() -> None:
     assert corps["score_preliminaire"] == 20
     assert corps["contexte_apprenant"]["niveau_preliminaire"] == "B1"
     assert corps["descripteurs_rag"][0]["identifiant"] == "cecrl-a1-ecrit"
-    assert len(corps["exemples_few_shot"]) == 2
+    assert len(corps["exemples_few_shot"]) == 1
+    assert corps["exemples_few_shot"][0]["scenario"] == "quotidien"
+    assert corps["exemples_few_shot"][0]["entree"]["contexte_apprenant"]["code_langue"] == "en"
 
 
 def test_prompt_et_empreinte_sont_stables_pour_les_memes_ressources() -> None:
@@ -69,6 +71,24 @@ def test_prompt_et_empreinte_sont_stables_pour_les_memes_ressources() -> None:
     second = registre.rendre_evaluation_diagnostic(variables_diagnostic())
 
     assert premier == second
+
+
+def test_selectionne_les_exemples_du_scenario_et_de_la_langue_demandes() -> None:
+    registre = RegistrePrompts()
+    quotidien = registre.rendre_evaluation_diagnostic(variables_diagnostic())
+    entretien = registre.rendre_evaluation_diagnostic(variables_diagnostic(scenario="entretien"))
+
+    def exemple_rendu(contenu: str) -> dict:
+        donnees = contenu.split("<donnees_diagnostic_non_fiables>\n", 1)[1]
+        donnees = donnees.split("\n</donnees_diagnostic_non_fiables>", 1)[0]
+        return json.loads(donnees)["exemples_few_shot"][0]
+
+    exemple_quotidien = exemple_rendu(quotidien.messages[1].contenu)
+    exemple_entretien = exemple_rendu(entretien.messages[1].contenu)
+    assert exemple_quotidien["scenario"] == "quotidien"
+    assert exemple_entretien["scenario"] == "entretien"
+    assert exemple_entretien["entree"]["contexte_apprenant"]["code_langue"] == "en"
+    assert quotidien.empreinte_prompt != entretien.empreinte_prompt
 
 
 def test_refuse_une_version_de_prompt_inconnue() -> None:
@@ -89,6 +109,35 @@ def test_refuse_un_marqueur_de_substitution_invalide() -> None:
 def test_refuse_les_donnees_incoherentes_avec_le_contexte() -> None:
     with pytest.raises(ValidationError):
         variables_diagnostic(code_langue="zh", referentiel="HSK")
+
+
+def test_refuse_un_exemple_few_shot_d_une_autre_langue_ou_d_un_autre_scenario() -> None:
+    rendu = RegistrePrompts().rendre_evaluation_diagnostic(variables_diagnostic())
+    donnees = json.loads(
+        rendu.messages[1]
+        .contenu.split("<donnees_diagnostic_non_fiables>\n", 1)[1]
+        .split("\n</donnees_diagnostic_non_fiables>", 1)[0]
+    )
+    exemple = donnees["exemples_few_shot"][0]
+
+    with pytest.raises(ValidationError):
+        variables_diagnostic(exemples_few_shot=[{**exemple, "scenario": "examen"}])
+    with pytest.raises(ValidationError):
+        variables_diagnostic(
+            exemples_few_shot=[
+                {
+                    **exemple,
+                    "entree": {
+                        **exemple["entree"],
+                        "contexte_apprenant": {
+                            "code_langue": "fr",
+                            "referentiel": "CECRL",
+                            "niveau_preliminaire": "A1",
+                        },
+                    },
+                }
+            ]
+        )
 
 
 def test_echappe_les_marqueurs_html_des_reponses_non_fiables() -> None:
@@ -121,7 +170,7 @@ def test_refuse_plus_de_trois_exemples_few_shot() -> None:
     )
 
     with pytest.raises(ValidationError):
-        variables_diagnostic(exemples_few_shot=donnees["exemples_few_shot"] * 2)
+        variables_diagnostic(exemples_few_shot=donnees["exemples_few_shot"] * 4)
 
 
 def test_echec_de_chargement_si_une_ressource_est_absente(tmp_path: Path) -> None:

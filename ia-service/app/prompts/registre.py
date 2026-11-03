@@ -8,6 +8,7 @@ from string import Template
 
 from app.core.erreurs import ErreurPromptIntrouvable, ErreurRegistre
 from app.llm.base import MessageLLM
+from app.prompts.bibliotheque_few_shot import BibliothequeFewShot
 from app.prompts.variables import ExempleFewShot, VariablesEvaluationDiagnostic
 
 VERSION_EVALUATION_DIAGNOSTIC = "1.0.0"
@@ -52,8 +53,14 @@ class _DefinitionPrompt:
 class RegistrePrompts:
     """Registre partagé des prompts ; une version publiée est identifiée par son nom de fichier."""
 
-    def __init__(self, repertoire: Path | None = None) -> None:
+    def __init__(
+        self,
+        repertoire: Path | None = None,
+        *,
+        bibliotheque_few_shot: BibliothequeFewShot | None = None,
+    ) -> None:
         self._repertoire = repertoire or Path(__file__).parent
+        self._bibliotheque_few_shot = bibliotheque_few_shot or BibliothequeFewShot()
         self._definitions = {
             ("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC): self._charger_evaluation_diagnostic()
         }
@@ -72,20 +79,34 @@ class RegistrePrompts:
         donnees = variables.model_dump(mode="json")
         exemples = variables.exemples_few_shot
         if exemples is None:
-            exemples = list(definition.exemples)
+            exemples = list(self._bibliotheque_few_shot.selectionner(variables.scenario, variables.code_langue))
         if len(exemples) > _NOMBRE_EXEMPLES_MAX:
             raise ErreurRegistre(f"Un prompt accepte {_NOMBRE_EXEMPLES_MAX} exemples few-shot au maximum.")
+        if any(
+            exemple.scenario != variables.scenario
+            or exemple.entree.contexte_apprenant.code_langue != variables.code_langue
+            for exemple in exemples
+        ):
+            raise ErreurRegistre("Les exemples few-shot doivent correspondre au scénario et à la langue du diagnostic.")
         donnees["exemples_few_shot"] = [exemple.model_dump(mode="json") for exemple in exemples]
 
         valeurs = {nom: _json_prompt(donnees[nom]) for nom in _VARIABLES_TEMPLATE}
         contenu_utilisateur = definition.template_utilisateur.substitute(valeurs)
+        empreinte = hashlib.sha256(
+            b"\0".join(
+                (
+                    definition.empreinte_prompt.encode("ascii"),
+                    _json_prompt(donnees["exemples_few_shot"]).encode("utf-8"),
+                )
+            )
+        ).hexdigest()
         return PromptRendu(
             messages=(
                 MessageLLM(role="system", contenu=definition.systeme),
                 MessageLLM(role="user", contenu=contenu_utilisateur),
             ),
             version_prompt=definition.version_prompt,
-            empreinte_prompt=definition.empreinte_prompt,
+            empreinte_prompt=f"sha256:{empreinte}",
             temperature=definition.temperature,
             max_tokens=definition.max_tokens,
         )
