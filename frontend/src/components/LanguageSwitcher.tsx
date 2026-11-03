@@ -33,7 +33,7 @@ export default function LanguageSwitcher() {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Langue d'affichage : ${courante.natif}`}
+        aria-label={`Langue d'affichage : ${courante.natif}, ${courante.code.toUpperCase()}`}
         className="flex items-center gap-2 rounded-full p-1.5 pr-2 transition-colors hover:bg-background"
       >
         <Image src={courante.flag} alt="" width={28} height={28} loading="eager" className="h-7 w-7 rounded-full object-cover ring-1 ring-border" />

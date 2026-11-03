@@ -7,4 +7,6 @@ export const testDiagnosticMockService = {
   demarrer: mockModeDisabled,
   repondre: mockModeDisabled,
   terminer: mockModeDisabled,
+  testEnCours: mockModeDisabled,
+  abandonner: mockModeDisabled,
 };

@@ -39,7 +39,7 @@ export default function RedactionEcrite({ id, valeur, onChange, motsMinimum, dis
               style={{ width: `${avancement}%` }}
             />
           </div>
-          <p aria-live="polite" className={`mt-1.5 text-small ${atteint ? "text-success" : "text-content-secondary"}`} data-testid="compteur-mots">
+          <p aria-live="polite" className={`mt-1.5 text-small ${atteint ? "text-success-dark" : "text-content-secondary"}`} data-testid="compteur-mots">
             {mots} {mots > 1 ? "mots" : "mot"} · {atteint ? "minimum atteint" : `au moins ${motsMinimum} mots attendus`}
           </p>
         </div>

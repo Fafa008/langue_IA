@@ -18,6 +18,7 @@ import {
   type ResultatTest,
   type RetourReponse,
   type SessionTest,
+  type TestInterrompu,
 } from "@/types/test-diagnostic";
 
 /** Plan visé d'un test de 15 minutes, réduit si la banque d'une langue n'a pas assez de questions. */
@@ -284,5 +285,19 @@ export const testDiagnosticMockService = {
     session.terminee = true;
     await analyseSimulee();
     return { statut: "termine", resultat: calculerResultat(session) };
+  },
+
+  /*
+   * Démonstration : le test adaptatif simulé choisit ses questions au fil des réponses et ne vit qu'en mémoire.
+   * La reprise après un rechargement passe par le store (sessionStorage) ; la reprise depuis le serveur
+   * (onglet fermé, autre appareil) n'existe qu'avec le backend.
+   */
+  async testEnCours(): Promise<TestInterrompu | null> {
+    return null;
+  },
+
+  async abandonner(idSession: string): Promise<void> {
+    const session = sessions.get(idSession);
+    if (session) session.terminee = true;
   },
 };

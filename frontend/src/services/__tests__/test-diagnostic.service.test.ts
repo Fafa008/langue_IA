@@ -346,4 +346,71 @@ describe("httpTestDiagnosticService", () => {
       jest.resetModules();
     }
   });
+  describe("reprise d'un test interrompu", () => {
+    const questions = [
+      { id_question: "1", niveau: "A1", competence: "grammaire", type_reponse: "choix", enonce: "Q1", choix: ["is", "are"] },
+      { id_question: "2", niveau: "A1", competence: "grammaire", type_reponse: "choix", enonce: "Q2", choix: ["a", "b"] },
+      { id_question: "3", niveau: "A1", competence: "ecrit", type_reponse: "texte", enonce: "Présentez-vous." },
+    ];
+    const tentative = {
+      id_tentative: 42,
+      code_langue: "en",
+      code_niveau: "A1",
+      date_debut: "2026-11-03T08:00:00Z",
+      reponses: [{ id_question: 1, reponse_fournie: "is" }],
+    };
+
+    it("restaure les réponses enregistrées et reprend à la première question sans réponse", async () => {
+      const fetchMock = mockFetch({ body: tentative }, { body: questions });
+
+      const test = await httpTestDiagnosticService.testEnCours();
+
+      expect(fetchCall(fetchMock).url).toBe(`${API}/diagnostic/tentatives/en-cours`);
+      expect(fetchCall(fetchMock, 1).url).toBe(`${API}/diagnostic/questions?code_langue=en&code_niveau=A1`);
+      expect(test).toMatchObject({
+        idSession: "42",
+        langue: "en",
+        debut: Date.parse("2026-11-03T08:00:00Z"),
+        totalQuestions: 3,
+        reponses: [{ idQuestion: "1", niveau: "A1", competence: "grammaire", typeReponse: "choix" }],
+        session: {
+          id: "42",
+          numeroQuestion: 2,
+          totalQuestions: 3,
+          question: { id: "2" },
+          plan: [{ etape: "qcm", nombreQuestions: 2 }, { etape: "expression_ecrite", nombreQuestions: 1 }],
+        },
+      });
+      expect(test?.session?.questions?.map((question) => question.id)).toEqual(["2", "3"]);
+    });
+
+    it("sans suite quand toutes les questions ont déjà une réponse", async () => {
+      mockFetch({
+        body: { ...tentative, reponses: questions.map(({ id_question }) => ({ id_question, reponse_fournie: "x" })) },
+      }, { body: questions });
+
+      const test = await httpTestDiagnosticService.testEnCours();
+
+      expect(test?.reponses).toHaveLength(3);
+      expect(test?.session).toBeNull();
+    });
+
+    it("renvoie null quand aucun test n'est en cours (204)", async () => {
+      const fetchMock = mockFetch({ status: 204 });
+      await expect(httpTestDiagnosticService.testEnCours()).resolves.toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("refuse une tentative incomplète", async () => {
+      mockFetch({ body: { id_tentative: 42, code_langue: "en" } });
+      await expect(httpTestDiagnosticService.testEnCours()).rejects.toThrow("invalide");
+    });
+
+    it("abandonne la tentative", async () => {
+      const fetchMock = mockFetch({ status: 204 });
+      await httpTestDiagnosticService.abandonner("42");
+      const { url, init } = fetchCall(fetchMock);
+      expect([url, init.method]).toEqual([`${API}/diagnostic/tentatives/42/abandonner`, "POST"]);
+    });
+  });
 });
