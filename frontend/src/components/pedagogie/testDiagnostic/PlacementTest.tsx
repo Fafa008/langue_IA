@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Alert from "@/components/ui/Alert";
-import { useLanguesDiagnostic, useTestDiagnostic } from "@/hooks/useTestDiagnostic";
+import { useLanguesDiagnostic, useTestDiagnostic, useTestInterrompu } from "@/hooks/useTestDiagnostic";
 import { messageErreurDiagnostic } from "@/lib/erreursDiagnostic";
 import { API_MOCK } from "@/lib/env";
 import { libelleLangue } from "@/lib/languages";
@@ -14,6 +14,7 @@ import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnost
 import BoutonRetour from "./BoutonRetour";
 import ChoixLangueTest from "./ChoixLangueTest";
 import PersonalisationForm from "./PersonalisationForm";
+import TestInterrompu from "./TestInterrompu";
 
 const CONSIGNES = [
   `Le test dure ${DUREE_TEST_MINUTES} minutes et comporte 4 étapes : grammaire et lexique, compréhension orale, expression orale, expression écrite.`,
@@ -43,6 +44,8 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
   const langues = useLanguesDiagnostic();
   const { etat } = test;
   const enCours = useTestDiagnosticStore(selectTestEnCours);
+  // Test commencé ailleurs (onglet fermé, autre appareil) : retrouvé sur le serveur
+  const interrompu = useTestInterrompu(!enCours && etat.phase === "intro");
   // Langue choisie et réellement disponible : sans elle, le test ne peut pas démarrer
   const langueChoisie = langues.data?.find((l) => l.code === etat.langue && l.disponible) ?? null;
 
@@ -113,11 +116,44 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
     );
   }
 
-  return (
-    <div className="mx-auto max-w-3xl">
+  const entete = (
+    <>
       <BoutonRetour href={ROUTES.apprenant.dashboard} libelle="Retour à mon espace" />
       <p className="eyebrow">Test de positionnement</p>
       <h1 className="mt-2">Évaluez votre niveau</h1>
+    </>
+  );
+
+  // Un test interrompu se reprend ou s'abandonne avant d'en commencer un autre
+  if (etat.phase === "intro" && (interrompu.isPending || interrompu.data)) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        {entete}
+        {interrompu.data ? (
+          <TestInterrompu
+            test={interrompu.data}
+            onReprendre={() => test.reprendre(interrompu.data!)}
+            onAbandonner={() => test.abandonnerTestInterrompu(interrompu.data!)}
+            repriseEnCours={test.repriseEnCours}
+            abandonEnCours={test.abandonEnCours}
+            erreur={test.erreurAbandon
+              ? messageErreurDiagnostic(test.erreurAbandon, "abandon")
+              : test.erreurTerminaison
+                ? messageErreurDiagnostic(test.erreurTerminaison, "analyse")
+                : test.resultatEnAttente
+                  ? "Votre résultat est en cours d'analyse. Réessayez dans quelques minutes."
+                  : null}
+          />
+        ) : (
+          <p role="status" className="card mt-6 animate-pulse text-content-secondary">Recherche d&apos;un test en cours…</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      {entete}
       <p className="mt-2 text-content-secondary">
         Un test court pour situer votre niveau et construire un parcours adapté. Commencez par choisir la langue à évaluer.
       </p>

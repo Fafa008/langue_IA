@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Clock } from "lucide-react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useConfirmationSortie } from "@/hooks/useConfirmationSortie";
 import { useTempsRestant } from "@/hooks/useTempsRestant";
 import { useTestDiagnostic } from "@/hooks/useTestDiagnostic";
 import { erreurReessayable, messageErreurDiagnostic } from "@/lib/erreursDiagnostic";
@@ -37,6 +38,8 @@ export default function DeroulementTest() {
   const [attenteSignalee, setAttenteSignalee] = useState(false);
   const [verificationsAutomatiques, setVerificationsAutomatiques] = useState(0);
   const verificationAutomatique = verificationsAutomatiques < VERIFICATIONS_AUTOMATIQUES_MAX;
+  // Quitter la page en cours de test (lien, fermeture, rechargement) demande confirmation
+  const sortie = useConfirmationSortie(!sansSession);
   const { resultatEnAttente } = test;
   // Toujours la dernière version de terminer, sans réarmer les minuteurs à chaque rendu (le compte à rebours en provoque un par seconde)
   const terminerRef = useRef(test.terminer);
@@ -106,6 +109,16 @@ export default function DeroulementTest() {
             setConfirmerAbandon(false);
             test.recommencer();
           }}
+        />
+      )}
+
+      {sortie.destination && (
+        <ConfirmDialog
+          title="Quitter la page du test ?"
+          description="Vos réponses déjà validées sont enregistrées. Le test sera interrompu : vous pourrez le reprendre là où vous en étiez depuis la page du test diagnostic."
+          confirmLabel="Quitter la page"
+          onClose={sortie.annuler}
+          onConfirm={sortie.confirmer}
         />
       )}
 

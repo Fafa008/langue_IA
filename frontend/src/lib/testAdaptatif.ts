@@ -122,6 +122,15 @@ export function reducteur(etat: EtatTest, action: ActionTest): EtatTest {
         retour: null,
       };
     }
+    case "reprendre": {
+      const { test, resultat } = action;
+      if (resultat) {
+        return { ...etatInitial(test.langue), phase: "resultat", sessionId: test.idSession, reponses: test.reponses, resultat };
+      }
+      if (!test.session) return etat;
+      const repris = reducteur(etatInitial(test.langue), { type: "demarrer", session: test.session, debut: test.debut });
+      return { ...repris, reponses: test.reponses };
+    }
     case "recommencer":
       return etatInitial(etat.langue);
   }

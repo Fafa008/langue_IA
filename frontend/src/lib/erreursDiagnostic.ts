@@ -1,13 +1,14 @@
 import { ApiError } from "@/lib/api-client";
 
 /** Ce que l'apprenant était en train de faire quand l'erreur est survenue. */
-export type ActionDiagnostic = "langues" | "demarrage" | "reponse" | "analyse";
+export type ActionDiagnostic = "langues" | "demarrage" | "reponse" | "analyse" | "abandon";
 
 const PANNE: Record<ActionDiagnostic, string> = {
   langues: "Les langues n'ont pas pu être chargées.",
   demarrage: "Le test n'a pas pu démarrer.",
   reponse: "Votre réponse n'a pas pu être envoyée.",
   analyse: "L'analyse de vos réponses n'a pas pu aboutir.",
+  abandon: "Le test interrompu n'a pas pu être abandonné.",
 };
 
 /** Le service d'analyse (LLM) répond lentement ou pas du tout : on rassure et on invite à réessayer. */
@@ -16,6 +17,7 @@ const DELAI_DEPASSE: Record<ActionDiagnostic, string> = {
   demarrage: "Le serveur met trop de temps à répondre.",
   reponse: "L'envoi de votre réponse prend plus de temps que prévu.",
   analyse: "L'analyse de vos réponses prend plus de temps que prévu.",
+  abandon: "Le serveur met trop de temps à répondre.",
 };
 
 /**
