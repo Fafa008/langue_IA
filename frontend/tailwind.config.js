@@ -9,9 +9,10 @@ module.exports = {
         surface: "#FFFFFF",
         content: { DEFAULT: "#172126", secondary: "#66757C" },
         border: "#DDE5E7",
-        success: "#16A34A",
-        error: "#DC2626",
-        warning: "#F59E0B",
+        success: { DEFAULT: "#16A34A", dark: "#15803D" },
+        error: { DEFAULT: "#DC2626", dark: "#B91C1C" },
+        // Teintes « dark » : pour le texte, contrastes WCAG AA (≥ 4,5:1) sur fond blanc ou teinté
+        warning: { DEFAULT: "#F59E0B", dark: "#92400E" },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],

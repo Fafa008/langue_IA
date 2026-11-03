@@ -51,7 +51,7 @@ export default function EnteteEtape({
             aria-label={`Temps restant : ${formaterDuree(secondesRestantes)}`}
             data-testid="temps-restant"
             className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-small font-semibold tabular-nums ${
-              bientotFini ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary"
+              bientotFini ? "bg-warning/15 text-warning-dark" : "bg-primary/10 text-primary"
             }`}
           >
             <Timer size={16} aria-hidden />

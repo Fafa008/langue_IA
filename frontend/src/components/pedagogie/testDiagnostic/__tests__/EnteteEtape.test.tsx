@@ -20,7 +20,7 @@ describe("EnteteEtape", () => {
   it("signale les deux dernières minutes et permet de quitter", () => {
     const onQuitter = jest.fn();
     render(<EnteteEtape {...props} onQuitter={onQuitter} secondesRestantes={90} />);
-    expect(screen.getByRole("timer")).toHaveClass("text-warning");
+    expect(screen.getByRole("timer")).toHaveClass("text-warning-dark");
     fireEvent.click(screen.getByRole("button", { name: "Quitter le test" }));
     expect(onQuitter).toHaveBeenCalled();
   });
