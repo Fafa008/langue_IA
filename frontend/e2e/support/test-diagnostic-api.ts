@@ -48,6 +48,18 @@ const REDACTION: QuestionMock = {
   bonneReponse: 0,
 };
 
+/** Question de compréhension orale ajoutée au test quand l'option `avecEcoute` est active. */
+export const ECOUTE: QuestionMock = {
+  id: "e2e-ecoute",
+  niveau: "A1",
+  competence: "ecoute",
+  typeReponse: "choix",
+  enonce: "Where is the speaker going?",
+  choix: ["To work", "To the beach", "To the cinema", "Home"],
+  audioTexte: "Good morning! I am taking the bus to work.",
+  bonneReponse: 0,
+};
+
 /** Premier niveau ayant des questions enregistrables, et ces questions (même règle que le backend). */
 function niveauDeDepart(langue: string) {
   const banque = (QUESTIONS_TEST as Record<string, QuestionMock[] | undefined>)[langue] ?? [];
@@ -73,6 +85,8 @@ export interface OptionsApiDiagnostic {
   premiereTerminaison?: "panne" | "en_attente" | "sans_reponse";
   /** Ajoute un sujet d'expression écrite après les questions à choix. */
   avecRedaction?: boolean;
+  /** Ajoute une question de compréhension orale (étape entre le QCM et l'expression écrite). */
+  avecEcoute?: boolean;
   /** Le résultat inclut l'analyse détaillée (LLM + RAG) : compétences, points faibles, phase Assimil, justification. */
   avecAnalyse?: boolean;
 }
@@ -121,6 +135,7 @@ export async function mockTestDiagnosticApi(
     languesEnErreur = false,
     premiereTerminaison,
     avecRedaction = false,
+    avecEcoute = false,
     avecAnalyse = false,
   }: OptionsApiDiagnostic = {},
 ) {
@@ -132,7 +147,11 @@ export async function mockTestDiagnosticApi(
   let terminaisonSpeciale = premiereTerminaison;
   const questionsDuTest = (langue: string) => {
     const { niveau, questions } = niveauDeDepart(langue);
-    return { niveau, questions: avecRedaction && niveau ? [...questions, REDACTION] : questions };
+    if (!niveau) return { niveau, questions };
+    return {
+      niveau,
+      questions: [...questions, ...(avecEcoute ? [ECOUTE] : []), ...(avecRedaction ? [REDACTION] : [])],
+    };
   };
 
   await page.route("**/api/v1/diagnostic/**", async (route) => {
