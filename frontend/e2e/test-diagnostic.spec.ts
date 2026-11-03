@@ -459,7 +459,7 @@ test.describe("Écran de résultats : niveau, phase Assimil, points faibles et j
     await expect(page.getByTestId("result-level")).toHaveText("B1");
     const partiel = page.getByTestId("resultat-partiel");
     await expect(partiel).toContainText("Résultat partiel");
-    await expect(partiel).toContainText("la phase Assimil");
+    await expect(partiel).toContainText("la phase de la méthode Assimil");
     await expect(partiel).toContainText("la justification du niveau");
     await expect(page.getByTestId("result-phase")).toContainText("Non déterminée");
     await expect(page.getByTestId("result-weaknesses")).toContainText("identifiés par l'analyse complète");

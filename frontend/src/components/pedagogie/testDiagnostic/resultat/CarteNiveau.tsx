@@ -1,4 +1,3 @@
-import { Sprout } from "lucide-react";
 import { PHASES_ASSIMIL } from "@/lib/resultatDiagnostic";
 import type { CadreReference, PhaseAssimil } from "@/types/test-diagnostic";
 
@@ -34,9 +33,7 @@ export default function CarteNiveau({ niveau, referentiel, libelleLangue, phase 
       <p className="mt-4 text-h4">{DESCRIPTIONS[niveau] ?? "Niveau de référence estimé"}</p>
 
       <div className="mt-5 border-t border-white/20 pt-4" data-testid="result-phase">
-        <p className="flex items-center gap-2 text-small text-white/70">
-          <Sprout size={16} aria-hidden /> Phase Assimil
-        </p>
+        <p className="text-small text-white/70">Phase de la méthode Assimil</p>
         {phase ? (
           <>
             <p className="mt-1 font-semibold">{PHASES_ASSIMIL[phase].libelle}</p>

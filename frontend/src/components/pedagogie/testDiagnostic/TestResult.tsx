@@ -20,7 +20,7 @@ import PointsFaibles from "./resultat/PointsFaibles";
 const LIBELLES_MANQUANTS: Record<InformationManquante, string> = {
   competences: "le détail par compétence",
   points_faibles: "les points faibles",
-  phase: "la phase Assimil",
+  phase: "la phase de la méthode Assimil",
   justification: "la justification du niveau",
 };
 
