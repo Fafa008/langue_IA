@@ -6,6 +6,7 @@
 | Périmètre | `ia-service/app/schemas/` : contrat commun du Harness, contexte apprenant, résultat de diagnostic, erreurs |
 | Hors périmètre | Routes HTTP, client LLM, RAG, prompts, persistance |
 | Sources | `backend/app/seed.py`, `backend/app/services/scoring.py`, `docs/api/contrat-frontend.md`, `docs/architecture/aj02-cadrage-technique-ia.md` |
+| Voir aussi | [US-69 — Client LLM et Agent Harness](US-69-llm-client-harness.md) |
 
 ## 1. Audit préalable
 
