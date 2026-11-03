@@ -3,9 +3,9 @@
 | Élément | Valeur |
 | --- | --- |
 | User Story | US-154 |
-| Branche | `feature/US154-timeouts-erreurs-llm` |
-| Base | `feature/US69-llm-client-harness` (PR #25), rebasée sur `develop` après fusion |
-| Statut | Implémenté, testé, documenté — en attente de revue |
+| Branche | `feature/US154-timeouts-erreurs-llm` (fusionnée) |
+| Base | `feature/US69-llm-client-harness` (PR #25) ; contenu arrivé dans `develop` par la fusion de #25 |
+| Statut | Fusionné dans `develop` via la PR #26 (empilée), puis la PR #25 |
 | Périmètre | `ia-service/app/core/`, `app/llm/adaptateurs/`, `app/harness/execution.py`, `app/main.py` et leurs tests |
 | Voir aussi | [`codes-erreur-ia.md`](codes-erreur-ia.md), [`US-69-llm-client-harness.md`](US-69-llm-client-harness.md) |
 
@@ -175,9 +175,15 @@ pytest 8.3.4, ruff 0.8.4. CI cible Python 3.11 ; le code n'utilise que `asyncio.
 
 ### Non exécuté
 
-- Stack Docker complète et CI GitHub : vérifiées après le push.
 - Appel à un vrai fournisseur LLM : aucun fournisseur choisi, aucun secret en test.
 - Tests backend et frontend : aucun fichier de ces modules n'est modifié.
+
+### Après fusion
+
+La CI GitHub de la PR #26 est passée au vert (6/6) : backend (ruff, pytest), frontend (typage, lint, Jest, build),
+E2E Playwright, service IA (installation, démarrage), Docker (build et démarrage de la stack) et GitGuardian.
+Le contenu a été revérifié sur `develop` après fusion : `ruff check .`, `ruff format --check .` et `312 passed`,
+couverture 100 %.
 
 ## 9. Limites et suites
 
