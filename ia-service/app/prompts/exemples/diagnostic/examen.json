@@ -1,0 +1,57 @@
+[
+  {
+    "scenario": "examen",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "fr", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+      "reponses": [{"id_question": "q-examen-fr-01", "competence": "ecrit", "type_reponse": "texte", "contenu": "Les transports publics sont importants pour une ville. Ils permettent à beaucoup de personnes de se déplacer sans voiture. Cependant, les horaires ne sont pas toujours adaptés aux habitants des quartiers éloignés. La ville devrait donc améliorer les lignes et demander l'avis des voyageurs."}],
+      "score_preliminaire": 78,
+      "descripteurs_rag": [{"identifiant": "exemple-fr-b2-ecrit", "code_langue": "fr", "referentiel": "CECRL", "niveau": "B2", "competence": "ecrit", "contenu": "Exemple pédagogique non normatif : présenter un point de vue argumenté avec des raisons et une conclusion compréhensible."}]
+    },
+    "sortie": {"code_langue": "fr", "referentiel": "CECRL", "niveau_estime": "B2", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.79, "niveau_preliminaire": "B1", "ecart_avec_niveau_preliminaire": 1},
+    "justification": "La production défend une position, donne des raisons et formule une proposition en accord avec le descripteur B2."
+  },
+  {
+    "scenario": "examen",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "B2"},
+      "reponses": [{"id_question": "q-examen-en-01", "competence": "ecrit", "type_reponse": "texte", "contenu": "Remote work can reduce commuting and give employees more flexibility. However, it may also make collaboration harder when teams rarely meet. A balanced policy should consider the kind of work, provide clear communication routines, and review the results instead of assuming one arrangement suits everyone."}],
+      "score_preliminaire": 82,
+      "descripteurs_rag": [{"identifiant": "exemple-en-b2-ecrit", "code_langue": "en", "referentiel": "CECRL", "niveau": "B2", "competence": "ecrit", "contenu": "Exemple pédagogique non normatif : développer une argumentation claire, comparer des aspects et proposer une conclusion nuancée."}]
+    },
+    "sortie": {"code_langue": "en", "referentiel": "CECRL", "niveau_estime": "B2", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.8, "niveau_preliminaire": "B2", "ecart_avec_niveau_preliminaire": 0},
+    "justification": "Le texte compare des avantages et limites puis propose une conclusion nuancée correspondant au descripteur."
+  },
+  {
+    "scenario": "examen",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "zh", "referentiel": "HSK", "niveau_preliminaire": "HSK 2"},
+      "reponses": [{"id_question": "q-examen-zh-01", "competence": "ecrit", "type_reponse": "texte", "contenu": "上个星期我和同学去了图书馆。我们先看了中文书，然后一起做了作业。虽然下雨了，但是我们还是坐公共汽车回家。下次我想借一本关于旅行的书。"}],
+      "score_preliminaire": 58,
+      "descripteurs_rag": [{"identifiant": "exemple-zh-hsk3-ecrit", "code_langue": "zh", "referentiel": "HSK", "niveau": "HSK 3", "competence": "ecrit", "contenu": "Exemple pédagogique non normatif : relater des activités passées et exprimer un projet simple en phrases reliées."}]
+    },
+    "sortie": {"code_langue": "zh", "referentiel": "HSK", "niveau_estime": "HSK 3", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.7, "niveau_preliminaire": "HSK 2", "ecart_avec_niveau_preliminaire": 1},
+    "justification": "La production relie plusieurs événements passés et un projet avec des marqueurs simples, en accord avec le descripteur HSK 3."
+  },
+  {
+    "scenario": "examen",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "it", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+      "reponses": [{"id_question": "q-examen-it-01", "competence": "ecrit", "type_reponse": "texte", "contenu": "Le biblioteche pubbliche sono utili perché offrono libri e spazi di studio a tutti. Alcune persone pensano che i servizi online siano sufficienti, ma non tutti hanno una buona connessione. Per questo motivo, le città dovrebbero mantenere le biblioteche e aggiornare anche i servizi digitali."}],
+      "score_preliminaire": 73,
+      "descripteurs_rag": [{"identifiant": "exemple-it-b2-ecrit", "code_langue": "it", "referentiel": "CECRL", "niveau": "B2", "competence": "ecrit", "contenu": "Exemple pédagogique non normatif : comparer des arguments et justifier une proposition dans un texte organisé."}]
+    },
+    "sortie": {"code_langue": "it", "referentiel": "CECRL", "niveau_estime": "B2", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.76, "niveau_preliminaire": "B1", "ecart_avec_niveau_preliminaire": 1},
+    "justification": "Le texte compare deux positions et justifie une proposition cohérente avec le descripteur B2 fourni."
+  },
+  {
+    "scenario": "examen",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "de", "referentiel": "CECRL", "niveau_preliminaire": "B2"},
+      "reponses": [{"id_question": "q-examen-de-01", "competence": "ecrit", "type_reponse": "texte", "contenu": "Städte sollten mehr sichere Radwege bauen. Dadurch können Menschen kurze Wege ohne Auto zurücklegen, und die Luft wird weniger belastet. Natürlich brauchen einige Einwohner weiterhin ein Auto, zum Beispiel für die Arbeit außerhalb der Stadt. Eine gute Planung muss deshalb verschiedene Verkehrsmittel verbinden und regelmäßig prüfen, ob die Maßnahmen funktionieren."}],
+      "score_preliminaire": 84,
+      "descripteurs_rag": [{"identifiant": "exemple-de-b2-ecrit", "code_langue": "de", "referentiel": "CECRL", "niveau": "B2", "competence": "ecrit", "contenu": "Exemple pédagogique non normatif : argumenter un point de vue, reconnaître une réserve et présenter une conclusion structurée."}]
+    },
+    "sortie": {"code_langue": "de", "referentiel": "CECRL", "niveau_estime": "B2", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.79, "niveau_preliminaire": "B2", "ecart_avec_niveau_preliminaire": 0},
+    "justification": "La réponse développe une proposition, reconnaît un besoin contraire et conclut par une mesure de planification."
+  }
+]

@@ -1,0 +1,57 @@
+[
+  {
+    "scenario": "quotidien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "fr", "referentiel": "CECRL", "niveau_preliminaire": "A2"},
+      "reponses": [{"id_question": "q-quotidien-fr-01", "competence": "oral", "type_reponse": "texte", "contenu": "Le matin, je prends le bus pour aller au travail. Le soir, je cuisine avec ma famille."}],
+      "score_preliminaire": 38,
+      "descripteurs_rag": [{"identifiant": "exemple-fr-a2-oral", "code_langue": "fr", "referentiel": "CECRL", "niveau": "A2", "competence": "oral", "contenu": "Exemple pédagogique non normatif : raconter simplement une routine et des activités familières."}]
+    },
+    "sortie": {"code_langue": "fr", "referentiel": "CECRL", "niveau_estime": "A2", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.72, "niveau_preliminaire": "A2", "ecart_avec_niveau_preliminaire": 0},
+    "justification": "Une production autonome décrit une routine familière avec des phrases simples ; une seule réponse limite la confiance."
+  },
+  {
+    "scenario": "quotidien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "A1"},
+      "reponses": [{"id_question": "q-quotidien-en-01", "competence": "ecrit", "type_reponse": "texte", "contenu": "I live near the market. I work in the morning."}],
+      "score_preliminaire": 18,
+      "descripteurs_rag": [{"identifiant": "exemple-en-a1-ecrit", "code_langue": "en", "referentiel": "CECRL", "niveau": "A1", "competence": "ecrit", "contenu": "Exemple pédagogique non normatif : écrire des phrases très simples sur soi et son quotidien."}]
+    },
+    "sortie": {"code_langue": "en", "referentiel": "CECRL", "niveau_estime": "A1", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.68, "niveau_preliminaire": "A1", "ecart_avec_niveau_preliminaire": 0},
+    "justification": "Les phrases brèves et compréhensibles correspondent au descripteur A1 fourni ; l'échantillon est limité."
+  },
+  {
+    "scenario": "quotidien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "zh", "referentiel": "HSK", "niveau_preliminaire": "HSK 1"},
+      "reponses": [{"id_question": "q-quotidien-zh-01", "competence": "oral", "type_reponse": "audio", "contenu": "你好。我住在这里。我喜欢喝茶。"}],
+      "score_preliminaire": 17,
+      "descripteurs_rag": [{"identifiant": "exemple-zh-hsk1-oral", "code_langue": "zh", "referentiel": "HSK", "niveau": "HSK 1", "competence": "oral", "contenu": "Exemple pédagogique non normatif : comprendre et produire quelques expressions très courantes."}]
+    },
+    "sortie": {"code_langue": "zh", "referentiel": "HSK", "niveau_estime": "HSK 1", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.62, "niveau_preliminaire": "HSK 1", "ecart_avec_niveau_preliminaire": 0},
+    "justification": "La transcription contient des expressions simples en lien avec le quotidien et le descripteur HSK 1 transmis."
+  },
+  {
+    "scenario": "quotidien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "it", "referentiel": "CECRL", "niveau_preliminaire": "A2"},
+      "reponses": [{"id_question": "q-quotidien-it-01", "competence": "ecrit", "type_reponse": "texte", "contenu": "Ieri ho visitato il mercato con mia sorella. Abbiamo comprato della frutta e poi siamo tornate a casa."}],
+      "score_preliminaire": 42,
+      "descripteurs_rag": [{"identifiant": "exemple-it-b1-ecrit", "code_langue": "it", "referentiel": "CECRL", "niveau": "B1", "competence": "ecrit", "contenu": "Exemple pédagogique non normatif : relier quelques phrases pour raconter une expérience familière."}]
+    },
+    "sortie": {"code_langue": "it", "referentiel": "CECRL", "niveau_estime": "B1", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.74, "niveau_preliminaire": "A2", "ecart_avec_niveau_preliminaire": 1},
+    "justification": "Le récit relie des actions passées dans un ordre compréhensible et correspond au descripteur B1 fourni."
+  },
+  {
+    "scenario": "quotidien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "de", "referentiel": "CECRL", "niveau_preliminaire": "A1"},
+      "reponses": [{"id_question": "q-quotidien-de-01", "competence": "oral", "type_reponse": "texte", "contenu": "Am Wochenende besuche ich meine Freunde. Wir trinken Kaffee und sprechen über unsere Arbeit."}],
+      "score_preliminaire": 35,
+      "descripteurs_rag": [{"identifiant": "exemple-de-a2-oral", "code_langue": "de", "referentiel": "CECRL", "niveau": "A2", "competence": "oral", "contenu": "Exemple pédagogique non normatif : décrire des activités habituelles avec des phrases reliées simples."}]
+    },
+    "sortie": {"code_langue": "de", "referentiel": "CECRL", "niveau_estime": "A2", "phase_assimil": "active", "points_faibles": [], "score_confiance": 0.7, "niveau_preliminaire": "A1", "ecart_avec_niveau_preliminaire": 1},
+    "justification": "La réponse relie des activités familières en phrases simples, en accord avec le descripteur A2 transmis."
+  }
+]
