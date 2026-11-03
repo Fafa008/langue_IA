@@ -5,6 +5,10 @@ seul ``httpx`` est nécessaire, ce qui évite le verrouillage et garde l'image l
 
 Le mode JSON s'appuie sur ``response_format={"type": "json_object"}`` ; la réponse est ensuite validée par le schéma
 Pydantic fourni par l'appelant. Le streaming lit le protocole SSE (``data: {...}`` puis ``data: [DONE]``).
+
+Depuis l'US-154, cet adaptateur ne décide plus lui-même de réessayer : il effectue **une** tentative et lève une
+exception typée. La boucle commune (``app.core.reprise``) applique le nombre de tentatives, les délais et le budget
+total. Un flux commencé n'est jamais rejoué, car des morceaux ont déjà pu être affichés.
 """
 
 import asyncio
@@ -17,23 +21,25 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import ConfigLLM
-from app.core.erreurs import ErreurConfiguration, ErreurLlmIndisponible, ErreurLlmTimeout, ErreurReponseLlm
+from app.core.erreurs import (
+    ErreurConfiguration,
+    ErreurLlmAuthentification,
+    ErreurLlmIndisponible,
+    ErreurLlmLimiteRequetes,
+    ErreurLlmRequete,
+    ErreurLlmTimeout,
+    ErreurReponseLlm,
+)
+from app.core.reprise import PolitiqueReprise, attendre, reessayer
 from app.llm.base import MessageLLM, MorceauFlux, ReponseLLM
 
 T = TypeVar("T", bound=BaseModel)
 
-# Seuls ces statuts justifient une reprise : une erreur 400/401/403/422 est définitive.
-STATUTS_REJOUABLES = frozenset({429, 500, 502, 503, 504})
 STATUTS_AUTHENTIFICATION = frozenset({401, 403})
 
 MESSAGE_TIMEOUT = "Le fournisseur LLM n'a pas répondu dans le délai imparti."
 MESSAGE_INDISPONIBLE = "Le fournisseur LLM est injoignable."
 MESSAGE_REPONSE_INVALIDE = "Le fournisseur LLM a renvoyé une réponse inexploitable."
-
-
-async def _attendre(delai_s: float) -> None:
-    """Attente par défaut entre deux tentatives (surchargeable dans les tests)."""
-    await asyncio.sleep(delai_s)
 
 
 class CompatibleOpenAI:
@@ -56,12 +62,18 @@ class CompatibleOpenAI:
         self._api_key = config.api_key
         self._client = client if client is not None else httpx.AsyncClient(timeout=config.timeout_s)
         self._client_externe = client is not None
-        self._attente = attente if attente is not None else _attendre
+        self._attente = attente if attente is not None else attendre
+        self._politique: PolitiqueReprise = config.politique_reprise
 
     @property
     def url(self) -> str:
         """URL complète de l'endpoint, utile à la supervision et aux tests."""
         return self._url
+
+    @property
+    def politique_reprise(self) -> PolitiqueReprise:
+        """Bornes de reprise appliquées aux appels JSON."""
+        return self._politique
 
     async def generer_json(
         self,
@@ -72,22 +84,39 @@ class CompatibleOpenAI:
         max_tokens: int | None = None,
         delai_s: float | None = None,
     ) -> tuple[T, ReponseLLM]:
-        """Appeler le fournisseur en mode JSON et valider la réponse avec ``schema``."""
+        """Appeler le fournisseur en mode JSON, avec reprise bornée, et valider la réponse avec ``schema``.
+
+        Le budget total de ``ConfigLLM`` encadre l'ensemble des tentatives : quel que soit le comportement du
+        fournisseur, l'appel rend la main avec ``ErreurLlmTimeout`` au plus tard à l'échéance.
+        """
         debut = time.monotonic()
         corps = self._corps(messages, temperature, max_tokens, mode_json=True, flux=False)
-        reponse_http = await self._poster(corps, self._delai(delai_s))
 
-        donnees = self._charger_json(reponse_http)
-        contenu = self._extraire_contenu(donnees)
-        if not contenu.strip():
-            raise ErreurReponseLlm(MESSAGE_REPONSE_INVALIDE)
+        async def tentative() -> tuple[T, str, dict | None]:
+            reponse_http = await self._poster(corps, self._delai(delai_s))
+            donnees = self._charger_json(reponse_http)
+            contenu = self._extraire_contenu(donnees)
+            if not contenu.strip():
+                raise ErreurReponseLlm(MESSAGE_REPONSE_INVALIDE)
+
+            try:
+                objet = schema.model_validate_json(contenu)
+            except ValidationError as exc:
+                raise ErreurReponseLlm(MESSAGE_REPONSE_INVALIDE) from exc
+
+            usage = donnees.get("usage")
+            return objet, contenu, usage if isinstance(usage, dict) else None
 
         try:
-            objet = schema.model_validate_json(contenu)
-        except ValidationError as exc:
-            raise ErreurReponseLlm(MESSAGE_REPONSE_INVALIDE) from exc
+            async with asyncio.timeout(self._config.budget_total_s):
+                objet, contenu, usage = await reessayer(
+                    tentative,
+                    politique=self._politique,
+                    attente=self._attente,
+                )
+        except TimeoutError as exc:
+            raise ErreurLlmTimeout(MESSAGE_TIMEOUT) from exc
 
-        usage = donnees.get("usage") if isinstance(donnees, dict) else None
         return objet, ReponseLLM(
             contenu=contenu,
             fournisseur=self.nom,
@@ -119,9 +148,7 @@ class CompatibleOpenAI:
                 headers=self._entetes(),
                 timeout=self._delai(delai_s),
             ) as reponse_http:
-                if reponse_http.status_code >= 300:
-                    await reponse_http.aread()
-                    self._verifier_statut(reponse_http.status_code)
+                self._verifier_statut(reponse_http)
 
                 async for ligne in reponse_http.aiter_lines():
                     if not ligne.startswith("data:"):
@@ -149,6 +176,8 @@ class CompatibleOpenAI:
                         yield MorceauFlux(texte=texte)
         except httpx.TimeoutException as exc:
             raise ErreurLlmTimeout(MESSAGE_TIMEOUT) from exc
+        except httpx.TransportError as exc:
+            raise ErreurLlmIndisponible(MESSAGE_INDISPONIBLE) from exc
         except httpx.HTTPError as exc:
             raise ErreurLlmIndisponible(MESSAGE_INDISPONIBLE) from exc
 
@@ -175,8 +204,8 @@ class CompatibleOpenAI:
     ) -> AsyncIterator[MorceauFlux]:
         """Retourner le flux SSE du fournisseur.
 
-        Un flux commencé n'est jamais rejoué : le consommateur a déjà pu afficher des morceaux. Une erreur de statut
-        avant tout contenu est signalée par ``ErreurLlmIndisponible``.
+        Aucune reprise : un flux commencé a déjà pu être affiché. Le délai ``httpx`` borne chaque lecture, donc une
+        connexion qui se bloque est interrompue même si le fournisseur n'envoie plus rien.
         """
         return self._iterer_flux(
             messages,
@@ -218,38 +247,42 @@ class CompatibleOpenAI:
         return corps
 
     async def _poster(self, corps: dict[str, object], delai_s: float) -> httpx.Response:
-        """Envoyer la requête, avec reprise uniquement sur les statuts transitoires."""
-        for tentative in range(self._config.max_retries + 1):
-            try:
-                reponse = await self._client.post(
-                    self._url,
-                    json=corps,
-                    headers=self._entetes(),
-                    timeout=delai_s,
-                )
-            except httpx.TimeoutException as exc:
-                raise ErreurLlmTimeout(MESSAGE_TIMEOUT) from exc
-            except httpx.HTTPError as exc:
-                raise ErreurLlmIndisponible(MESSAGE_INDISPONIBLE) from exc
+        """Envoyer une tentative unique ; la reprise éventuelle appartient à la politique commune."""
+        try:
+            reponse = await self._client.post(
+                self._url,
+                json=corps,
+                headers=self._entetes(),
+                timeout=delai_s,
+            )
+        except httpx.TimeoutException as exc:
+            raise ErreurLlmTimeout(MESSAGE_TIMEOUT) from exc
+        except httpx.TransportError as exc:
+            raise ErreurLlmIndisponible(MESSAGE_INDISPONIBLE) from exc
+        except httpx.HTTPError as exc:
+            raise ErreurLlmIndisponible(MESSAGE_INDISPONIBLE) from exc
 
-            if reponse.status_code in STATUTS_REJOUABLES and tentative < self._config.max_retries:
-                await self._attente(min(0.5 * (2**tentative), 4.0))
-                continue
-
-            self._verifier_statut(reponse.status_code)
-            return reponse
-
-        raise ErreurLlmIndisponible(MESSAGE_INDISPONIBLE)  # pragma: no cover - boucle toujours bornée
+        self._verifier_statut(reponse)
+        return reponse
 
     @staticmethod
-    def _verifier_statut(statut: int) -> None:
-        """Traduire un statut HTTP en erreur interne, sans recopier le corps de la réponse."""
+    def _verifier_statut(reponse: httpx.Response) -> None:
+        """Traduire un statut HTTP en erreur typée, sans jamais recopier le corps de la réponse."""
+        statut = reponse.status_code
+        if 200 <= statut < 300:
+            return
         if statut in STATUTS_AUTHENTIFICATION:
-            raise ErreurLlmIndisponible("Le fournisseur LLM a refusé l'authentification.")
+            raise ErreurLlmAuthentification(f"Le fournisseur LLM a refusé l'authentification (HTTP {statut}).")
         if statut == 429:
-            raise ErreurLlmIndisponible("Le fournisseur LLM a atteint sa limite de requêtes.")
-        if statut >= 400:
-            raise ErreurLlmIndisponible(f"Le fournisseur LLM a renvoyé une erreur HTTP {statut}.")
+            raise ErreurLlmLimiteRequetes(
+                "Le fournisseur LLM a atteint sa limite de requêtes (HTTP 429).",
+                retry_after_s=_delai_retry_after(reponse.headers),
+            )
+        if 300 <= statut < 400:
+            raise ErreurLlmRequete(f"Le fournisseur LLM a répondu par une redirection inattendue (HTTP {statut}).")
+        if statut < 500:
+            raise ErreurLlmRequete(f"Le fournisseur LLM a refusé la requête (HTTP {statut}).")
+        raise ErreurLlmIndisponible(f"Le fournisseur LLM a renvoyé une erreur HTTP {statut}.")
 
     @staticmethod
     def _charger_json(reponse_http: httpx.Response) -> dict:
@@ -296,3 +329,21 @@ class CompatibleOpenAI:
     @staticmethod
     def _duree_ms(debut: float) -> int:
         return max(0, int(round((time.monotonic() - debut) * 1000)))
+
+
+def _delai_retry_after(entetes: httpx.Headers) -> float | None:
+    """Lire ``Retry-After`` en secondes ; une date HTTP n'est pas interprétée et vaut « inconnu ».
+
+    Le fournisseur ne doit pas pouvoir imposer une attente arbitraire : le plafond de la politique s'applique
+    ensuite.
+    """
+    valeur = entetes.get("retry-after")
+    if valeur is None:
+        return None
+    try:
+        delai = float(valeur.strip())
+    except ValueError:
+        return None
+    if delai < 0:
+        return None
+    return delai
