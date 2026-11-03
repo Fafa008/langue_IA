@@ -27,9 +27,10 @@ const CONSIGNES = [
 /** Chiffre clé du test (« 10 questions »), « – » tant qu'aucune langue n'est choisie. */
 function Chiffre({ valeur, libelle }: { valeur: string | number | null; libelle: string }) {
   return (
-    <div className="flex flex-col-reverse rounded-btn bg-background p-4 text-center">
+    // Valeur au-dessus du libellé, alignée en haut d'une case à l'autre même si le libellé passe sur deux lignes
+    <div className="flex flex-col-reverse justify-end rounded-btn bg-background px-2 py-3 text-center sm:p-4">
       <dt className="text-small text-content-secondary">{libelle}</dt>
-      <dd className="text-h3 font-bold text-content">{valeur ?? "–"}</dd>
+      <dd className="whitespace-nowrap text-h4 font-bold text-content sm:text-h3">{valeur ?? "–"}</dd>
     </div>
   );
 }
@@ -183,10 +184,10 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
 
       <section className="card mt-6" aria-labelledby="etape-consignes">
         <h2 id="etape-consignes" className="mb-4 text-h3 text-content">2. Avant de commencer</h2>
-        <ul className="list-inside list-disc space-y-2 text-content" data-testid="consignes">
+        <ul className="list-disc space-y-2 pl-5 text-content" data-testid="consignes">
           {CONSIGNES.map((consigne) => <li key={consigne}>{consigne}</li>)}
         </ul>
-        <dl className="mt-6 grid grid-cols-3 gap-3" data-testid="chiffres-test">
+        <dl className="mt-6 grid grid-cols-3 gap-2 sm:gap-3" data-testid="chiffres-test">
           <Chiffre valeur={langueChoisie?.nombreQuestions ?? null} libelle="questions" />
           <Chiffre valeur={langueChoisie ? `${DUREE_TEST_MINUTES} min` : null} libelle="de durée estimée" />
           <Chiffre valeur={langueChoisie?.niveaux.length ?? null} libelle="niveaux estimés" />

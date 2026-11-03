@@ -196,7 +196,7 @@ export default function DeroulementTest() {
               }`}
             >
               {etat.retour.typeReponse === "choix" ? (
-                <p className={`font-semibold ${etat.retour.correcte ? "text-success" : "text-error"}`}>
+                <p className={`font-semibold ${etat.retour.correcte ? "text-success-dark" : "text-error-dark"}`}>
                   {etat.retour.correcte
                     ? "Bonne réponse"
                     : `Réponse incorrecte. Bonne réponse : ${etat.courante.choix?.[etat.retour.bonneReponse]}`}
