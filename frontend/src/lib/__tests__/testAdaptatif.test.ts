@@ -155,3 +155,44 @@ describe("réponses enregistrées", () => {
     expect(reducteur(feedback, { type: "demarrer", session, debut: 0 }).reponses).toEqual([]);
   });
 });
+
+describe("reprise d'un test interrompu", () => {
+  const q2 = { id: "q-2", niveau: "A1", competence: "grammaire" as const, typeReponse: "choix" as const, enonce: "Question 2", choix: ["A", "B"] };
+  const dejaRepondue = { idQuestion: "q-1", niveau: "A1", competence: "grammaire" as const, typeReponse: "choix" as const };
+  const interrompu = {
+    idSession: "42",
+    langue: "en",
+    debut: 1_000,
+    totalQuestions: 2,
+    reponses: [dejaRepondue],
+    session: { ...session, id: "42", numeroQuestion: 2, question: q2, questions: [q2] },
+  };
+
+  it("reprend à la première question sans réponse, avec les réponses enregistrées et l'heure de début", () => {
+    const etat = reducteur(etatInitial(null), { type: "reprendre", test: interrompu });
+
+    expect(etat).toMatchObject({
+      phase: "question",
+      sessionId: "42",
+      langue: "en",
+      numeroQuestion: 2,
+      totalQuestions: 2,
+      debut: 1_000,
+      courante: { id: "q-2" },
+      questionsRestantes: [],
+      reponses: [dejaRepondue],
+    });
+  });
+
+  it("affiche directement le résultat quand toutes les questions avaient une réponse", () => {
+    const resultat = { niveau: "A2", score: 50, total: 100, cadre: "CECRL" as const, competences: [], lacunes: [] };
+    const etat = reducteur(etatInitial(null), { type: "reprendre", test: { ...interrompu, session: null }, resultat });
+
+    expect(etat).toMatchObject({ phase: "resultat", sessionId: "42", langue: "en", resultat, reponses: [dejaRepondue] });
+  });
+
+  it("sans suite ni résultat, ne change rien", () => {
+    const avant = etatInitial("en");
+    expect(reducteur(avant, { type: "reprendre", test: { ...interrompu, session: null } })).toBe(avant);
+  });
+});

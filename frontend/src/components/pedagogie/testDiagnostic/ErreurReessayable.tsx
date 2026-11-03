@@ -11,13 +11,13 @@ interface ErreurReessayableProps {
 export default function ErreurReessayable({ message, onReessayer, libelleBouton = "Réessayer" }: ErreurReessayableProps) {
   return (
     <div role="alert" data-testid="erreur-diagnostic" className="mt-4 rounded-card border border-error bg-error/5 p-4">
-      <p className="flex items-start gap-2 font-medium text-error">
+      <p className="flex items-start gap-2 font-medium text-error-dark">
         <AlertTriangle size={20} aria-hidden className="mt-0.5 shrink-0" />
         {message}
       </p>
       {onReessayer && (
         <>
-          <p className="mt-1 pl-7 text-small text-content-secondary">Vos réponses déjà saisies sont conservées.</p>
+          <p className="mt-1 pl-7 text-small text-content">Vos réponses déjà saisies sont conservées.</p>
           <button type="button" onClick={onReessayer} className="btn-secondary mt-3 ml-7">
             <RotateCcw size={16} aria-hidden /> {libelleBouton}
           </button>

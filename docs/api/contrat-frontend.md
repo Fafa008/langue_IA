@@ -681,6 +681,48 @@ déjà saisies restent affichées.
 Les messages d'erreur du test ne reprennent jamais le champ `detail`, un code HTTP ni un message technique : le
 backend peut y mettre des informations de diagnostic sans risque qu'elles soient montrées à l'apprenant.
 
+### `GET /diagnostic/tentatives/en-cours` — rôle `APPRENANT` — contrat frontend à implémenter côté backend
+
+Reprise d'un test interrompu (onglet fermé, autre appareil) : dernière tentative de l'apprenant connecté au statut
+`EN_COURS`, avec les réponses déjà enregistrées. Le frontend l'appelle à l'ouverture de l'écran de démarrage quand
+aucun test n'est en cours dans l'onglet.
+
+**200** :
+
+```json
+{
+  "id_tentative": 42,
+  "code_langue": "en",
+  "code_niveau": "A1",
+  "date_debut": "2026-11-03T08:12:00Z",
+  "reponses": [
+    { "id_question": "12", "reponse_fournie": "is" }
+  ]
+}
+```
+
+**204** (sans corps) : aucune tentative en cours. Erreurs : **401** session absente ou invalide, **403** rôle autre
+qu'`APPRENANT`.
+
+Le frontend recharge les questions du niveau (`GET /diagnostic/questions`), ne repose pas celles qui ont une réponse
+et reprend à la première sans réponse. `date_debut` (ISO 8601 avec fuseau) sert au compte à rebours : les 15 minutes
+courent depuis le début de la tentative, pas depuis la reprise ; une fois écoulées, la reprise calcule directement le
+résultat avec les réponses enregistrées. `id_question` peut être un entier ou une chaîne.
+
+L'écran de démarrage affiche alors « Test interrompu » (langue, date de début, réponses enregistrées, temps restant)
+avec deux choix : **Reprendre le test** ou **Commencer un nouveau test** (après confirmation, voir ci-dessous).
+
+### `POST /diagnostic/tentatives/{id_tentative}/abandonner` — rôle `APPRENANT` — contrat frontend à implémenter côté backend
+
+Passe la tentative au statut `ANNULE` : elle n'est plus renvoyée par `GET /diagnostic/tentatives/en-cours`. Appelée
+quand l'apprenant choisit « Commencer un nouveau test » sur un test interrompu, ou « Quitter le test » pendant le test.
+
+**204** (sans corps). Erreurs : **401**, **403**, **404** tentative inconnue ou appartenant à un autre apprenant,
+**409** tentative déjà terminée ou annulée.
+
+Quitter la page **sans** passer par « Quitter le test » (lien du menu, fermeture de l'onglet) n'abandonne rien : le
+frontend demande confirmation, et la tentative reste `EN_COURS` pour être reprise.
+
 ## Formateurs — rôle `ADMINISTRATEUR`
 
 > Routes implémentées dans `backend/app/api/routes/formateurs.py`.

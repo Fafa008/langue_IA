@@ -27,7 +27,7 @@ export default function PointsFaibles({ points, children }: PointsFaiblesProps) 
           {points.map(({ domaine, detail }) => (
             <li key={domaine} data-testid={`point-faible-${domaine}`} className="rounded-btn bg-warning/10 px-3 py-2">
               <p className="font-semibold text-content">{LIBELLES_DOMAINES[domaine]}</p>
-              {detail && <p className="mt-0.5 text-small text-content-secondary">{detail}</p>}
+              {detail && <p className="mt-0.5 text-small text-content">{detail}</p>}
             </li>
           ))}
         </ul>

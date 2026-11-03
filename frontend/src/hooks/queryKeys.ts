@@ -18,6 +18,8 @@ export const queryKeys = {
   languesChoix: ["langues", "choix"] as const,
   /** Langues proposées sur l'écran d'accueil du test de positionnement. */
   languesDiagnostic: ["diagnostic", "langues"] as const,
+  /** Tentative interrompue de l'apprenant connecté, à reprendre ou abandonner. */
+  testInterrompu: ["diagnostic", "test-interrompu"] as const,
   statistiquesAdmin: ["statistiques-admin"] as const,
   inscriptions: (jours: PeriodeInscriptions) => ["inscriptions", jours] as const,
 };

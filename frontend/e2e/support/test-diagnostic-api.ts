@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { ECHELLES, cadreDeLangue } from "../../src/lib/referentiels";
 import { QUESTIONS_TEST, type QuestionMock } from "../../src/mocks/questions-test.mock";
 import type { Question } from "../../src/types/test-diagnostic";
-import { handlePreflight, json } from "./session";
+import { CORS_HEADERS, handlePreflight, json } from "./session";
 
 interface TentativeE2E {
   id: number;
@@ -10,7 +10,8 @@ interface TentativeE2E {
   niveau: string;
   questions: QuestionMock[];
   reponses: Map<string, { id: number; valeur: string }>;
-  statut: "EN_COURS" | "TERMINE";
+  statut: "EN_COURS" | "TERMINE" | "ANNULE";
+  dateDebut: string;
 }
 
 function questionPublique(question: Question) {
@@ -48,6 +49,18 @@ const REDACTION: QuestionMock = {
   bonneReponse: 0,
 };
 
+/** Question de compréhension orale ajoutée au test quand l'option `avecEcoute` est active. */
+export const ECOUTE: QuestionMock = {
+  id: "e2e-ecoute",
+  niveau: "A1",
+  competence: "ecoute",
+  typeReponse: "choix",
+  enonce: "Where is the speaker going?",
+  choix: ["To work", "To the beach", "To the cinema", "Home"],
+  audioTexte: "Good morning! I am taking the bus to work.",
+  bonneReponse: 0,
+};
+
 /** Premier niveau ayant des questions enregistrables, et ces questions (même règle que le backend). */
 function niveauDeDepart(langue: string) {
   const banque = (QUESTIONS_TEST as Record<string, QuestionMock[] | undefined>)[langue] ?? [];
@@ -73,6 +86,8 @@ export interface OptionsApiDiagnostic {
   premiereTerminaison?: "panne" | "en_attente" | "sans_reponse";
   /** Ajoute un sujet d'expression écrite après les questions à choix. */
   avecRedaction?: boolean;
+  /** Ajoute une question de compréhension orale (étape entre le QCM et l'expression écrite). */
+  avecEcoute?: boolean;
   /** Le résultat inclut l'analyse détaillée (LLM + RAG) : compétences, points faibles, phase Assimil, justification. */
   avecAnalyse?: boolean;
 }
@@ -121,6 +136,7 @@ export async function mockTestDiagnosticApi(
     languesEnErreur = false,
     premiereTerminaison,
     avecRedaction = false,
+    avecEcoute = false,
     avecAnalyse = false,
   }: OptionsApiDiagnostic = {},
 ) {
@@ -132,7 +148,11 @@ export async function mockTestDiagnosticApi(
   let terminaisonSpeciale = premiereTerminaison;
   const questionsDuTest = (langue: string) => {
     const { niveau, questions } = niveauDeDepart(langue);
-    return { niveau, questions: avecRedaction && niveau ? [...questions, REDACTION] : questions };
+    if (!niveau) return { niveau, questions };
+    return {
+      niveau,
+      questions: [...questions, ...(avecEcoute ? [ECOUTE] : []), ...(avecRedaction ? [REDACTION] : [])],
+    };
   };
 
   await page.route("**/api/v1/diagnostic/**", async (route) => {
@@ -175,6 +195,7 @@ export async function mockTestDiagnosticApi(
         questions,
         reponses: new Map(),
         statut: "EN_COURS",
+        dateDebut: new Date().toISOString(),
       });
       await json(route, 201, { id_tentative: id, code_langue: langue, code_niveau: niveau });
       return;
@@ -275,6 +296,35 @@ export async function mockTestDiagnosticApi(
         framework: tentative.langue === "zh" ? "HSK" : "CECRL",
         ...(avecAnalyse ? ANALYSE_E2E : {}),
       });
+      return;
+    }
+
+    // Reprise : dernière tentative commencée et non terminée, avec les réponses déjà enregistrées
+    if (request.method() === "GET" && url.pathname === "/api/v1/diagnostic/tentatives/en-cours") {
+      const enCours = [...tentatives.values()].reverse().find((tentative) => tentative.statut === "EN_COURS");
+      if (!enCours) {
+        await route.fulfill({ status: 204, headers: CORS_HEADERS });
+        return;
+      }
+      await json(route, 200, {
+        id_tentative: enCours.id,
+        code_langue: enCours.langue,
+        code_niveau: enCours.niveau,
+        date_debut: enCours.dateDebut,
+        reponses: [...enCours.reponses].map(([idQuestion, { valeur }]) => ({ id_question: idQuestion, reponse_fournie: valeur })),
+      });
+      return;
+    }
+
+    const abandon = url.pathname.match(/^\/api\/v1\/diagnostic\/tentatives\/(\d+)\/abandonner$/);
+    if (request.method() === "POST" && abandon) {
+      const tentative = tentatives.get(Number(abandon[1]));
+      if (!tentative || tentative.statut !== "EN_COURS") {
+        await json(route, tentative ? 409 : 404, { detail: "Tentative non abandonnable." });
+        return;
+      }
+      tentative.statut = "ANNULE";
+      await route.fulfill({ status: 204, headers: CORS_HEADERS });
       return;
     }
 

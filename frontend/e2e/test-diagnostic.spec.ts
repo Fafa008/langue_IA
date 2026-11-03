@@ -459,7 +459,7 @@ test.describe("Écran de résultats : niveau, phase Assimil, points faibles et j
     await expect(page.getByTestId("result-level")).toHaveText("B1");
     const partiel = page.getByTestId("resultat-partiel");
     await expect(partiel).toContainText("Résultat partiel");
-    await expect(partiel).toContainText("la phase Assimil");
+    await expect(partiel).toContainText("la phase de la méthode Assimil");
     await expect(partiel).toContainText("la justification du niveau");
     await expect(page.getByTestId("result-phase")).toContainText("Non déterminée");
     await expect(page.getByTestId("result-weaknesses")).toContainText("identifiés par l'analyse complète");
@@ -467,5 +467,102 @@ test.describe("Écran de résultats : niveau, phase Assimil, points faibles et j
     await expect(page.getByRole("link", { name: "Commencer mon parcours" })).toBeVisible();
 
     await expectSansDebordement(page);
+  });
+});
+
+test.describe("Parcours complet du diagnostic", () => {
+  const OPTIONS: OptionsApiDiagnostic = { avecEcoute: true, avecRedaction: true, avecAnalyse: true };
+  const REDACTION = "Je m'appelle Rova et j'apprends l'anglais pour mon travail.";
+
+  /** Vérifie l'étape affichée et la progression avant de répondre à la question n (sur 4). */
+  async function expectEtape(page: Page, etape: string, numero: number) {
+    await expect(page.getByRole("heading", { name: etape })).toBeVisible();
+    await expect(page.getByTestId("progress-label")).toHaveText(`Question ${numero} sur 4`);
+    await expect(page.getByRole("progressbar", { name: "Progression du test" }))
+      .toHaveAttribute("aria-valuetext", `${Math.round(((numero - 1) / 4) * 100)} %`);
+  }
+
+  async function choisirEtContinuer(page: Page, option: number) {
+    await page.getByTestId(`option-${option}`).click();
+    await page.getByRole("button", { name: "Valider et continuer" }).click();
+    await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
+    await page.getByRole("button", { name: "Question suivante" }).click();
+  }
+
+  test("nominal : démarrage, réponses aux trois étapes, progression et résultats", async ({ page }) => {
+    // Démarrage : langue, consignes, personnalisation
+    await ouvrir(page, "en", OPTIONS);
+    await expect(page.getByRole("heading", { name: "Évaluez votre niveau" })).toBeVisible();
+    await expect(page.getByTestId("language-select")).toContainText("Anglais");
+    await demarrer(page);
+
+    // Étape 1 : QCM de grammaire (deux bonnes réponses)
+    await expectEtape(page, "Étape 1/3 : Grammaire et lexique", 1);
+    await choisirEtContinuer(page, 0);
+    await expectEtape(page, "Étape 1/3 : Grammaire et lexique", 2);
+    await choisirEtContinuer(page, 1);
+
+    // Étape 2 : compréhension orale
+    await expectEtape(page, "Étape 2/3 : Compréhension orale", 3);
+    await expect(page.getByRole("button", { name: "Écouter l’extrait" })).toBeVisible();
+    await choisirEtContinuer(page, 0);
+
+    // Étape 3 : expression écrite, dernière question
+    await expectEtape(page, "Étape 3/3 : Expression écrite", 4);
+    await page.getByLabel("Votre réponse").fill(REDACTION);
+    await page.getByRole("button", { name: "Valider et finaliser" }).click();
+    await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
+    await page.getByRole("button", { name: "Finaliser le test" }).click();
+
+    // Résultats : toutes les questions à choix sont justes
+    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
+    await expect(page.getByTestId("result-level")).toHaveText("C2");
+    await expect(page.getByTestId("result-score")).toHaveText(/100\s*\/\s*100/);
+    await expect(page.getByTestId("result-phase")).toContainText("Activation");
+    await expect(page.getByTestId("point-faible-vocabulaire")).toBeVisible();
+    await expect(page.getByTestId("justification-resume")).toHaveText(ANALYSE_E2E.justification.resume);
+    await expect(page.getByTestId("resultat-partiel")).toHaveCount(0);
+    await expectSansDebordement(page);
+  });
+
+  test("erreur LLM : la réponse écrite puis l'analyse finale échouent, l'apprenant réessaie et obtient son résultat", async ({ page }) => {
+    await ouvrir(page, "en", { ...OPTIONS, premiereTerminaison: "panne" });
+    // L'évaluation de la réponse écrite par le LLM échoue une première fois
+    let echecRedaction = true;
+    await page.route("**/api/v1/diagnostic/reponse", async (route) => {
+      const corps = route.request().method() === "POST" ? route.request().postDataJSON() : null;
+      if (echecRedaction && corps?.id_question === "e2e-ecrit") {
+        echecRedaction = false;
+        await json(route, 503, { detail: DETAIL_TECHNIQUE });
+        return;
+      }
+      await route.fallback();
+    });
+    await demarrer(page);
+    await choisirEtContinuer(page, 0);
+    await choisirEtContinuer(page, 1);
+    await choisirEtContinuer(page, 0);
+
+    // Réponse écrite : message clair, texte conservé, nouvelle tentative
+    await expectEtape(page, "Étape 3/3 : Expression écrite", 4);
+    await page.getByLabel("Votre réponse").fill(REDACTION);
+    await page.getByRole("button", { name: "Valider et finaliser" }).click();
+    const erreurReponse = page.getByTestId("erreur-diagnostic");
+    await expect(erreurReponse).toContainText("Votre réponse n'a pas pu être envoyée");
+    await expect(page.getByLabel("Votre réponse")).toHaveValue(REDACTION);
+    await erreurReponse.getByRole("button", { name: "Réessayer" }).click();
+    await expect(page.getByTestId("feedback")).toContainText("Réponse enregistrée");
+
+    // Analyse finale : panne du service d'analyse, sans détail technique, puis nouvelle tentative
+    await page.getByRole("button", { name: "Finaliser le test" }).click();
+    const erreurAnalyse = page.getByTestId("erreur-diagnostic");
+    await expect(erreurAnalyse).toContainText("L'analyse de vos réponses n'a pas pu aboutir");
+    await expect(page.locator("body")).not.toContainText("Traceback");
+    await expect(page.locator("body")).not.toContainText("sk-secret");
+    await erreurAnalyse.getByRole("button", { name: "Réessayer" }).click();
+
+    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
+    await expect(page.getByTestId("result-level")).toHaveText("C2");
+    await expect(page.getByTestId("result-phase")).toContainText("Activation");
   });
 });

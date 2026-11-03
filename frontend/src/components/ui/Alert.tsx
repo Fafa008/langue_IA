@@ -2,8 +2,8 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 const VARIANTS = {
-  error: { icon: AlertTriangle, className: "border-error bg-error/5 text-error" },
-  success: { icon: CheckCircle2, className: "border-success bg-success/5 text-success" },
+  error: { icon: AlertTriangle, className: "border-error bg-error/5 text-error-dark" },
+  success: { icon: CheckCircle2, className: "border-success bg-success/5 text-success-dark" },
 };
 
 interface AlertProps {

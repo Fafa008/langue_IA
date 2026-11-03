@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Alert from "@/components/ui/Alert";
-import { useLanguesDiagnostic, useTestDiagnostic } from "@/hooks/useTestDiagnostic";
+import { useLanguesDiagnostic, useTestDiagnostic, useTestInterrompu } from "@/hooks/useTestDiagnostic";
 import { messageErreurDiagnostic } from "@/lib/erreursDiagnostic";
 import { API_MOCK } from "@/lib/env";
 import { libelleLangue } from "@/lib/languages";
@@ -14,6 +14,7 @@ import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnost
 import BoutonRetour from "./BoutonRetour";
 import ChoixLangueTest from "./ChoixLangueTest";
 import PersonalisationForm from "./PersonalisationForm";
+import TestInterrompu from "./TestInterrompu";
 
 const CONSIGNES = [
   `Le test dure ${DUREE_TEST_MINUTES} minutes et comporte 4 étapes : grammaire et lexique, compréhension orale, expression orale, expression écrite.`,
@@ -26,9 +27,10 @@ const CONSIGNES = [
 /** Chiffre clé du test (« 10 questions »), « – » tant qu'aucune langue n'est choisie. */
 function Chiffre({ valeur, libelle }: { valeur: string | number | null; libelle: string }) {
   return (
-    <div className="flex flex-col-reverse rounded-btn bg-background p-4 text-center">
+    // Valeur au-dessus du libellé, alignée en haut d'une case à l'autre même si le libellé passe sur deux lignes
+    <div className="flex flex-col-reverse justify-end rounded-btn bg-background px-2 py-3 text-center sm:p-4">
       <dt className="text-small text-content-secondary">{libelle}</dt>
-      <dd className="text-h3 font-bold text-content">{valeur ?? "–"}</dd>
+      <dd className="whitespace-nowrap text-h4 font-bold text-content sm:text-h3">{valeur ?? "–"}</dd>
     </div>
   );
 }
@@ -43,6 +45,8 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
   const langues = useLanguesDiagnostic();
   const { etat } = test;
   const enCours = useTestDiagnosticStore(selectTestEnCours);
+  // Test commencé ailleurs (onglet fermé, autre appareil) : retrouvé sur le serveur
+  const interrompu = useTestInterrompu(!enCours && etat.phase === "intro");
   // Langue choisie et réellement disponible : sans elle, le test ne peut pas démarrer
   const langueChoisie = langues.data?.find((l) => l.code === etat.langue && l.disponible) ?? null;
 
@@ -113,11 +117,44 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
     );
   }
 
-  return (
-    <div className="mx-auto max-w-3xl">
+  const entete = (
+    <>
       <BoutonRetour href={ROUTES.apprenant.dashboard} libelle="Retour à mon espace" />
       <p className="eyebrow">Test de positionnement</p>
       <h1 className="mt-2">Évaluez votre niveau</h1>
+    </>
+  );
+
+  // Un test interrompu se reprend ou s'abandonne avant d'en commencer un autre
+  if (etat.phase === "intro" && (interrompu.isPending || interrompu.data)) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        {entete}
+        {interrompu.data ? (
+          <TestInterrompu
+            test={interrompu.data}
+            onReprendre={() => test.reprendre(interrompu.data!)}
+            onAbandonner={() => test.abandonnerTestInterrompu(interrompu.data!)}
+            repriseEnCours={test.repriseEnCours}
+            abandonEnCours={test.abandonEnCours}
+            erreur={test.erreurAbandon
+              ? messageErreurDiagnostic(test.erreurAbandon, "abandon")
+              : test.erreurTerminaison
+                ? messageErreurDiagnostic(test.erreurTerminaison, "analyse")
+                : test.resultatEnAttente
+                  ? "Votre résultat est en cours d'analyse. Réessayez dans quelques minutes."
+                  : null}
+          />
+        ) : (
+          <p role="status" className="card mt-6 animate-pulse text-content-secondary">Recherche d&apos;un test en cours…</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      {entete}
       <p className="mt-2 text-content-secondary">
         Un test court pour situer votre niveau et construire un parcours adapté. Commencez par choisir la langue à évaluer.
       </p>
@@ -147,10 +184,10 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
 
       <section className="card mt-6" aria-labelledby="etape-consignes">
         <h2 id="etape-consignes" className="mb-4 text-h3 text-content">2. Avant de commencer</h2>
-        <ul className="list-inside list-disc space-y-2 text-content" data-testid="consignes">
+        <ul className="list-disc space-y-2 pl-5 text-content" data-testid="consignes">
           {CONSIGNES.map((consigne) => <li key={consigne}>{consigne}</li>)}
         </ul>
-        <dl className="mt-6 grid grid-cols-3 gap-3" data-testid="chiffres-test">
+        <dl className="mt-6 grid grid-cols-3 gap-2 sm:gap-3" data-testid="chiffres-test">
           <Chiffre valeur={langueChoisie?.nombreQuestions ?? null} libelle="questions" />
           <Chiffre valeur={langueChoisie ? `${DUREE_TEST_MINUTES} min` : null} libelle="de durée estimée" />
           <Chiffre valeur={langueChoisie?.niveaux.length ?? null} libelle="niveaux estimés" />

@@ -1,13 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/hooks/queryKeys";
 import { ApiError } from "@/lib/api-client";
 import { ROUTES } from "@/lib/routes";
 import { testDiagnosticService, type ReponseProgression } from "@/services/test-diagnostic.service";
 import { useTestDiagnosticStore } from "@/store/test-diagnostic.store";
-import type { EtatTest, PersonnalisationTest, ReponseTest } from "@/types/test-diagnostic";
+import type { EtatTest, PersonnalisationTest, ReponseTest, TestInterrompu } from "@/types/test-diagnostic";
 
 interface EnvoiReponse {
   idSession: string;
@@ -37,11 +37,26 @@ export function useLanguesDiagnostic() {
 }
 
 /**
+ * Test commencé puis interrompu (onglet fermé, autre appareil), retrouvé sur le serveur.
+ * `actif` : seulement quand aucun test n'est déjà en cours dans cet onglet.
+ */
+export function useTestInterrompu(actif: boolean) {
+  return useQuery({
+    queryKey: queryKeys.testInterrompu,
+    queryFn: () => testDiagnosticService.testEnCours(),
+    enabled: actif,
+    staleTime: 0,
+    retry: false,
+  });
+}
+
+/**
  * Actions du test de positionnement. L'état vit dans le store unique, les appels API passent par le service,
  * et chaque fin d'étape mène à la page suivante : démarrage → test → résultats.
  */
 export function useTestDiagnostic() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const etat = useTestDiagnosticStore((s) => s.etat);
   const dispatch = useTestDiagnosticStore((s) => s.dispatch);
 
@@ -56,11 +71,19 @@ export function useTestDiagnostic() {
   const terminaison = useMutation({
     mutationFn: (idSession: string) => testDiagnosticService.terminer(idSession),
   });
+  const abandon = useMutation({
+    mutationFn: (idSession: string) => testDiagnosticService.abandonner(idSession),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.testInterrompu }),
+  });
+
+  /** Le test interrompu n'est plus d'actualité dès qu'un test démarre ou reprend. */
+  const oublierTestInterrompu = () => queryClient.removeQueries({ queryKey: queryKeys.testInterrompu });
 
   const reinitialiserRequetes = () => {
     demarrage.reset();
     reponse.reset();
     terminaison.reset();
+    abandon.reset();
   };
 
   /* Démarrage */
@@ -78,6 +101,7 @@ export function useTestDiagnostic() {
     if (!etat.langue) return;
     demarrage.mutate({ langue: etat.langue, personnalisation: etat.personnalisation }, {
       onSuccess: (session) => {
+        oublierTestInterrompu();
         dispatch({ type: "demarrer", session, debut: Date.now() });
         router.push(ROUTES.apprenant.testDiagnostic.test);
       },
@@ -153,8 +177,38 @@ export function useTestDiagnostic() {
     }
   };
 
-  const recommencer = () => {
+  /* Reprise d'un test interrompu, ou abandon pour en commencer un nouveau */
+
+  const reprendre = (test: TestInterrompu) => {
     reinitialiserRequetes();
+    if (test.session) {
+      oublierTestInterrompu();
+      dispatch({ type: "reprendre", test });
+      router.push(ROUTES.apprenant.testDiagnostic.test);
+      return;
+    }
+    // Toutes les questions avaient une réponse : il ne reste qu'à calculer le résultat
+    terminaison.mutate(test.idSession, {
+      onSuccess: (issue) => {
+        if (issue.statut === "en_attente") return;
+        oublierTestInterrompu();
+        dispatch({ type: "reprendre", test, resultat: issue.resultat });
+        afficherResultat();
+      },
+    });
+  };
+
+  /** Abandonne le test interrompu ; l'apprenant revient au choix de la langue pour un nouveau test. */
+  const abandonnerTestInterrompu = (test: TestInterrompu) => {
+    reinitialiserRequetes();
+    abandon.mutate(test.idSession);
+  };
+
+  const recommencer = () => {
+    // Test quitté en cours de route : la tentative est abandonnée sur le serveur (au mieux, sans bloquer)
+    const aAbandonner = etat.sessionId && (etat.phase === "question" || etat.phase === "retour") ? etat.sessionId : null;
+    reinitialiserRequetes();
+    if (aAbandonner) abandon.mutate(aAbandonner);
     dispatch({ type: "recommencer" });
     router.push(ROUTES.apprenant.testDiagnostic.demarrage);
   };
@@ -185,6 +239,11 @@ export function useTestDiagnostic() {
     /** Termine le test maintenant (temps écoulé, ou nouvel essai après une erreur de calcul). */
     terminer,
     recommencer,
+    reprendre,
+    abandonnerTestInterrompu,
+    repriseEnCours: terminaison.isPending && etat.phase === "intro",
+    abandonEnCours: abandon.isPending,
+    erreurAbandon: abandon.error,
     demarrageEnCours: demarrage.isPending,
     erreurDemarrage: demarrage.error,
     langueIndisponible: demarrage.error instanceof ApiError && demarrage.error.status === 404,

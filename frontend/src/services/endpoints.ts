@@ -28,6 +28,9 @@ export const ENDPOINTS = {
     langues: `${API}/diagnostic/langues`,
     tentatives: `${API}/diagnostic/tentatives`,
     terminerTentative: (idTentative: number) => `${API}/diagnostic/tentatives/${idTentative}/terminer`,
+    /** Tentative commencée et non terminée de l'apprenant connecté (204 s'il n'y en a pas). */
+    tentativeEnCours: `${API}/diagnostic/tentatives/en-cours`,
+    abandonnerTentative: (idTentative: number) => `${API}/diagnostic/tentatives/${idTentative}/abandonner`,
     questions: `${API}/diagnostic/questions`,
     reponse: `${API}/diagnostic/reponse`,
   },

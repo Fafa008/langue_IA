@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import Avatar from "@/components/ui/Avatar";
+import { initiales } from "@/lib/saisie";
 import { useLogout } from "@/hooks/useAuth";
 import { useDismiss } from "@/hooks/useDismiss";
 import { ACCUEIL_PAR_ROLE, NAVIGATION } from "@/lib/navigation";
@@ -38,7 +39,8 @@ export default function UserMenu({ utilisateur }: { utilisateur: Utilisateur }) 
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Menu du compte"
+        // Le nom reprend les initiales affichées (critère WCAG 2.5.3 « Nom dans l'étiquette »)
+        aria-label={`Menu du compte, ${initiales(utilisateur.prenom, utilisateur.nom)}`}
         className="flex items-center gap-1 rounded-full p-1 transition-colors hover:bg-background"
       >
         <Avatar prenom={utilisateur.prenom} nom={utilisateur.nom} photoUrl={utilisateur.photoUrl} size={44} />
