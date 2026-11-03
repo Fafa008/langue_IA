@@ -168,6 +168,22 @@ export interface CompetenceResultat {
   total: number;
 }
 
+/**
+ * Tentative commencée puis interrompue (onglet fermé, autre appareil), retrouvée sur le serveur
+ * avec les réponses déjà enregistrées.
+ */
+export interface TestInterrompu {
+  idSession: string;
+  langue: string;
+  /** Début de la tentative (horodatage en ms) : le compte à rebours des 15 minutes reprend où il en était. */
+  debut: number;
+  totalQuestions: number;
+  /** Réponses déjà enregistrées, dans l'ordre du test. */
+  reponses: ReponseEnregistree[];
+  /** Suite du test à partir de la première question sans réponse ; null si toutes ont déjà une réponse. */
+  session: SessionTest | null;
+}
+
 export type PhaseTest = "intro" | "personnalisation" | "question" | "retour" | "resultat";
 
 /** Réponse déjà validée par le serveur : sert au suivi de la progression et au récapitulatif. */
@@ -214,5 +230,7 @@ export type ActionTest =
   | { type: "choisirAudio"; audio: Blob | null }
   | { type: "repondre"; choix: number | null; retour: RetourReponse }
   | { type: "terminer"; resultat: ResultatTest }
+  /** Reprise d'un test interrompu ; avec un résultat quand toutes les questions avaient déjà une réponse. */
+  | { type: "reprendre"; test: TestInterrompu; resultat?: ResultatTest }
   | { type: "suivante" }
   | { type: "recommencer" };

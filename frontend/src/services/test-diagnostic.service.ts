@@ -19,6 +19,7 @@ import {
   type RetourReponse,
   type ResultatTest,
   type SessionTest,
+  type TestInterrompu,
 } from "@/types/test-diagnostic";
 import { ENDPOINTS } from "./endpoints";
 
@@ -49,6 +50,12 @@ interface SessionTestDto {
   id_tentative: number;
   code_langue: string;
   code_niveau: string;
+}
+
+/** GET /diagnostic/tentatives/en-cours : la tentative et les réponses déjà enregistrées. */
+interface TentativeEnCoursDto extends SessionTestDto {
+  date_debut: string;
+  reponses: { id_question: string | number; reponse_fournie: string }[];
 }
 
 interface ReponseDto {
@@ -169,6 +176,37 @@ export interface TestDiagnosticGateway {
     progression?: ReponseProgression,
   ): Promise<RetourReponse>;
   terminer(idSession: string): Promise<IssueTerminaison>;
+  /** Test commencé et non terminé (onglet fermé, autre appareil), ou null s'il n'y en a pas. */
+  testEnCours(): Promise<TestInterrompu | null>;
+  /** Abandonne la tentative : elle ne sera plus proposée à la reprise. */
+  abandonner(idSession: string): Promise<void>;
+}
+
+/** Questions enregistrables d'une tentative, dans l'ordre des étapes du test. */
+async function questionsDeTentative(codeLangue: string, codeNiveau: string): Promise<Question[]> {
+  const params = new URLSearchParams({ code_langue: codeLangue, code_niveau: codeNiveau });
+  const questionDtos = await apiRequest<QuestionDto[]>(`${ENDPOINTS.diagnostic.questions}?${params}`);
+  // Les réponses orales attendent le stockage des médias côté backend ; le reste suit l'ordre des étapes
+  const questions = trierParEtape(questionDtos.filter((question) => question.type_reponse !== "audio").map(toQuestion));
+  if (questions.length === 0) {
+    throw new Error("Aucune question textuelle ou à choix n'est disponible pour cette tentative.");
+  }
+  return questions;
+}
+
+/** Suite du test à partir de la question `restantes[0]`, numérotée après les réponses déjà données. */
+function sessionDepuis(tentative: SessionTestDto, questions: Question[], restantes: Question[]): SessionTest | null {
+  if (restantes.length === 0) return null;
+  return {
+    id: String(tentative.id_tentative),
+    langue: tentative.code_langue,
+    niveaux: [tentative.code_niveau],
+    numeroQuestion: questions.length - restantes.length + 1,
+    totalQuestions: questions.length,
+    plan: planDepuisQuestions(questions),
+    question: restantes[0],
+    questions: restantes,
+  };
 }
 
 const toQuestion = (dto: QuestionDto): Question => ({
@@ -206,26 +244,8 @@ export const httpTestDiagnosticService = {
       method: "POST",
       body: { code_langue: langue },
     });
-    const params = new URLSearchParams({
-      code_langue: tentative.code_langue,
-      code_niveau: tentative.code_niveau,
-    });
-    const questionDtos = await apiRequest<QuestionDto[]>(`${ENDPOINTS.diagnostic.questions}?${params}`);
-    // Les réponses orales attendent le stockage des médias côté backend ; le reste suit l'ordre des étapes
-    const questions = trierParEtape(questionDtos.filter((question) => question.type_reponse !== "audio").map(toQuestion));
-    if (questions.length === 0) {
-      throw new Error("Aucune question textuelle ou à choix n'est disponible pour cette tentative.");
-    }
-    return {
-      id: String(tentative.id_tentative),
-      langue: tentative.code_langue,
-      niveaux: [tentative.code_niveau],
-      numeroQuestion: 1,
-      totalQuestions: questions.length,
-      plan: planDepuisQuestions(questions),
-      question: questions[0],
-      questions,
-    };
+    const questions = await questionsDeTentative(tentative.code_langue, tentative.code_niveau);
+    return sessionDepuis(tentative, questions, questions)!;
   },
 
   async repondre(
@@ -310,6 +330,33 @@ export const httpTestDiagnosticService = {
       },
     };
   },
+
+  async testEnCours(): Promise<TestInterrompu | null> {
+    // 204 : aucune tentative en cours
+    const dto = await apiRequest<TentativeEnCoursDto | undefined>(ENDPOINTS.diagnostic.tentativeEnCours);
+    if (!dto) return null;
+    if (!Number.isInteger(dto.id_tentative) || !dto.code_langue || !dto.code_niveau || !Array.isArray(dto.reponses)) {
+      throw new Error("La tentative en cours renvoyée par le serveur est invalide.");
+    }
+    const questions = await questionsDeTentative(dto.code_langue, dto.code_niveau);
+    const repondues = new Set(dto.reponses.map((reponse) => String(reponse.id_question)));
+    const debut = Date.parse(dto.date_debut);
+    return {
+      idSession: String(dto.id_tentative),
+      langue: dto.code_langue,
+      // Date absente ou illisible : le compte à rebours repart de maintenant plutôt que d'être déjà écoulé
+      debut: Number.isNaN(debut) ? Date.now() : debut,
+      totalQuestions: questions.length,
+      reponses: questions
+        .filter((question) => repondues.has(question.id))
+        .map(({ id, niveau, competence, typeReponse }) => ({ idQuestion: id, niveau, competence, typeReponse })),
+      session: sessionDepuis(dto, questions, questions.filter((question) => !repondues.has(question.id))),
+    };
+  },
+
+  async abandonner(idSession: string): Promise<void> {
+    await apiRequest<void>(ENDPOINTS.diagnostic.abandonnerTentative(Number(idSession)), { method: "POST" });
+  },
 };
 
 /** En mode API simulée, le mock conserve l'évaluation de démonstration. */
@@ -324,4 +371,8 @@ export const testDiagnosticService: TestDiagnosticGateway = {
   terminer: (...args) => API_MOCK
     ? testDiagnosticMockService.terminer(...args)
     : httpTestDiagnosticService.terminer(...args),
+  testEnCours: () => API_MOCK ? testDiagnosticMockService.testEnCours() : httpTestDiagnosticService.testEnCours(),
+  abandonner: (...args) => API_MOCK
+    ? testDiagnosticMockService.abandonner(...args)
+    : httpTestDiagnosticService.abandonner(...args),
 };
