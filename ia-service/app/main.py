@@ -1,15 +1,45 @@
 """Point d'entrée du service IA.
 
-Squelette minimal pour que la stack Docker démarre : une seule route /health.
-À compléter par l'équipe (routes, base de données, configuration).
+Le service expose pour l'instant ``GET /health``. Le client LLM unique et le Harness sont construits au démarrage :
+une configuration LLM invalide empêche le service de démarrer, et le client est fermé proprement à l'arrêt.
 """
 
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Centre de langues IA — Service IA", version="0.1.0")
+from app.core.erreurs import ErreurServiceIA
+from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service
+from app.harness.execution import Harness
+from app.harness.registre import RegistreAgents
+from app.llm.fabrique import obtenir_client, reinitialiser_client
+
+
+@asynccontextmanager
+async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
+    """Construire les ressources partagées une seule fois, puis les libérer."""
+    client_llm = obtenir_client()
+    registre_agents = RegistreAgents()
+
+    app.state.client_llm = client_llm
+    app.state.registre_agents = registre_agents
+    app.state.harness = Harness(registre_agents, client_llm)
+
+    try:
+        yield
+    finally:
+        await client_llm.fermer()
+        reinitialiser_client()
+
+
+app = FastAPI(title="Centre de langues IA — Service IA", version="0.1.0", lifespan=duree_vie)
+
+# Gestionnaire d'erreurs central (US-154) : réponse JSON {code, message, retryable}, jamais de trace ni de secret.
+app.add_exception_handler(ErreurServiceIA, gerer_erreur_service)
+app.add_exception_handler(Exception, gerer_erreur_inattendue)
 
 # Origines autorisées (frontend) : BACKEND_CORS_ORIGINS du .env, séparées par des virgules
 origines = [o.strip() for o in os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()]
