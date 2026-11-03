@@ -1,7 +1,11 @@
 # Dépendances du service IA.
 #
 # `pydantic` est épinglé sur la même version que le backend : les contrats internes et publics doivent accepter et
-# refuser exactement les mêmes valeurs.
+# refuser exactement les mêmes valeurs. `httpx` et `pydantic-settings` sont alignés sur le backend pour éviter deux
+# versions incompatibles dans la même image.
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
+pydantic-settings==2.7.1
+httpx==0.27.2
+packaging==24.2
