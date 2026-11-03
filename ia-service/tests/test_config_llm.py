@@ -23,7 +23,30 @@ def test_config_defauts_dev(env_propre: pytest.MonkeyPatch) -> None:
     assert c.max_tokens == 600
     assert c.timeout_s == 12.0
     assert c.max_retries == 1
+    assert c.reprise_delai_s == 0.5
+    assert c.reprise_delai_max_s == 4.0
+    assert c.budget_total_s == 30.0
     assert c.est_factice is True
+
+
+def test_politique_de_reprise_issue_de_la_config(env_propre: pytest.MonkeyPatch) -> None:
+    c = ConfigLLM(max_retries=2, reprise_delai_s=0.25, reprise_delai_max_s=3.0, budget_total_s=20.0)
+    politique = c.politique_reprise
+    assert politique.max_reprises == 2
+    assert politique.tentatives_max == 3
+    assert politique.delai_initial_s == 0.25
+    assert politique.delai_max_s == 3.0
+    assert politique.budget_total_s == 20.0
+
+
+def test_plafond_de_reprise_inferieur_au_delai_initial() -> None:
+    with pytest.raises(ValidationError, match="LLM_REPRISE_DELAI_MAX_S"):
+        ConfigLLM(reprise_delai_s=2.0, reprise_delai_max_s=1.0)
+
+
+def test_budget_total_inferieur_au_timeout() -> None:
+    with pytest.raises(ValidationError, match="LLM_BUDGET_TOTAL_S"):
+        ConfigLLM(timeout_s=30.0, budget_total_s=10.0)
 
 
 def test_cle_api_en_secretstr() -> None:
@@ -70,10 +93,19 @@ def test_charger_config_lit_les_variables(env_propre: pytest.MonkeyPatch) -> Non
     env_propre.setenv("LLM_FOURNISSEUR", "factice")
     env_propre.setenv("LLM_TEMPERATURE", "0.7")
     env_propre.setenv("LLM_MAX_TOKENS", "1024")
+    env_propre.setenv("LLM_TIMEOUT_S", "8")
+    env_propre.setenv("LLM_MAX_RETRIES", "2")
+    env_propre.setenv("LLM_REPRISE_DELAI_S", "0.2")
+    env_propre.setenv("LLM_REPRISE_DELAI_MAX_S", "2.5")
+    env_propre.setenv("LLM_BUDGET_TOTAL_S", "18")
     c = charger_config()
     assert c.environnement == "test"
     assert c.temperature == 0.7
     assert c.max_tokens == 1024
+    assert c.politique_reprise.max_reprises == 2
+    assert c.politique_reprise.delai_initial_s == 0.2
+    assert c.politique_reprise.delai_max_s == 2.5
+    assert c.politique_reprise.budget_total_s == 18.0
 
 
 def test_charger_config_prod_factice(env_propre: pytest.MonkeyPatch) -> None:
@@ -123,6 +155,9 @@ def test_charger_config_fournisseur_inconnu(env_propre: pytest.MonkeyPatch) -> N
         ("LLM_MAX_TOKENS", "0", "max_tokens"),
         ("LLM_TIMEOUT_S", "0", "timeout_s"),
         ("LLM_MAX_RETRIES", "4", "max_retries"),
+        ("LLM_REPRISE_DELAI_S", "-1", "reprise_delai_s"),
+        ("LLM_REPRISE_DELAI_MAX_S", "61", "reprise_delai_max_s"),
+        ("LLM_BUDGET_TOTAL_S", "0", "budget_total_s"),
         ("LLM_MAX_TOKENS", "beaucoup", "max_tokens"),
     ],
 )
