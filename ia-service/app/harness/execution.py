@@ -14,21 +14,14 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from app.core.erreurs import (
-    ErreurAgentInconnu,
-    ErreurConfiguration,
-    ErreurLlmIndisponible,
-    ErreurLlmTimeout,
-    ErreurReponseLlm,
-)
+from app.core.codes_erreur import CodeErreur
+from app.core.erreurs import ErreurAgentInconnu
+from app.core.gestionnaire_erreurs import code_pour, reponse_erreur_pour_code
 from app.harness.agent import ContexteExecution, OutilsCommuns
 from app.harness.registre import RegistreAgents
 from app.llm.base import FournisseurLLM
 from app.schemas.commun import (
     CODE_AGENT_PATTERN,
-    CODES_RETRYABLES,
-    CodeErreur,
-    ErreurAgent,
     MetaExecution,
     ReponseAgent,
     ReponseErreur,
@@ -36,16 +29,6 @@ from app.schemas.commun import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Messages fixes : ils ne recopient ni l'entrée, ni le contexte, ni un message de fournisseur, donc aucun secret.
-MESSAGES_ERREUR = {
-    CodeErreur.AGENT_INCONNU: "L'agent demandé n'existe pas ou sa version est inconnue.",
-    CodeErreur.ENTREE_INVALIDE: "L'entrée ne respecte pas le contrat attendu par l'agent.",
-    CodeErreur.LLM_TIMEOUT: "Le fournisseur LLM n'a pas répondu dans le délai imparti.",
-    CodeErreur.LLM_INDISPONIBLE: "Le fournisseur LLM est momentanément indisponible.",
-    CodeErreur.LLM_REPONSE_INVALIDE: "Le fournisseur LLM a renvoyé une réponse inexploitable.",
-    CodeErreur.ERREUR_INTERNE: "Une erreur interne est survenue pendant l'exécution de l'agent.",
-}
 
 AGENT_INCONNU_AFFICHE = "inconnu"
 
@@ -103,19 +86,10 @@ class Harness:
                 resultat_brut = await definition.executer(entree, contexte)
         except TimeoutError:
             return self._erreur(requete, agent_affiche, CodeErreur.LLM_TIMEOUT)
-        except ErreurLlmTimeout:
-            return self._erreur(requete, agent_affiche, CodeErreur.LLM_TIMEOUT)
-        except (ErreurLlmIndisponible, ErreurConfiguration):
-            return self._erreur(requete, agent_affiche, CodeErreur.LLM_INDISPONIBLE)
-        except (ErreurReponseLlm, ValidationError):
-            return self._erreur(requete, agent_affiche, CodeErreur.LLM_REPONSE_INVALIDE)
-        except Exception:
-            logger.exception(
-                "Erreur inattendue de l'agent %s (request_id=%s)",
-                definition.code,
-                requete.request_id,
-            )
-            return self._erreur(requete, agent_affiche, CodeErreur.ERREUR_INTERNE)
+        except Exception as exception:
+            code = self._code_pour(exception)
+            self._journaliser(exception, code, definition.code, requete.request_id)
+            return self._erreur(requete, agent_affiche, code)
 
         try:
             resultat = definition.schema_sortie.model_validate(resultat_brut)
@@ -153,12 +127,19 @@ class Harness:
 
     @staticmethod
     def _erreur(requete: RequeteAgent[Any], agent: str, code: CodeErreur) -> ReponseErreur:
-        return ReponseErreur(
-            request_id=requete.request_id,
-            agent=agent,
-            erreur=ErreurAgent(
-                code=code,
-                message=MESSAGES_ERREUR[code],
-                retryable=code in CODES_RETRYABLES,
-            ),
-        )
+        return reponse_erreur_pour_code(requete.request_id, agent, code)
+
+    @staticmethod
+    def _code_pour(exception: BaseException) -> CodeErreur:
+        """Un agent qui produit un objet hors schéma est une sortie LLM inexploitable, pas un bug interne."""
+        if isinstance(exception, ValidationError):
+            return CodeErreur.LLM_REPONSE_INVALIDE
+        return code_pour(exception)
+
+    @staticmethod
+    def _journaliser(exception: BaseException, code: CodeErreur, code_agent: str, request_id: object) -> None:
+        """Journaliser sans contenu sensible : le code et l'identifiant technique suffisent au diagnostic."""
+        if code is CodeErreur.ERREUR_INTERNE:
+            logger.exception("Erreur inattendue de l'agent %s (request_id=%s)", code_agent, request_id)
+        else:
+            logger.warning("Erreur %s de l'agent %s (request_id=%s)", code.value, code_agent, request_id)

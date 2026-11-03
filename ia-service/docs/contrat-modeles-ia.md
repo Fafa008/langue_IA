@@ -6,7 +6,7 @@
 | Périmètre | `ia-service/app/schemas/` : contrat commun du Harness, contexte apprenant, résultat de diagnostic, erreurs |
 | Hors périmètre | Routes HTTP, client LLM, RAG, prompts, persistance |
 | Sources | `backend/app/seed.py`, `backend/app/services/scoring.py`, `docs/api/contrat-frontend.md`, `docs/architecture/aj02-cadrage-technique-ia.md` |
-| Voir aussi | [US-69 — Client LLM et Agent Harness](US-69-llm-client-harness.md) |
+| Voir aussi | [US-69 — Client LLM et Agent Harness](US-69-llm-client-harness.md), [US-154 — Timeouts et erreurs LLM](US-154-timeouts-erreurs-llm.md), [Codes d'erreur](codes-erreur-ia.md) |
 
 ## 1. Audit préalable
 
@@ -86,8 +86,12 @@ Aucune autre phase n'existe dans le dépôt ; en ajouter une relève d'une déci
 | `AGENT_INCONNU` | non | Code ou version non enregistré |
 | `TAILLE_DEPASSEE` | non | Texte ou audio trop volumineux |
 | `QUOTA_DEPASSE` | **oui** | Limite d'appels LLM |
-| `LLM_INDISPONIBLE` | **oui** | Fournisseur en erreur |
-| `LLM_TIMEOUT` | **oui** | Budget de temps dépassé |
+| `LLM_INDISPONIBLE` | **oui** | Fournisseur injoignable, erreur réseau ou 5xx |
+| `LLM_TIMEOUT` | **oui** | Budget de temps ou délai d'appel dépassé |
+| `LLM_LIMITE_REQUETES` | **oui** | Limitation de débit du fournisseur (HTTP 429) |
+| `LLM_AUTHENTIFICATION` | non | Clé refusée par le fournisseur (HTTP 401/403) |
+| `LLM_REQUETE_INVALIDE` | non | Requête refusée par le fournisseur (400/404/422/3xx) |
+| `LLM_CONFIGURATION` | non | Configuration LLM absente ou incohérente |
 | `LLM_REPONSE_INVALIDE` | **oui** | Sortie non conforme au schéma |
 | `CORPUS_INDISPONIBLE` | **oui** | Index RAG non chargé |
 | `PROMPT_INTROUVABLE` | non | Fichier ou variable manquant |
@@ -95,6 +99,9 @@ Aucune autre phase n'existe dans le dépôt ; en ajouter une relève d'une déci
 
 `retryable` est **vérifié** contre ce tableau : annoncer `LLM_TIMEOUT` non rejouable, ou `ENTREE_INVALIDE`
 rejouable, est une erreur de validation.
+
+Le catalogue fait foi dans `app/core/codes_erreur.py` ; le détail (message public, statut HTTP, exceptions
+associées, politique de reprise) est documenté dans [Codes d'erreur du service IA](codes-erreur-ia.md).
 
 ## 5. Contexte apprenant
 
@@ -200,7 +207,7 @@ Le backend ne transmet pas `meta` au frontend : ces informations servent à l'ex
 
 | Champ | Type | Contrainte |
 | --- | --- | --- |
-| `code` | `CodeErreur` | une des dix valeurs du tableau 4.5 |
+| `code` | `CodeErreur` | une des quatorze valeurs du tableau 4.5 |
 | `message` | texte | 1 à 500 caractères, **une seule ligne** |
 | `retryable` | booléen | cohérent avec `code` |
 | `details` | dictionnaire plat \| `null` | 10 entrées max, clés et valeurs non vides, clés 1 à 64 caractères, valeurs 200 max, sans saut de ligne |

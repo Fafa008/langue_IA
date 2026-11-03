@@ -5,12 +5,14 @@ générique (``RequeteAgent[T]``) afin que les neuf agents partagent le même co
 autant du JSON arbitraire : chaque route instancie ``T`` avec un modèle strict.
 """
 
-from enum import Enum
 from typing import Generic, Literal, TypeVar
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
+# Ré-exportés depuis ``app.core.codes_erreur`` (US-154) : le catalogue des codes est la seule source de vérité.
+from app.core.codes_erreur import CODES_RETRYABLES as CODES_RETRYABLES
+from app.core.codes_erreur import CodeErreur as CodeErreur
 from app.schemas.base import ModeleStrict
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.regles import MESSAGE_ERREUR_MAX, erreur
@@ -58,32 +60,6 @@ class ReponseAgent(ModeleStrict, Generic[T]):
     resultat: T
     meta: MetaExecution
 
-
-class CodeErreur(str, Enum):
-    """Codes d'erreur stables du service IA (repris du cadrage AJ02, §11.5)."""
-
-    ENTREE_INVALIDE = "ENTREE_INVALIDE"
-    AGENT_INCONNU = "AGENT_INCONNU"
-    TAILLE_DEPASSEE = "TAILLE_DEPASSEE"
-    QUOTA_DEPASSE = "QUOTA_DEPASSE"
-    LLM_INDISPONIBLE = "LLM_INDISPONIBLE"
-    LLM_TIMEOUT = "LLM_TIMEOUT"
-    LLM_REPONSE_INVALIDE = "LLM_REPONSE_INVALIDE"
-    CORPUS_INDISPONIBLE = "CORPUS_INDISPONIBLE"
-    PROMPT_INTROUVABLE = "PROMPT_INTROUVABLE"
-    ERREUR_INTERNE = "ERREUR_INTERNE"
-
-
-# Seules ces erreurs justifient une nouvelle tentative : une entrée invalide ne doit jamais être rejouée.
-CODES_RETRYABLES = frozenset(
-    {
-        CodeErreur.QUOTA_DEPASSE,
-        CodeErreur.LLM_INDISPONIBLE,
-        CodeErreur.LLM_TIMEOUT,
-        CodeErreur.LLM_REPONSE_INVALIDE,
-        CodeErreur.CORPUS_INDISPONIBLE,
-    }
-)
 
 DETAILS_MAX = 10
 

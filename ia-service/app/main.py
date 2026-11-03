@@ -11,6 +11,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.erreurs import ErreurServiceIA
+from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service
 from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm.fabrique import obtenir_client, reinitialiser_client
@@ -34,6 +36,10 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Centre de langues IA — Service IA", version="0.1.0", lifespan=duree_vie)
+
+# Gestionnaire d'erreurs central (US-154) : réponse JSON {code, message, retryable}, jamais de trace ni de secret.
+app.add_exception_handler(ErreurServiceIA, gerer_erreur_service)
+app.add_exception_handler(Exception, gerer_erreur_inattendue)
 
 # Origines autorisées (frontend) : BACKEND_CORS_ORIGINS du .env, séparées par des virgules
 origines = [o.strip() for o in os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()]

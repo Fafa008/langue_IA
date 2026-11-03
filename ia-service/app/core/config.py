@@ -13,8 +13,11 @@ Variables reconnues (préfixe ``LLM_``, sauf ``ENVIRONNEMENT``) :
 ``LLM_API_KEY``      clé d'API, jamais journalisée
 ``LLM_TEMPERATURE``  créativité, entre 0 et 2
 ``LLM_MAX_TOKENS``   1 à 8 192
-``LLM_TIMEOUT_S``    délai d'un appel, de 0 à 120 secondes
-``LLM_MAX_RETRIES``  reprises sur erreur transitoire, de 0 à 3
+``LLM_TIMEOUT_S``    délai d'un appel, de 0 exclus à 120 secondes
+``LLM_MAX_RETRIES``  reprises sur erreur rejouable, de 0 à 3
+``LLM_REPRISE_DELAI_S``  délai initial entre deux tentatives, de 0 à 10 secondes
+``LLM_REPRISE_DELAI_MAX_S``  plafond du délai de reprise, de 0 à 60 secondes
+``LLM_BUDGET_TOTAL_S``  budget total d'un appel, reprises comprises, de 0 exclu à 600 secondes
 ===================  ===========================================================
 """
 
@@ -24,6 +27,7 @@ from pydantic import Field, HttpUrl, SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.erreurs import ErreurConfiguration
+from app.core.reprise import PolitiqueReprise
 
 Environnement = Literal["dev", "test", "prod"]
 Fournisseur = Literal["factice", "compatible-openai"]
@@ -52,6 +56,9 @@ class ConfigLLM(BaseSettings):
     max_tokens: int = Field(default=600, ge=1, le=8192)
     timeout_s: float = Field(default=12.0, gt=0.0, le=120.0)
     max_retries: int = Field(default=1, ge=0, le=3)
+    reprise_delai_s: float = Field(default=0.5, ge=0.0, le=10.0)
+    reprise_delai_max_s: float = Field(default=4.0, ge=0.0, le=60.0)
+    budget_total_s: float = Field(default=30.0, gt=0.0, le=600.0)
 
     @field_validator("modele", "base_url", "api_key", mode="before")
     @classmethod
@@ -73,12 +80,27 @@ class ConfigLLM(BaseSettings):
                 raise ValueError(
                     "Configuration LLM incomplète : " + ", ".join(manquants) + " requis pour ce fournisseur."
                 )
+
+        if self.reprise_delai_max_s < self.reprise_delai_s:
+            raise ValueError("LLM_REPRISE_DELAI_MAX_S doit être supérieur ou égal à LLM_REPRISE_DELAI_S.")
+        if self.budget_total_s < self.timeout_s:
+            raise ValueError("LLM_BUDGET_TOTAL_S doit être supérieur ou égal à LLM_TIMEOUT_S.")
         return self
 
     @property
     def est_factice(self) -> bool:
         """Indique si le client simulé est actif (utile aux tests et à la supervision)."""
         return self.fournisseur == "factice"
+
+    @property
+    def politique_reprise(self) -> PolitiqueReprise:
+        """Bornes de reprise d'un appel LLM, déduites de la configuration."""
+        return PolitiqueReprise(
+            max_reprises=self.max_retries,
+            delai_initial_s=self.reprise_delai_s,
+            delai_max_s=self.reprise_delai_max_s,
+            budget_total_s=self.budget_total_s,
+        )
 
 
 def _detail_validation(erreur: dict) -> str:
