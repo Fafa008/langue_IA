@@ -4,9 +4,19 @@ import asyncio
 import time
 from typing import Any
 
+import pytest
 from pydantic import Field
 
-from app.core.erreurs import ErreurConfiguration, ErreurLlmIndisponible, ErreurLlmTimeout, ErreurReponseLlm
+from app.core.codes_erreur import MESSAGES_PUBLICS
+from app.core.erreurs import (
+    ErreurConfiguration,
+    ErreurLlmAuthentification,
+    ErreurLlmIndisponible,
+    ErreurLlmLimiteRequetes,
+    ErreurLlmRequete,
+    ErreurLlmTimeout,
+    ErreurReponseLlm,
+)
 from app.harness import execution as execution_module
 from app.harness.agent import ContexteExecution, DefinitionAgent, OutilsCommuns
 from app.harness.execution import Harness
@@ -316,7 +326,8 @@ def test_configuration_erreur_traduite() -> None:
     resultat = asyncio.run(harness.executer("diagnostic", requete()))
 
     assert isinstance(resultat, ReponseErreur)
-    assert resultat.erreur.code == CodeErreur.LLM_INDISPONIBLE
+    assert resultat.erreur.code == CodeErreur.LLM_CONFIGURATION
+    assert resultat.erreur.retryable is False
 
 
 def test_reponse_llm_invalide() -> None:
@@ -327,6 +338,35 @@ def test_reponse_llm_invalide() -> None:
     assert isinstance(resultat, ReponseErreur)
     assert resultat.erreur.code == CodeErreur.LLM_REPONSE_INVALIDE
     assert resultat.erreur.retryable is True
+
+
+@pytest.mark.parametrize(
+    ("exception", "code", "rejouable"),
+    [
+        (ErreurLlmTimeout("message-interne"), CodeErreur.LLM_TIMEOUT, True),
+        (ErreurLlmIndisponible("message-interne"), CodeErreur.LLM_INDISPONIBLE, True),
+        (ErreurLlmLimiteRequetes("message-interne"), CodeErreur.LLM_LIMITE_REQUETES, True),
+        (ErreurLlmAuthentification("message-interne"), CodeErreur.LLM_AUTHENTIFICATION, False),
+        (ErreurLlmRequete("message-interne"), CodeErreur.LLM_REQUETE_INVALIDE, False),
+        (ErreurConfiguration("message-interne"), CodeErreur.LLM_CONFIGURATION, False),
+        (ErreurReponseLlm("message-interne"), CodeErreur.LLM_REPONSE_INVALIDE, True),
+    ],
+)
+def test_mapping_central_des_erreurs(
+    exception: Exception,
+    code: CodeErreur,
+    rejouable: bool,
+) -> None:
+    harness, registre, _ = construire_harness()
+    registre.enregistrer(agent(erreur=exception))
+
+    resultat = asyncio.run(harness.executer("diagnostic", requete()))
+
+    assert isinstance(resultat, ReponseErreur)
+    assert resultat.erreur.code is code
+    assert resultat.erreur.retryable is rejouable
+    assert resultat.erreur.message == MESSAGES_PUBLICS[code]
+    assert "message-interne" not in resultat.erreur.message
 
 
 def test_erreur_inattendue_journalisee_et_generique(monkeypatch) -> None:

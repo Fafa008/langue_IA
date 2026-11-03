@@ -251,6 +251,7 @@ def test_codes_rejouables_attendus() -> None:
         CodeErreur.QUOTA_DEPASSE,
         CodeErreur.LLM_INDISPONIBLE,
         CodeErreur.LLM_TIMEOUT,
+        CodeErreur.LLM_LIMITE_REQUETES,
         CodeErreur.LLM_REPONSE_INVALIDE,
         CodeErreur.CORPUS_INDISPONIBLE,
     }
