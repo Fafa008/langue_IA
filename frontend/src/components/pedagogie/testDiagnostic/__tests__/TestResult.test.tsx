@@ -70,7 +70,7 @@ describe("TestResult", () => {
     expect(screen.getByTestId("result-level")).toHaveTextContent("B1");
     const partiel = screen.getByTestId("resultat-partiel");
     expect(partiel).toHaveTextContent("Résultat partiel");
-    expect(partiel).toHaveTextContent("le détail par compétence, les points faibles, la phase Assimil, la justification du niveau");
+    expect(partiel).toHaveTextContent("le détail par compétence, les points faibles, la phase de la méthode Assimil, la justification du niveau");
     expect(screen.getByTestId("result-phase")).toHaveTextContent("Non déterminée");
   });
 
