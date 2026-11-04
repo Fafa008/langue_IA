@@ -98,3 +98,9 @@ class ErreurPromptIntrouvable(ErreurServiceIA):
     """Prompt versionné absent ou non enregistré."""
 
     code = CodeErreur.PROMPT_INTROUVABLE
+
+
+class ErreurCorpusIndisponible(ErreurServiceIA):
+    """Corpus documentaire absent, en échec ou incohérent avec le contexte de la requête."""
+
+    code = CodeErreur.CORPUS_INDISPONIBLE

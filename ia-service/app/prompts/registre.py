@@ -72,9 +72,7 @@ class RegistrePrompts:
         version: str = VERSION_EVALUATION_DIAGNOSTIC,
     ) -> PromptRendu:
         """Rendre le prompt d'évaluation diagnostic à partir de variables validées."""
-        definition = self._definitions.get(("diagnostic", "evaluation", version))
-        if definition is None:
-            raise ErreurPromptIntrouvable("La version du prompt d'évaluation diagnostic est introuvable.")
+        definition = self._definition_evaluation_diagnostic(version)
 
         donnees = variables.model_dump(mode="json")
         exemples = variables.exemples_few_shot
@@ -110,6 +108,26 @@ class RegistrePrompts:
             temperature=definition.temperature,
             max_tokens=definition.max_tokens,
         )
+
+    def identite_evaluation_diagnostic(
+        self,
+        *,
+        version: str = VERSION_EVALUATION_DIAGNOSTIC,
+    ) -> tuple[str, str]:
+        """Retourner ``(version_prompt, empreinte_prompt)`` publiés pour la définition d'un agent.
+
+        L'empreinte couvre les ressources versionnées du prompt. Le rendu en dérive une empreinte propre à
+        l'exemple few-shot sélectionné, mais ``DefinitionAgent`` doit être construit avant toute requête : il
+        référence donc les ressources publiées.
+        """
+        definition = self._definition_evaluation_diagnostic(version)
+        return definition.version_prompt, definition.empreinte_prompt
+
+    def _definition_evaluation_diagnostic(self, version: str) -> _DefinitionPrompt:
+        definition = self._definitions.get(("diagnostic", "evaluation", version))
+        if definition is None:
+            raise ErreurPromptIntrouvable("La version du prompt d'évaluation diagnostic est introuvable.")
+        return definition
 
     def _charger_evaluation_diagnostic(self) -> _DefinitionPrompt:
         nom = f"evaluation@{VERSION_EVALUATION_DIAGNOSTIC}"
