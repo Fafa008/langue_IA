@@ -21,6 +21,8 @@ from app.harness.agent import ContexteExecution, OutilsCommuns
 from app.harness.registre import RegistreAgents
 from app.llm.base import FournisseurLLM
 from app.prompts import RegistrePrompts
+from app.rag.base import RecuperateurRAG
+from app.rag.vide import RecuperateurVide
 from app.schemas.commun import (
     CODE_AGENT_PATTERN,
     MetaExecution,
@@ -43,11 +45,13 @@ class Harness:
         client_llm: FournisseurLLM,
         *,
         registre_prompts: RegistrePrompts | None = None,
+        recuperateur_rag: RecuperateurRAG | None = None,
         horloge: Callable[[], float] = time.monotonic,
     ) -> None:
         self._registre = registre
         self._client_llm = client_llm
         self._registre_prompts = registre_prompts or RegistrePrompts()
+        self._recuperateur_rag = recuperateur_rag or RecuperateurVide()
         self._horloge = horloge
 
     async def executer(
@@ -79,6 +83,7 @@ class Harness:
         outils = OutilsCommuns(
             client_llm=self._client_llm,
             registre_prompts=self._registre_prompts,
+            recuperateur_rag=self._recuperateur_rag,
             horloge=self._horloge,
         )
         contexte = ContexteExecution(
@@ -108,7 +113,7 @@ class Harness:
             duree_ms=duree_ms,
             fournisseur=self._client_llm.nom,
             modele=self._client_llm.modele,
-            version_corpus=None,
+            version_corpus=self._recuperateur_rag.version_corpus,
             empreinte_prompt=definition.empreinte_prompt,
         )
         enveloppe = ReponseAgent[definition.schema_sortie]

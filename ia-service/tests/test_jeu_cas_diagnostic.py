@@ -168,7 +168,7 @@ def _tester_simulation(cas: CasEvaluationDiagnostic) -> None:
         schema_entree=EntreeCasTest,
         schema_sortie=ResultatDiagnostic,
         budget_ms=25 if cas.simulation_llm.mode == "timeout" else 15000,
-        version_prompt="diagnostic/evaluation@1.0.0",
+        version_prompt="diagnostic/evaluation@1.1.0",
         empreinte_prompt="sha256:" + "a" * 64,
         executer=executer,
     )

@@ -4,7 +4,8 @@ Toutes les valeurs sont reprises de l'existant, aucune n'est inventée :
 
 - langues : ``backend/app/seed.py`` (``LANGUES``) et ``frontend/src/types/langue.ts`` ;
 - niveaux : ``backend/app/seed.py`` (``CECRL`` et ``HSK``) ;
-- compétences : ``docs/api/contrat-frontend.md`` et ``frontend/src/types/test-diagnostic.ts`` ;
+- compétences et domaines de faiblesse : ``docs/api/contrat-frontend.md`` et
+  ``frontend/src/types/test-diagnostic.ts`` ;
 - référentiel : ``backend/app/services/scoring.py`` (le mandarin ``zh`` utilise HSK, les autres langues le CECRL).
 
 Les messages d'erreur sont en français et destinés aux journaux du service : le backend les traduit avant de les
@@ -25,6 +26,14 @@ LANGUES = ("fr", "en", "zh", "it", "de")
 LANGUE_HSK = "zh"
 
 COMPETENCES = ("grammaire", "lecture", "ecoute", "ecrit", "oral")
+DOMAINES_FAIBLESSE = (
+    "grammaire",
+    "vocabulaire",
+    "comprehension_ecrite",
+    "comprehension_orale",
+    "expression_ecrite",
+    "expression_orale",
+)
 
 # Alias de types : ils ferment l'OpenAPI et empêchent toute valeur hors référentiel.
 CodeLangue = Literal["fr", "en", "zh", "it", "de"]
@@ -33,11 +42,31 @@ NiveauCecrl = Literal["A1", "A2", "B1", "B2", "C1", "C2"]
 NiveauHsk = Literal["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"]
 CodeNiveau = NiveauCecrl | NiveauHsk
 Competence = Literal["grammaire", "lecture", "ecoute", "ecrit", "oral"]
+DomaineFaiblesse = Literal[
+    "grammaire",
+    "vocabulaire",
+    "comprehension_ecrite",
+    "comprehension_orale",
+    "expression_ecrite",
+    "expression_orale",
+]
+
+# Descripteurs RAG qui peuvent documenter un domaine. Le vocabulaire n'a pas de compétence propre dans le
+# contrat : il s'appuie sur les descripteurs des productions et de la lecture.
+COMPETENCES_DESCRIPTEUR_PAR_DOMAINE: dict[str, tuple[Competence, ...]] = {
+    "grammaire": ("grammaire",),
+    "vocabulaire": ("lecture", "ecrit", "oral"),
+    "comprehension_ecrite": ("lecture",),
+    "comprehension_orale": ("ecoute",),
+    "expression_ecrite": ("ecrit",),
+    "expression_orale": ("oral",),
+}
 
 # Longueurs maximales (caractères), alignées sur les limites du contrat public quand elles existent.
 RESUME_MEMOIRE_MAX = 2000
 POINT_MEMOIRE_MAX = 120
-DESCRIPTION_POINT_FAIBLE_MAX = 200
+OBSERVATION_POINT_FAIBLE_MAX = 160
+JUSTIFICATION_POINT_FAIBLE_MAX = 240
 MESSAGE_ERREUR_MAX = 500
 
 

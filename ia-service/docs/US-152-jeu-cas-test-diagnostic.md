@@ -62,11 +62,10 @@ classification d'une réponse hors sujet ou incohérente et de phase Assimil req
 Ils sont inscrits dans `criteres_acceptation.revue_humaine` et ne sont pas présentés comme des assertions
 automatiques.
 
-**Dépendance de branche :** le `develop` de départ possède `ResultatDiagnostic`, le Harness et `FakeLLMClient`, mais
-pas encore `DiagnosticAgent` ni les évolutions US30. Le jeu valide donc les contrats disponibles et les erreurs
-LLM simulées ; il ne prétend pas tester de bout en bout l'agent réel. Les phases attendues suivent le schéma présent
-sur cette base (`passive` / `active`). Après intégration de US30, les fixtures devront être alignées sur son schéma
-(`impregnation` / `activation`) et les mêmes cas devront être branchés au véritable `DiagnosticAgent`.
+**Compatibilité US30 :** lors de la réconciliation des branches, les résultats attendus ont été alignés sur le
+schéma actualisé (`impregnation` / `activation` et points faibles justifiés par une preuve directe). Le jeu passe
+toujours par un agent d'essai : il valide les contrats et les erreurs LLM simulées, mais ne prétend pas tester de
+bout en bout le véritable `DiagnosticAgent`.
 
 Enfin, des sorties attendues fixes ne constituent pas une vérité de référence linguistique. Les niveaux indiqués
 servent à vérifier la validation et les écarts de contrat ; leur adéquation aux réponses doit être confirmée par des

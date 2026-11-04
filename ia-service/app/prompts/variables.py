@@ -1,5 +1,6 @@
 """Données structurées rendues dans les prompts du diagnostic et du chatbot."""
 
+from collections.abc import Sequence
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
@@ -7,8 +8,10 @@ from pydantic import Field, field_validator, model_validator
 from app.schemas.base import ModeleStrict
 from app.schemas.chatbot import HISTORIQUE_CHATBOT_MAX, MESSAGE_CHATBOT_MAX, MessageHistorique
 from app.schemas.contexte import ContexteApprenant
-from app.schemas.diagnostic import ResultatDiagnostic
+from app.schemas.diagnostic import PreuveReponse, ResultatDiagnostic
 from app.schemas.regles import CodeLangue, CodeNiveau, Competence, Referentiel, erreur, niveaux_du_referentiel
+
+ScenarioDiagnostic = Literal["quotidien", "entretien", "examen"]
 
 
 class ReponseDiagnosticPrompt(ModeleStrict):
@@ -18,6 +21,18 @@ class ReponseDiagnosticPrompt(ModeleStrict):
     competence: Competence
     type_reponse: Literal["choix", "texte", "audio"]
     contenu: str = Field(min_length=1, max_length=5000)
+
+
+def preuves_depuis_reponses(reponses: Sequence[ReponseDiagnosticPrompt]) -> tuple[PreuveReponse, ...]:
+    """Réduire les réponses aux indices vérifiables par le résultat du diagnostic."""
+    return tuple(
+        PreuveReponse(
+            id_question=reponse.id_question,
+            competence=reponse.competence,
+            type_reponse=reponse.type_reponse,
+        )
+        for reponse in reponses
+    )
 
 
 class DescripteurRAGPrompt(ModeleStrict):
@@ -62,25 +77,33 @@ class EntreeExempleFewShot(ModeleStrict):
             for descripteur in self.descripteurs_rag
         ):
             raise erreur("Les descripteurs few-shot doivent correspondre au contexte de l'exemple.")
+        identifiants = [reponse.id_question for reponse in self.reponses]
+        if len(identifiants) != len(set(identifiants)):
+            raise erreur("Deux réponses d'un exemple few-shot ne peuvent pas partager le même identifiant.")
         return self
 
 
 class ExempleFewShot(ModeleStrict):
     """Exemple d'entrée et de sortie validé par le contrat Pydantic du diagnostic."""
 
+    scenario: ScenarioDiagnostic = "quotidien"
     entree: EntreeExempleFewShot
     sortie: ResultatDiagnostic
     justification: str = Field(min_length=1, max_length=500)
 
     @model_validator(mode="after")
     def verifier_sortie(self) -> "ExempleFewShot":
-        self.sortie.verifier_coherence(self.entree.contexte_apprenant)
+        self.sortie.verifier_coherence(
+            self.entree.contexte_apprenant,
+            preuves_depuis_reponses(self.entree.reponses),
+        )
         return self
 
 
 class VariablesEvaluationDiagnostic(ModeleStrict):
     """Variables dynamiques du prompt d'évaluation, contrôlées avant tout rendu."""
 
+    scenario: ScenarioDiagnostic = "quotidien"
     code_langue: CodeLangue
     referentiel: Referentiel
     reponses: list[ReponseDiagnosticPrompt] = Field(max_length=100)
@@ -101,6 +124,11 @@ class VariablesEvaluationDiagnostic(ModeleStrict):
         contexte = self.contexte_apprenant
         if self.code_langue != contexte.code_langue or self.referentiel != contexte.referentiel:
             raise erreur("La langue et le référentiel doivent correspondre au contexte apprenant.")
+        if self.exemples_few_shot is not None and any(
+            exemple.scenario != self.scenario or exemple.entree.contexte_apprenant.code_langue != self.code_langue
+            for exemple in self.exemples_few_shot
+        ):
+            raise erreur("Les exemples few-shot doivent correspondre au scénario et à la langue du diagnostic.")
         if any(
             descripteur.code_langue != self.code_langue or descripteur.referentiel != self.referentiel
             for descripteur in self.descripteurs_rag

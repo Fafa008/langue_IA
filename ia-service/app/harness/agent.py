@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from app.core.erreurs import ErreurRegistre
 from app.llm.base import FournisseurLLM
 from app.prompts import RegistrePrompts
+from app.rag.base import RecuperateurRAG
 from app.schemas.commun import CODE_AGENT_PATTERN, EMPREINTE_PATTERN, VERSION_PATTERN, VERSION_PROMPT_PATTERN
 from app.schemas.contexte import ContexteApprenant
 
@@ -29,6 +30,7 @@ class OutilsCommuns:
 
     client_llm: FournisseurLLM
     registre_prompts: RegistrePrompts
+    recuperateur_rag: RecuperateurRAG
     horloge: Callable[[], float]
 
 
