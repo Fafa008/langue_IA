@@ -2,17 +2,19 @@
   "request_id": "3f1c9b7e-6a2d-4f0e-9c1a-2b7d5e8f4a10",
   "agent": "diagnostic",
   "version_agent": "1.0.0",
-  "version_prompt": "diagnostic/evaluation@1.0.0",
+  "version_prompt": "diagnostic/evaluation@1.1.0",
   "statut": "succes",
   "resultat": {
     "code_langue": "en",
     "referentiel": "CECRL",
     "niveau_estime": "B2",
-    "phase_assimil": "active",
+    "phase_assimil": "activation",
     "points_faibles": [
       {
-        "competence": "ecrit",
-        "description": "Emploi irrégulier des temps."
+        "domaine": "expression_ecrite",
+        "id_question": "q-entretien-en-01",
+        "observation": "La réponse comporte une phrase au présent là où le passé serait attendu.",
+        "justification": "Cette observation semble indiquer un emploi irrégulier des temps ; elle reste à confirmer."
       }
     ],
     "score_confiance": 0.78,
