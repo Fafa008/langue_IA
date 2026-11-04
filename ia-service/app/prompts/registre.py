@@ -8,9 +8,10 @@ from string import Template
 
 from app.core.erreurs import ErreurPromptIntrouvable, ErreurRegistre
 from app.llm.base import MessageLLM
-from app.prompts.variables import ExempleFewShot, VariablesEvaluationDiagnostic
+from app.prompts.variables import ExempleFewShot, VariablesConversationChatbot, VariablesEvaluationDiagnostic
 
 VERSION_EVALUATION_DIAGNOSTIC = "1.0.0"
+VERSION_CONVERSATION_CHATBOT = "1.0.0"
 _VARIABLES_TEMPLATE = frozenset(
     {
         "code_langue",
@@ -22,6 +23,7 @@ _VARIABLES_TEMPLATE = frozenset(
         "exemples_few_shot",
     }
 )
+_VARIABLES_TEMPLATE_CHATBOT = frozenset({"contexte_apprenant", "historique", "message"})
 _NOMBRE_EXEMPLES_MAX = 3
 
 
@@ -55,8 +57,41 @@ class RegistrePrompts:
     def __init__(self, repertoire: Path | None = None) -> None:
         self._repertoire = repertoire or Path(__file__).parent
         self._definitions = {
-            ("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC): self._charger_evaluation_diagnostic()
+            ("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC): self._charger_evaluation_diagnostic(),
+            ("chatbot", "conversation", VERSION_CONVERSATION_CHATBOT): self._charger_conversation_chatbot(),
         }
+
+    def definition(self, agent: str, tache: str, version: str) -> tuple[str, str]:
+        """Version et empreinte d'un prompt publié, pour déclarer un agent sans rendre le prompt."""
+        definition = self._definitions.get((agent, tache, version))
+        if definition is None:
+            raise ErreurPromptIntrouvable("La version de prompt demandée est introuvable.")
+        return definition.version_prompt, definition.empreinte_prompt
+
+    def rendre_conversation_chatbot(
+        self,
+        variables: VariablesConversationChatbot,
+        *,
+        version: str = VERSION_CONVERSATION_CHATBOT,
+    ) -> PromptRendu:
+        """Rendre le prompt de conversation du chatbot à partir de variables validées."""
+        definition = self._definitions.get(("chatbot", "conversation", version))
+        if definition is None:
+            raise ErreurPromptIntrouvable("La version du prompt de conversation du chatbot est introuvable.")
+
+        donnees = variables.model_dump(mode="json")
+        valeurs = {nom: _json_prompt(donnees[nom]) for nom in _VARIABLES_TEMPLATE_CHATBOT}
+        contenu_utilisateur = definition.template_utilisateur.substitute(valeurs)
+        return PromptRendu(
+            messages=(
+                MessageLLM(role="system", contenu=definition.systeme),
+                MessageLLM(role="user", contenu=contenu_utilisateur),
+            ),
+            version_prompt=definition.version_prompt,
+            empreinte_prompt=definition.empreinte_prompt,
+            temperature=definition.temperature,
+            max_tokens=definition.max_tokens,
+        )
 
     def rendre_evaluation_diagnostic(
         self,
@@ -118,17 +153,36 @@ class RegistrePrompts:
             max_tokens=600,
         )
 
+    def _charger_conversation_chatbot(self) -> _DefinitionPrompt:
+        nom = f"conversation@{VERSION_CONVERSATION_CHATBOT}"
+        repertoire = self._repertoire / "chatbot"
+        systeme = self._lire(repertoire / f"{nom}.systeme.md")
+        texte_utilisateur = self._lire(repertoire / f"{nom}.utilisateur.md")
+        template = _valider_template(texte_utilisateur, _VARIABLES_TEMPLATE_CHATBOT)
+
+        empreinte = hashlib.sha256(b"\0".join((systeme.encode("utf-8"), texte_utilisateur.encode("utf-8"))))
+        # Température plus haute que le diagnostic : une conversation gagne à varier ses formulations.
+        return _DefinitionPrompt(
+            version_prompt=f"chatbot/conversation@{VERSION_CONVERSATION_CHATBOT}",
+            systeme=systeme.strip(),
+            template_utilisateur=template,
+            exemples=(),
+            empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
+            temperature=0.5,
+            max_tokens=600,
+        )
+
     @staticmethod
     def _lire(chemin: Path) -> str:
         try:
             return chemin.read_text(encoding="utf-8")
         except OSError:
-            raise ErreurPromptIntrouvable("Une ressource du prompt d'évaluation diagnostic est introuvable.") from None
+            raise ErreurPromptIntrouvable("Une ressource de prompt versionné est introuvable.") from None
 
 
-def _valider_template(texte: str) -> Template:
+def _valider_template(texte: str, attendues: frozenset[str] = _VARIABLES_TEMPLATE) -> Template:
     if not texte.strip():
-        raise ErreurRegistre("Le template utilisateur du diagnostic ne peut pas être vide.")
+        raise ErreurRegistre("Le template utilisateur ne peut pas être vide.")
     variables: set[str] = set()
     for correspondance in Template.pattern.finditer(texte):
         if correspondance.group("invalid") is not None:
@@ -136,9 +190,9 @@ def _valider_template(texte: str) -> Template:
         nom = correspondance.group("named") or correspondance.group("braced")
         if nom is not None:
             variables.add(nom)
-    if variables != _VARIABLES_TEMPLATE:
-        manquantes = sorted(_VARIABLES_TEMPLATE - variables)
-        inattendues = sorted(variables - _VARIABLES_TEMPLATE)
+    if variables != attendues:
+        manquantes = sorted(attendues - variables)
+        inattendues = sorted(variables - attendues)
         details = []
         if manquantes:
             details.append("variables manquantes : " + ", ".join(manquantes))

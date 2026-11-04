@@ -13,6 +13,7 @@ import logging
 from uuid import UUID
 
 from fastapi import Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.core.codes_erreur import CODES_RETRYABLES, MESSAGES_PUBLICS, STATUTS_HTTP, CodeErreur
@@ -77,9 +78,24 @@ async def gerer_erreur_inattendue(_: Request, exception: Exception) -> JSONRespo
     return _reponse_http(exception)
 
 
+async def gerer_erreur_validation(_: Request, exception: RequestValidationError) -> JSONResponse:
+    """Handler FastAPI des corps de requête hors contrat.
+
+    La réponse 422 par défaut de FastAPI recopie la valeur refusée (``input``), donc le message de l'apprenant : elle
+    est remplacée par ``ENTREE_INVALIDE``. Seuls les emplacements des champs fautifs sont journalisés.
+    """
+    emplacements = sorted({".".join(str(partie) for partie in erreur.get("loc", ())) for erreur in exception.errors()})
+    logger.warning("Erreur %s : %s", CodeErreur.ENTREE_INVALIDE.value, ", ".join(emplacements[:10]))
+    return _reponse_http_pour_code(CodeErreur.ENTREE_INVALIDE)
+
+
 def _reponse_http(exception: BaseException) -> JSONResponse:
     """Réponse JSON ``{code, message, retryable}``, au format attendu par le backend."""
-    erreur = erreur_publique(exception)
+    return _reponse_http_pour_code(code_pour(exception))
+
+
+def _reponse_http_pour_code(code: CodeErreur) -> JSONResponse:
+    erreur = erreur_pour_code(code)
     return JSONResponse(
         status_code=STATUTS_HTTP[erreur.code],
         content=erreur.model_dump(mode="json", exclude_none=True),
