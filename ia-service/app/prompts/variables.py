@@ -1,12 +1,13 @@
 """Données structurées rendues dans les prompts du diagnostic."""
 
+from collections.abc import Sequence
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 
 from app.schemas.base import ModeleStrict
 from app.schemas.contexte import ContexteApprenant
-from app.schemas.diagnostic import ResultatDiagnostic
+from app.schemas.diagnostic import PreuveReponse, ResultatDiagnostic
 from app.schemas.regles import CodeLangue, CodeNiveau, Competence, Referentiel, erreur, niveaux_du_referentiel
 
 ScenarioDiagnostic = Literal["quotidien", "entretien", "examen"]
@@ -19,6 +20,18 @@ class ReponseDiagnosticPrompt(ModeleStrict):
     competence: Competence
     type_reponse: Literal["choix", "texte", "audio"]
     contenu: str = Field(min_length=1, max_length=5000)
+
+
+def preuves_depuis_reponses(reponses: Sequence[ReponseDiagnosticPrompt]) -> tuple[PreuveReponse, ...]:
+    """Réduire les réponses aux indices vérifiables par le résultat du diagnostic."""
+    return tuple(
+        PreuveReponse(
+            id_question=reponse.id_question,
+            competence=reponse.competence,
+            type_reponse=reponse.type_reponse,
+        )
+        for reponse in reponses
+    )
 
 
 class DescripteurRAGPrompt(ModeleStrict):
@@ -63,6 +76,9 @@ class EntreeExempleFewShot(ModeleStrict):
             for descripteur in self.descripteurs_rag
         ):
             raise erreur("Les descripteurs few-shot doivent correspondre au contexte de l'exemple.")
+        identifiants = [reponse.id_question for reponse in self.reponses]
+        if len(identifiants) != len(set(identifiants)):
+            raise erreur("Deux réponses d'un exemple few-shot ne peuvent pas partager le même identifiant.")
         return self
 
 
@@ -76,7 +92,10 @@ class ExempleFewShot(ModeleStrict):
 
     @model_validator(mode="after")
     def verifier_sortie(self) -> "ExempleFewShot":
-        self.sortie.verifier_coherence(self.entree.contexte_apprenant)
+        self.sortie.verifier_coherence(
+            self.entree.contexte_apprenant,
+            preuves_depuis_reponses(self.entree.reponses),
+        )
         return self
 
 

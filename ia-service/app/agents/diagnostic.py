@@ -3,7 +3,7 @@
 L'agent reçoit les réponses du test, le score et le niveau préliminaire calculés par le backend, ainsi que le
 contexte apprenant. Il récupère les descripteurs pertinents, laisse le registre de prompts sélectionner l'exemple
 few-shot du scénario et de la langue, puis appelle le client LLM partagé. Le résultat est validé par Pydantic,
-comparé au contexte transmis, et un écart important est signalé dans les journaux.
+comparé au contexte transmis et aux réponses disponibles, et un écart important est signalé dans les journaux.
 
 Contraintes : aucun accès PostgreSQL, aucune mémoire apprenant persistée, aucun recalcul du score objectif, aucune
 sortie du pipeline du Harness. Quand les descripteurs manquent ou que les preuves sont insuffisantes, le prompt
@@ -22,11 +22,12 @@ from app.prompts.variables import (
     ReponseDiagnosticPrompt,
     ScenarioDiagnostic,
     VariablesEvaluationDiagnostic,
+    preuves_depuis_reponses,
 )
 from app.rag.base import DESCRIPTEURS_MAX, TEXTE_REQUETE_MAX, RequeteRAG
 from app.schemas.base import ModeleStrict
 from app.schemas.contexte import ContexteApprenant
-from app.schemas.diagnostic import DiagnosticIncoherent, ResultatDiagnostic
+from app.schemas.diagnostic import DiagnosticIncoherent, PreuveReponse, ResultatDiagnostic
 from app.schemas.regles import erreur
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,15 @@ class EntreeDiagnostic(ModeleStrict):
         if isinstance(valeur, bool):
             raise erreur("Le score préliminaire doit être un nombre entre 0 et 100.")
         return valeur
+
+    @field_validator("reponses")
+    @classmethod
+    def verifier_identifiants_uniques(cls, reponses: list[ReponseDiagnosticPrompt]) -> list[ReponseDiagnosticPrompt]:
+        """Un point faible cite une question : deux réponses ne peuvent pas porter le même identifiant."""
+        identifiants = [reponse.id_question for reponse in reponses]
+        if len(identifiants) != len(set(identifiants)):
+            raise erreur("Deux réponses ne peuvent pas partager le même identifiant de question.")
+        return reponses
 
 
 def est_ecart_important(ecart: int, seuil: int = SEUIL_ECART_IMPORTANT) -> bool:
@@ -86,7 +96,7 @@ class DiagnosticAgent:
             max_tokens=rendu.max_tokens,
         )
 
-        self._verifier_coherence(resultat, apprenant)
+        self._verifier_coherence(resultat, apprenant, entree.reponses)
         self._signaler_ecart(resultat, contexte)
         return resultat
 
@@ -170,12 +180,17 @@ class DiagnosticAgent:
             raise ErreurRegistre("Les variables du diagnostic ne respectent pas le contrat du prompt.") from exc
 
     @staticmethod
-    def _verifier_coherence(resultat: ResultatDiagnostic, apprenant: ContexteApprenant) -> None:
-        """Une estimation qui ne concerne pas le contexte reçu est une sortie LLM inexploitable."""
+    def _verifier_coherence(
+        resultat: ResultatDiagnostic,
+        apprenant: ContexteApprenant,
+        reponses: list[ReponseDiagnosticPrompt],
+    ) -> None:
+        """Une estimation qui ne concerne pas le contexte reçu ou une preuve absente est inexploitable."""
+        preuves: tuple[PreuveReponse, ...] = preuves_depuis_reponses(reponses)
         try:
-            resultat.verifier_coherence(apprenant)
+            resultat.verifier_coherence(apprenant, preuves)
         except DiagnosticIncoherent as exc:
-            raise ErreurReponseLlm(f"Le résultat est incohérent avec le contexte : {exc}") from exc
+            raise ErreurReponseLlm(f"Le résultat est incohérent avec le contexte ou les preuves : {exc}") from exc
 
     @staticmethod
     def _signaler_ecart(resultat: ResultatDiagnostic, contexte: ContexteExecution) -> None:

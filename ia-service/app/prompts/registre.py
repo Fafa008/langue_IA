@@ -11,7 +11,7 @@ from app.llm.base import MessageLLM
 from app.prompts.bibliotheque_few_shot import BibliothequeFewShot
 from app.prompts.variables import ExempleFewShot, VariablesEvaluationDiagnostic
 
-VERSION_EVALUATION_DIAGNOSTIC = "1.0.0"
+VERSION_EVALUATION_DIAGNOSTIC = "1.1.0"
 _VARIABLES_TEMPLATE = frozenset(
     {
         "code_langue",
@@ -154,7 +154,7 @@ class RegistrePrompts:
             exemples=exemples,
             empreinte_prompt=f"sha256:{empreinte}",
             temperature=0.2,
-            max_tokens=600,
+            max_tokens=900,
         )
 
     @staticmethod
