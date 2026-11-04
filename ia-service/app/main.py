@@ -1,7 +1,9 @@
 """Point d'entrée du service IA.
 
-Le service expose pour l'instant ``GET /health``. Le client LLM unique et le Harness sont construits au démarrage :
-une configuration LLM invalide empêche le service de démarrer, et le client est fermé proprement à l'arrêt.
+Le service expose ``GET /health``. Le client LLM unique, le registre de prompts, le port RAG et le Harness sont
+construits au démarrage : une configuration LLM invalide empêche le service de démarrer, et le client est fermé
+proprement à l'arrêt. L'agent Diagnostic est enregistré dans le registre partagé ; aucune route d'inférence n'est
+encore exposée.
 """
 
 import os
@@ -11,12 +13,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agents.diagnostic import construire_definition
 from app.core.erreurs import ErreurServiceIA
 from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service
 from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm.fabrique import obtenir_client, reinitialiser_client
 from app.prompts import RegistrePrompts
+from app.rag import RecuperateurVide
 
 
 @asynccontextmanager
@@ -25,16 +29,26 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     registre_prompts = RegistrePrompts()
     client_llm = obtenir_client()
     registre_agents = RegistreAgents()
+    recuperateur_rag = RecuperateurVide()
+
+    registre_agents.enregistrer(construire_definition(registre_prompts))
 
     app.state.client_llm = client_llm
     app.state.registre_agents = registre_agents
     app.state.registre_prompts = registre_prompts
-    app.state.harness = Harness(registre_agents, client_llm, registre_prompts=registre_prompts)
+    app.state.recuperateur_rag = recuperateur_rag
+    app.state.harness = Harness(
+        registre_agents,
+        client_llm,
+        registre_prompts=registre_prompts,
+        recuperateur_rag=recuperateur_rag,
+    )
 
     try:
         yield
     finally:
         await client_llm.fermer()
+        await recuperateur_rag.fermer()
         reinitialiser_client()
 
 
