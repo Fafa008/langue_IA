@@ -1,0 +1,17 @@
+{
+  "code_langue": "en",
+  "referentiel": "CECRL",
+  "niveau_estime": "B1",
+  "phase_assimil": "impregnation",
+  "points_faibles": [
+    {
+      "domaine": "prononciation",
+      "id_question": "q-1",
+      "observation": "Une observation directement lisible.",
+      "justification": "Une justification prudente à confirmer."
+    }
+  ],
+  "score_confiance": 0.6,
+  "niveau_preliminaire": "B1",
+  "ecart_avec_niveau_preliminaire": 0
+}
