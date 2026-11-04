@@ -15,8 +15,10 @@ from app.schemas.diagnostic import (
     DiagnosticIncoherent,
     PhaseAssimil,
     PointFaible,
+    PreuveReponse,
     ResultatDiagnostic,
     calculer_ecart,
+    preuve_directe,
 )
 
 __all__ = [
@@ -30,9 +32,11 @@ __all__ = [
     "ModeleStrict",
     "PhaseAssimil",
     "PointFaible",
+    "PreuveReponse",
     "ReponseAgent",
     "ReponseErreur",
     "RequeteAgent",
     "ResultatDiagnostic",
     "calculer_ecart",
+    "preuve_directe",
 ]
