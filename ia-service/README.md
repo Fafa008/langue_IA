@@ -7,6 +7,7 @@ agents du Harness).
 ## État
 
 - `GET /health` : squelette de déploiement conservé (healthcheck Docker et CI).
+- `POST /chatbot/message` : premier endpoint d'inférence, connecté au modèle via l'agent `chatbot` du Harness (US67).
 - `app/schemas/` : contrat interne validé par Pydantic (US-151) — enveloppes du Harness, contexte apprenant, résultat
   du diagnostic et erreurs standardisées.
 - `app/core/` : configuration du client LLM (`SecretStr`, variables d'environnement), catalogue des codes d'erreur,
@@ -14,12 +15,13 @@ agents du Harness).
 - `app/llm/` : client LLM fournisseur-agnostique, fabrique, adaptateur `factice` et adaptateur `compatible-openai`
   (US-69).
 - `app/harness/` : définition d'agent, registre et pipeline commun d'exécution (US-69).
-- `app/prompts/` : registre partagé et ressources versionnées du prompt d'évaluation diagnostic (US70).
+- `app/prompts/` : registre partagé et prompts versionnés `diagnostic/evaluation@1.1.0` (US30) et
+  `chatbot/conversation@1.0.0` (US67).
 - `app/prompts/exemples/diagnostic/` : bibliothèque few-shot synthétique triée par scénario et langue (US71).
 - `app/rag/` : port `RecuperateurRAG` et récupérateur neutre `RecuperateurVide` (US29). Aucun index réel n'est
   encore branché.
-- `app/agents/` : agent Diagnostic `diagnostic@1.0.0`, enregistré au démarrage (US29). Aucune route d'inférence
-  n'est encore exposée : seul `GET /health` est public.
+- `app/agents/` : agents Diagnostic (`diagnostic@1.0.0`, US29) et chatbot (`chatbot@1.0.0`, US67), enregistrés
+  au démarrage. Seul `POST /chatbot/message` est exposé ; l'agent Diagnostic n'a pas encore de route HTTP.
 
 ## Client LLM et Harness (US-69)
 
@@ -176,6 +178,26 @@ Le catalogue complet (messages publics, statuts HTTP, caractère rejouable) est 
 
 Les messages d'erreur sont fixes : ils ne recopient ni l'entrée, ni le contexte, ni la réponse du fournisseur.
 
+## API du chatbot (US67)
+
+`POST /chatbot/message` reçoit l'enveloppe commune `RequeteAgent[EntreeChatbot]` (contexte apprenant, message, court
+historique renvoyé par le backend) et retourne `ReponseAgent[ResultatChatbot]`. La route ne contient aucune logique :
+elle confie la requête au Harness, qui exécute l'agent `chatbot` avec le client LLM partagé.
+
+```bash
+curl -X POST localhost:8001/chatbot/message -H 'Content-Type: application/json' -d '{
+  "request_id": "3f1c9b7e-6a2d-4f0e-9c1a-2b7d5e8f4a10",
+  "contexte": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "A2"},
+  "entree": {"message": "How long I study English?", "historique": []}
+}'
+# → 200 {"statut": "succes", "resultat": {"reponse": "…"}, "meta": {…}, …}
+```
+
+Une erreur du Harness garde l'enveloppe `ReponseErreur` avec le statut HTTP du catalogue (504, 503, 502…). Un corps
+hors contrat renvoie `422 ENTREE_INVALIDE` sans recopier le message reçu. Avec le fournisseur `factice` par défaut,
+aucun scénario n'est préparé : la route répond `500 LLM_CONFIGURATION` tant qu'un vrai fournisseur n'est pas
+configuré. Détails : [`docs/US-67-api-chatbot.md`](docs/US-67-api-chatbot.md).
+
 ## Gestion des erreurs et des reprises (US-154)
 
 Trois modules portent la fiabilité du service :
@@ -225,7 +247,11 @@ les tests : un exemple invalide doit échouer pour la raison documentée.
 
 ```
 app/
-├── main.py              # application FastAPI, lifespan et handlers d'erreurs
+├── main.py              # application FastAPI, lifespan, agents enregistrés et handlers d'erreurs
+├── agents/
+│   └── chatbot.py       # agent chatbot : prompt de conversation + réponse JSON validée (US67)
+├── api/
+│   └── chatbot.py       # POST /chatbot/message (US67)
 ├── core/
 │   ├── config.py        # configuration LLM (pydantic-settings) et politique de reprise
 │   ├── codes_erreur.py  # catalogue des codes publics (message, retryable, statut HTTP)
@@ -252,6 +278,7 @@ app/
 │   └── adaptateurs/
 │       ├── factice.py           # FakeLLMClient (tests, hors ligne)
 │       └── compatible_openai.py # HTTP + SSE, sans SDK propriétaire
+├── prompts/             # registre et ressources versionnées (diagnostic/, chatbot/)
 └── schemas/             # modèles Pydantic du contrat interne
 tests/
 ├── exemples/            # charges utiles valides et invalides
@@ -264,8 +291,12 @@ tests/
 
 - [`docs/US-29-agent-diagnostic.md`](docs/US-29-agent-diagnostic.md) — agent Diagnostic : entrée, port RAG,
   pipeline, écart important, erreurs, exemple complet et limites.
+- [`docs/US-152-jeu-cas-test-diagnostic.md`](docs/US-152-jeu-cas-test-diagnostic.md) — jeu de cas synthétiques,
+  tests déterministes, critères de revue humaine et limites.
 - [`docs/US-69-llm-client-harness.md`](docs/US-69-llm-client-harness.md) — bilan de la tâche, interfaces, décisions,
   tests et extension aux neuf agents.
+- [`docs/US-67-api-chatbot.md`](docs/US-67-api-chatbot.md) — contrat de `POST /chatbot/message`, erreurs, décisions
+  et vérifications.
 - [`docs/US-154-timeouts-erreurs-llm.md`](docs/US-154-timeouts-erreurs-llm.md) — timeouts, reprises bornées,
   gestionnaire d'erreurs, tests et limites.
 - [`docs/codes-erreur-ia.md`](docs/codes-erreur-ia.md) — catalogue des codes d'erreur et garanties de
