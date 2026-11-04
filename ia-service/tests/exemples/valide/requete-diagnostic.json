@@ -1,0 +1,33 @@
+{
+  "request_id": "3f1c9b7e-6a2d-4f0e-9c1a-2b7d5e8f4a10",
+  "version_agent": "1.0.0",
+  "contexte": {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_preliminaire": "B1",
+    "memoire_pedagogique": {
+      "resume": "Deux sessions de conversation, bonnes bases lexicales.",
+      "points_forts": ["aisance à l'oral"],
+      "points_faibles": ["emploi des temps"],
+      "nb_activites": 12
+    }
+  },
+  "entree": {
+    "scenario": "entretien",
+    "reponses": [
+      {
+        "id_question": "q-entretien-en-01",
+        "competence": "ecrit",
+        "type_reponse": "texte",
+        "contenu": "I have been learning English for two years and I work in a small company."
+      },
+      {
+        "id_question": "q-entretien-en-02",
+        "competence": "oral",
+        "type_reponse": "audio",
+        "contenu": "Transcription fictive d'une présentation professionnelle."
+      }
+    ],
+    "score_preliminaire": 64
+  }
+}

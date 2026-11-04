@@ -14,9 +14,12 @@ agents du Harness).
 - `app/llm/` : client LLM fournisseur-agnostique, fabrique, adaptateur `factice` et adaptateur `compatible-openai`
   (US-69).
 - `app/harness/` : définition d'agent, registre et pipeline commun d'exécution (US-69).
-- `app/prompts/` : registre partagé et ressources versionnées du prompt d'évaluation diagnostic (US70). Aucun agent
-  ni endpoint d'inférence n'est encore enregistré.
+- `app/prompts/` : registre partagé et ressources versionnées du prompt d'évaluation diagnostic (US70).
 - `app/prompts/exemples/diagnostic/` : bibliothèque few-shot synthétique triée par scénario et langue (US71).
+- `app/rag/` : port `RecuperateurRAG` et récupérateur neutre `RecuperateurVide` (US29). Aucun index réel n'est
+  encore branché.
+- `app/agents/` : agent Diagnostic `diagnostic@1.0.0`, enregistré au démarrage (US29). Aucune route d'inférence
+  n'est encore exposée : seul `GET /health` est public.
 
 ## Client LLM et Harness (US-69)
 
@@ -27,7 +30,8 @@ contrat `FournisseurLLM`. Aucun accès à la base de données, aucun stockage pe
 
 1. résolution de `(code, version)` dans le registre (dernière version SemVer si absente) ;
 2. revalidation de l'entrée contre le schéma de l'agent ;
-3. préparation des `OutilsCommuns` (client LLM partagé, registre de prompts, horloge) et du `ContexteExecution` ;
+3. préparation des `OutilsCommuns` (client LLM partagé, registre de prompts, récupérateur RAG, horloge) et du
+   `ContexteExecution` ;
 4. exécution sous budget (`asyncio.timeout`) ;
 5. validation de la sortie de l'agent ;
 6. enveloppe `ReponseAgent` normalisée, ou `ReponseErreur` avec un code stable.
@@ -119,6 +123,28 @@ officiels : le RAG reste l'unique source de référence normative. Voir
 [`docs/US-71-bibliotheque-few-shot.md`](docs/US-71-bibliotheque-few-shot.md) pour le schéma, la sélection, la
 validation et les limites.
 
+### Agent Diagnostic (US29)
+
+`DiagnosticAgent` est le premier agent métier enregistré dans le registre partagé (`diagnostic@1.0.0`, budget
+15 000 ms). Il reçoit les réponses du test (`EntreeDiagnostic`), le score et le niveau préliminaire du backend, puis :
+
+1. interroge le port `RecuperateurRAG` (langue, référentiel, niveau, compétences, texte borné à 4 000 caractères) ;
+2. filtre les descripteurs (contexte, doublons, plafond de 8) ;
+3. laisse le registre sélectionner le few-shot du scénario et de la langue ;
+4. rend `diagnostic/evaluation@1.0.0` et appelle le client LLM partagé ;
+5. vérifie la cohérence du résultat avec le contexte ;
+6. signale un écart d'au moins deux niveaux avec le niveau préliminaire.
+
+```python
+reponse = await harness.executer("diagnostic", requete)  # ReponseAgent[ResultatDiagnostic] ou ReponseErreur
+```
+
+`RecuperateurVide` retourne une séquence vide tant que le corpus n'est pas branché : le prompt applique sa règle de
+prudence et l'agent ne fabrique aucun descripteur. Le score objectif du backend n'est jamais recalculé, aucune
+donnée n'est persistée et aucune route d'inférence n'est encore exposée. Voir
+[`docs/US-29-agent-diagnostic.md`](docs/US-29-agent-diagnostic.md) pour l'entrée, le pipeline, les erreurs et
+l'exemple complet requête/réponse.
+
 ### Correspondance des erreurs
 
 Le catalogue complet (messages publics, statuts HTTP, caractère rejouable) est décrit dans
@@ -135,6 +161,7 @@ Le catalogue complet (messages publics, statuts HTTP, caractère rejouable) est 
 | Requête refusée (400/404/422/3xx) | `LLM_REQUETE_INVALIDE` | non |
 | Configuration LLM absente ou incohérente | `LLM_CONFIGURATION` | non |
 | Prompt versionné absent | `PROMPT_INTROUVABLE` | non |
+| Corpus RAG absent, en panne ou incohérent | `CORPUS_INDISPONIBLE` | oui |
 | JSON LLM ou sortie d'agent invalide | `LLM_REPONSE_INVALIDE` | oui |
 | Exception imprévue | `ERREUR_INTERNE` (message générique) | non |
 
@@ -200,6 +227,16 @@ app/
 │   ├── agent.py         # DefinitionAgent, OutilsCommuns, ContexteExecution
 │   ├── registre.py      # résolution par code et version SemVer
 │   └── execution.py     # pipeline commun, validation, erreurs normalisées
+├── agents/
+│   ├── __init__.py
+│   └── diagnostic.py    # EntreeDiagnostic, DiagnosticAgent, définition enregistrée
+├── rag/
+│   ├── base.py          # port RecuperateurRAG et RequeteRAG
+│   └── vide.py          # RecuperateurVide (aucun corpus)
+├── prompts/
+│   ├── registre.py      # chargement, empreinte et rendu des prompts
+│   ├── bibliotheque_few_shot.py  # sélection scénario/langue
+│   └── diagnostic/      # ressources versionnées du prompt
 ├── llm/
 │   ├── base.py          # protocole FournisseurLLM et types de réponse
 │   ├── fabrique.py      # sélection et instance unique du client
@@ -216,6 +253,8 @@ tests/
 
 ## Documentation
 
+- [`docs/US-29-agent-diagnostic.md`](docs/US-29-agent-diagnostic.md) — agent Diagnostic : entrée, port RAG,
+  pipeline, écart important, erreurs, exemple complet et limites.
 - [`docs/US-69-llm-client-harness.md`](docs/US-69-llm-client-harness.md) — bilan de la tâche, interfaces, décisions,
   tests et extension aux neuf agents.
 - [`docs/US-154-timeouts-erreurs-llm.md`](docs/US-154-timeouts-erreurs-llm.md) — timeouts, reprises bornées,

@@ -4,6 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.agents.diagnostic import CODE_AGENT, VERSION_AGENT
 from app.core.erreurs import ErreurConfiguration, ErreurLlmIndisponible, ErreurServiceIA
 from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service
 from app.harness.execution import Harness
@@ -12,6 +13,7 @@ from app.llm import fabrique
 from app.llm.adaptateurs.factice import FakeLLMClient
 from app.main import app
 from app.prompts import RegistrePrompts
+from app.rag import RecuperateurVide
 
 
 @pytest.fixture(autouse=True)
@@ -31,8 +33,13 @@ def test_health_et_lifespan(env_propre: pytest.MonkeyPatch) -> None:
         assert isinstance(client_llm, FakeLLMClient)
         assert isinstance(app.state.registre_agents, RegistreAgents)
         assert isinstance(app.state.registre_prompts, RegistrePrompts)
+        assert isinstance(app.state.recuperateur_rag, RecuperateurVide)
         assert isinstance(app.state.harness, Harness)
         assert client_llm.ferme is False
+
+        assert CODE_AGENT in app.state.registre_agents
+        assert app.state.registre_agents.resoudre(CODE_AGENT).version == VERSION_AGENT
+        assert app.state.registre_agents.resoudre(CODE_AGENT).schema_entree is not None
 
     assert client_llm.ferme is True
 

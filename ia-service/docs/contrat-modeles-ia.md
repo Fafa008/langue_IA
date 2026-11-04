@@ -3,10 +3,10 @@
 | Élément | Valeur |
 | --- | --- |
 | Statut | Implémenté et testé |
-| Périmètre | `ia-service/app/schemas/` : contrat commun du Harness, contexte apprenant, résultat de diagnostic, erreurs |
-| Hors périmètre | Routes HTTP, client LLM, RAG, prompts, persistance |
+| Périmètre | `ia-service/app/schemas/` (contrat commun du Harness, contexte apprenant, résultat de diagnostic, erreurs) et `EntreeDiagnostic` de l'agent Diagnostic |
+| Hors périmètre | Implémentation des routes HTTP, du client LLM, du RAG, des prompts et de la persistance |
 | Sources | `backend/app/seed.py`, `backend/app/services/scoring.py`, `docs/api/contrat-frontend.md`, `docs/architecture/aj02-cadrage-technique-ia.md` |
-| Voir aussi | [US-69 — Client LLM et Agent Harness](US-69-llm-client-harness.md), [US-154 — Timeouts et erreurs LLM](US-154-timeouts-erreurs-llm.md), [Codes d'erreur](codes-erreur-ia.md) |
+| Voir aussi | [US-29 — Agent Diagnostic](US-29-agent-diagnostic.md), [US-69 — Client LLM et Agent Harness](US-69-llm-client-harness.md), [US-154 — Timeouts et erreurs LLM](US-154-timeouts-erreurs-llm.md), [Codes d'erreur](codes-erreur-ia.md) |
 
 ## 1. Audit préalable
 
@@ -125,7 +125,7 @@ associées, politique de reprise) est documenté dans [Codes d'erreur du service
 
 C'est un **résumé** produit par le backend, pas un historique : le service IA n'a pas accès aux réponses brutes.
 
-## 6. Résultat du diagnostic
+## 6. Modèles du diagnostic
 
 ### 6.1 `PointFaible`
 
@@ -159,6 +159,30 @@ le nombre de bonnes réponses, le niveau final, l'identité de l'apprenant. Ces 
 
 `ResultatDiagnostic.verifier_coherence(contexte)` vérifie que le résultat concerne bien le contexte reçu (langue et
 niveau préliminaire) et lève `DiagnosticIncoherent` sinon. Le Harness l'appelle après validation du résultat.
+
+### 6.4 `EntreeDiagnostic` (US29)
+
+Modèle d'entrée de l'agent Diagnostic, implémenté dans `app/agents/diagnostic.py` (hors `app/schemas/` car il
+appartient à l'agent). Il hérite de `ModeleStrict` : tout champ inconnu est refusé.
+
+| Champ | Type | Contrainte |
+| --- | --- | --- |
+| `scenario` | `quotidien` \| `entretien` \| `examen` | défaut `quotidien` ; pilote la sélection few-shot |
+| `reponses` | liste de `ReponseDiagnosticPrompt` | 1 à 100 éléments |
+| `score_preliminaire` | nombre | 0 à 100, obligatoire ; booléen refusé |
+
+Un élément de `reponses` contient :
+
+| Champ | Type | Contrainte |
+| --- | --- | --- |
+| `id_question` | texte | 1 à 64 caractères |
+| `competence` | `Competence` | une des cinq compétences du contrat |
+| `type_reponse` | `choix` \| `texte` \| `audio` | requis |
+| `contenu` | texte | 1 à 5 000 caractères |
+
+Le contexte apprenant (langue, référentiel, niveau préliminaire, mémoire facultative) reste porté par
+`RequeteAgent.contexte`. Le score est celui du backend : l'agent ne le recalcule pas et ne l'utilise pas comme score
+de confiance. Voir [US-29](US-29-agent-diagnostic.md) pour le pipeline et les erreurs associées.
 
 ## 7. Contrat commun du Harness
 
@@ -233,6 +257,7 @@ chaque exemple invalide échoue pour la raison annoncée.
 | --- | --- | --- |
 | `tests/exemples/valide/contexte-apprenant.json` | `ContexteApprenant` | valide |
 | `tests/exemples/valide/resultat-diagnostic.json` | `ResultatDiagnostic` | valide |
+| `tests/exemples/valide/requete-diagnostic.json` | `RequeteAgent[EntreeDiagnostic]` | valide |
 | `tests/exemples/valide/reponse-diagnostic.json` | `ReponseAgent[ResultatDiagnostic]` | valide |
 | `tests/exemples/valide/erreur-standard.json` | `ReponseErreur` | valide |
 | `tests/exemples/invalide/contexte-apprenant-champ-inconnu.json` | `ContexteApprenant` | champ `id_apprenant` refusé |
@@ -266,8 +291,9 @@ chaque exemple invalide échoue pour la raison annoncée.
 }
 ```
 
-`entree` est ici celle d'un exemple de test : chaque agent publiera son propre modèle d'entrée (`EntreeDiagnostic`
-pour l'US d'évaluation). L'enveloppe, elle, ne change pas.
+`entree` est ici une charge de démonstration. L'agent Diagnostic publie désormais son propre modèle d'entrée,
+`EntreeDiagnostic` (section 6.4) ; l'exemple complet correspondant se trouve dans
+`tests/exemples/valide/requete-diagnostic.json`. L'enveloppe, elle, ne change pas.
 
 ### 9.2 Réponse valide
 
