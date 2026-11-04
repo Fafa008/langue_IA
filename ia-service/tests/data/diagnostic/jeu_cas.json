@@ -1,0 +1,391 @@
+{
+  "version": "1.0.0",
+  "cas": [
+    {
+      "id": "debutant-fr-cecrl",
+      "categorie": "debutant",
+      "code_langue": "fr",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "A1",
+      "reponses": [
+        {
+          "id_question": "q-debutant-fr-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "J'habite en ville. Je travaille le matin.",
+          "consigne": "Présente-toi et décris une journée habituelle."
+        }
+      ],
+      "simulation_llm": {"mode": "reponse_attendue"},
+      "resultat_attendu": {
+        "type": "succes",
+        "resultat": {
+          "code_langue": "fr",
+          "referentiel": "CECRL",
+          "niveau_estime": "A1",
+          "phase_assimil": "activation",
+          "points_faibles": [],
+          "score_confiance": 0.62,
+          "niveau_preliminaire": "A1",
+          "ecart_avec_niveau_preliminaire": 0
+        }
+      },
+      "criteres_acceptation": {
+        "deterministes": ["sortie_pydantic_valide", "referentiel_langue_coherent", "ecart_exact"],
+        "revue_humaine": ["Le niveau A1 est plausible au vu des phrases courtes et simples."]
+      }
+    },
+    {
+      "id": "intermediaire-en-cecrl",
+      "categorie": "intermediaire",
+      "code_langue": "en",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "A2",
+      "reponses": [
+        {
+          "id_question": "q-intermediaire-en-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "Last year I joined a small team at work. We planned a weekly event, shared the tasks, and changed the schedule when the room was unavailable.",
+          "consigne": "Describe a task completed with a team and explain how you handled a difficulty."
+        },
+        {
+          "id_question": "q-intermediaire-en-02",
+          "competence": "oral",
+          "type_reponse": "audio",
+          "contenu": "I can follow short conversations, but I sometimes miss details when people speak quickly.",
+          "consigne": "Explain what is difficult when listening to people who speak quickly."
+        }
+      ],
+      "simulation_llm": {"mode": "reponse_attendue"},
+      "resultat_attendu": {
+        "type": "succes",
+        "resultat": {
+          "code_langue": "en",
+          "referentiel": "CECRL",
+          "niveau_estime": "B1",
+          "phase_assimil": "activation",
+          "points_faibles": [],
+          "score_confiance": 0.7,
+          "niveau_preliminaire": "A2",
+          "ecart_avec_niveau_preliminaire": 1
+        }
+      },
+      "criteres_acceptation": {
+        "deterministes": ["sortie_pydantic_valide", "ecart_exact", "aucune_faiblesse_sans_preuve_directe"],
+        "revue_humaine": ["La difficulté de compréhension déclarée n'est pas assimilée à une preuve objective de faiblesse en compréhension orale."]
+      }
+    },
+    {
+      "id": "avance-de-cecrl",
+      "categorie": "avance",
+      "code_langue": "de",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "C1",
+      "reponses": [
+        {
+          "id_question": "q-avance-de-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "Obwohl digitale Angebote den Zugang zu Informationen erleichtern, ersetzen sie nicht automatisch öffentliche Bibliotheken. Diese bieten nicht nur Medien, sondern auch einen gemeinschaftlichen Lernort. Eine langfristige Planung sollte deshalb beide Formen fördern und regelmäßig prüfen, welche Gruppen tatsächlich erreicht werden.",
+          "consigne": "Nimm begründet Stellung zur Rolle öffentlicher Bibliotheken im digitalen Zeitalter."
+        }
+      ],
+      "simulation_llm": {"mode": "reponse_attendue"},
+      "resultat_attendu": {
+        "type": "succes",
+        "resultat": {
+          "code_langue": "de",
+          "referentiel": "CECRL",
+          "niveau_estime": "C1",
+          "phase_assimil": "activation",
+          "points_faibles": [],
+          "score_confiance": 0.82,
+          "niveau_preliminaire": "C1",
+          "ecart_avec_niveau_preliminaire": 0
+        }
+      },
+      "criteres_acceptation": {
+        "deterministes": ["sortie_pydantic_valide", "niveau_cecrl_valide", "ecart_exact"],
+        "revue_humaine": ["Un évaluateur juge si la production soutient réellement un niveau avancé."]
+      }
+    },
+    {
+      "id": "reponses-insuffisantes-it",
+      "categorie": "reponses_insuffisantes",
+      "code_langue": "it",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "A2",
+      "reponses": [
+        {
+          "id_question": "q-insuffisant-it-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "Non lo so.",
+          "consigne": "Racconta un'attività che hai fatto la settimana scorsa."
+        }
+      ],
+      "simulation_llm": {"mode": "reponse_attendue"},
+      "resultat_attendu": {
+        "type": "succes",
+        "resultat": {
+          "code_langue": "it",
+          "referentiel": "CECRL",
+          "niveau_estime": "A2",
+          "phase_assimil": "impregnation",
+          "points_faibles": [],
+          "score_confiance": 0.0,
+          "niveau_preliminaire": "A2",
+          "ecart_avec_niveau_preliminaire": 0
+        }
+      },
+      "criteres_acceptation": {
+        "deterministes": ["sortie_pydantic_valide", "niveau_preliminaire_conserve", "confiance_nulle_sans_preuve"],
+        "revue_humaine": ["La réponse ne fournit pas assez d'éléments pour estimer un niveau ou une faiblesse."]
+      }
+    },
+    {
+      "id": "reponses-incoherentes-fr",
+      "categorie": "reponses_incoherentes",
+      "code_langue": "fr",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "B1",
+      "reponses": [
+        {
+          "id_question": "q-incoherent-fr-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "Je n'ai jamais visité Lyon.",
+          "consigne": "Raconte une visite récente à Lyon."
+        },
+        {
+          "id_question": "q-incoherent-fr-02",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "Quand j'ai visité Lyon la semaine dernière, j'ai pris le tramway.",
+          "consigne": "Raconte une visite récente à Lyon."
+        }
+      ],
+      "simulation_llm": {"mode": "reponse_attendue"},
+      "resultat_attendu": {
+        "type": "succes",
+        "resultat": {
+          "code_langue": "fr",
+          "referentiel": "CECRL",
+          "niveau_estime": "B1",
+          "phase_assimil": "impregnation",
+          "points_faibles": [],
+          "score_confiance": 0.0,
+          "niveau_preliminaire": "B1",
+          "ecart_avec_niveau_preliminaire": 0
+        }
+      },
+      "criteres_acceptation": {
+        "deterministes": ["sortie_pydantic_valide", "pas_de_point_faible_avec_confiance_nulle"],
+        "revue_humaine": ["Identifier la contradiction entre les deux réponses.", "Ne pas déduire une faiblesse linguistique de la seule contradiction."]
+      }
+    },
+    {
+      "id": "reponse-hors-sujet-en",
+      "categorie": "hors_sujet",
+      "code_langue": "en",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "B2",
+      "reponses": [
+        {
+          "id_question": "q-hors-sujet-en-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "My favorite meal is soup. I usually eat it on Sunday.",
+          "consigne": "Explain one advantage and one drawback of using public transport in a city."
+        }
+      ],
+      "simulation_llm": {"mode": "reponse_attendue"},
+      "resultat_attendu": {
+        "type": "succes",
+        "resultat": {
+          "code_langue": "en",
+          "referentiel": "CECRL",
+          "niveau_estime": "B2",
+          "phase_assimil": "impregnation",
+          "points_faibles": [],
+          "score_confiance": 0.0,
+          "niveau_preliminaire": "B2",
+          "ecart_avec_niveau_preliminaire": 0
+        }
+      },
+      "criteres_acceptation": {
+        "deterministes": ["sortie_pydantic_valide", "niveau_preliminaire_conserve", "aucune_faiblesse_sans_preuve"],
+        "revue_humaine": ["Vérifier que la réponse ne répond pas à la consigne supposée.", "Ne pas confondre hors-sujet et faible maîtrise de l'anglais."]
+      }
+    },
+    {
+      "id": "referentiel-cecrl-it",
+      "categorie": "cecrl",
+      "code_langue": "it",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "B2",
+      "reponses": [
+        {
+          "id_question": "q-cecrl-it-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "Il trasporto pubblico riduce il traffico, ma deve essere affidabile. Se gli orari sono chiari e le linee collegano anche i quartieri periferici, più persone possono scegliere l'autobus invece dell'auto.",
+          "consigne": "Spiega un vantaggio e un limite del trasporto pubblico."
+        }
+      ],
+      "simulation_llm": {"mode": "reponse_attendue"},
+      "resultat_attendu": {
+        "type": "succes",
+        "resultat": {
+          "code_langue": "it",
+          "referentiel": "CECRL",
+          "niveau_estime": "B2",
+          "phase_assimil": "activation",
+          "points_faibles": [],
+          "score_confiance": 0.76,
+          "niveau_preliminaire": "B2",
+          "ecart_avec_niveau_preliminaire": 0
+        }
+      },
+      "criteres_acceptation": {
+        "deterministes": ["referentiel_cecrl", "niveau_cecrl_valide", "ecart_exact"],
+        "revue_humaine": ["Évaluer la cohérence du niveau uniquement sur la réponse et la consigne associée."]
+      }
+    },
+    {
+      "id": "referentiel-hsk-zh",
+      "categorie": "hsk",
+      "code_langue": "zh",
+      "referentiel": "HSK",
+      "niveau_preliminaire": "HSK 3",
+      "reponses": [
+        {
+          "id_question": "q-hsk-zh-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "上个星期我和朋友去了图书馆。我们看了中文书，还一起做了作业。下次我想借一本关于旅行的书。",
+          "consigne": "讲一讲你最近一次去图书馆的经历和一个未来计划。"
+        }
+      ],
+      "simulation_llm": {"mode": "reponse_attendue"},
+      "resultat_attendu": {
+        "type": "succes",
+        "resultat": {
+          "code_langue": "zh",
+          "referentiel": "HSK",
+          "niveau_estime": "HSK 3",
+          "phase_assimil": "activation",
+          "points_faibles": [],
+          "score_confiance": 0.7,
+          "niveau_preliminaire": "HSK 3",
+          "ecart_avec_niveau_preliminaire": 0
+        }
+      },
+      "criteres_acceptation": {
+        "deterministes": ["referentiel_hsk", "niveau_hsk_valide", "pas_de_niveau_cecrl", "ecart_exact"],
+        "revue_humaine": ["Un évaluateur compétent en mandarin juge la plausibilité du niveau HSK."]
+      }
+    },
+    {
+      "id": "json-llm-invalide",
+      "categorie": "json_invalide",
+      "code_langue": "en",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "A2",
+      "reponses": [
+        {
+          "id_question": "q-json-invalide-en-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "I read a short story yesterday.",
+          "consigne": "Describe a short story you read recently."
+        }
+      ],
+      "simulation_llm": {"mode": "json_invalide", "contenu_brut": "{\"niveau_estime\": \"B1\""},
+      "resultat_attendu": {"type": "erreur", "code": "LLM_REPONSE_INVALIDE", "retryable": true},
+      "criteres_acceptation": {
+        "deterministes": ["erreur_llm_reponse_invalide", "aucun_resultat_partiel"],
+        "revue_humaine": []
+      }
+    },
+    {
+      "id": "llm-indisponible",
+      "categorie": "llm_indisponible",
+      "code_langue": "fr",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "B1",
+      "reponses": [
+        {
+          "id_question": "q-llm-indisponible-fr-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "Hier, j'ai visité un musée avec des amis.",
+          "consigne": "Raconte une visite au musée."
+        }
+      ],
+      "simulation_llm": {"mode": "indisponible"},
+      "resultat_attendu": {"type": "erreur", "code": "LLM_INDISPONIBLE", "retryable": true},
+      "criteres_acceptation": {
+        "deterministes": ["erreur_llm_indisponible", "message_public_sans_donnees_de_reponse"],
+        "revue_humaine": []
+      }
+    },
+    {
+      "id": "timeout-llm",
+      "categorie": "timeout",
+      "code_langue": "de",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "A2",
+      "reponses": [
+        {
+          "id_question": "q-timeout-de-01",
+          "competence": "oral",
+          "type_reponse": "audio",
+          "contenu": "Am Wochenende besuche ich meine Freunde.",
+          "consigne": "Beschreibe, was du am Wochenende normalerweise machst."
+        }
+      ],
+      "simulation_llm": {"mode": "timeout"},
+      "resultat_attendu": {"type": "erreur", "code": "LLM_TIMEOUT", "retryable": true},
+      "criteres_acceptation": {
+        "deterministes": ["erreur_llm_timeout", "aucun_resultat_partiel"],
+        "revue_humaine": []
+      }
+    },
+    {
+      "id": "ecart-important-en",
+      "categorie": "ecart_niveau",
+      "code_langue": "en",
+      "referentiel": "CECRL",
+      "niveau_preliminaire": "A1",
+      "reponses": [
+        {
+          "id_question": "q-ecart-en-01",
+          "competence": "ecrit",
+          "type_reponse": "texte",
+          "contenu": "Although the proposal has advantages, its implementation depends on reliable transport and clear communication with residents. A gradual trial would make it possible to measure the effects before extending the project.",
+          "consigne": "Present and justify a proposal to improve public transport in a city."
+        }
+      ],
+      "simulation_llm": {"mode": "reponse_attendue"},
+      "resultat_attendu": {
+        "type": "succes",
+        "resultat": {
+          "code_langue": "en",
+          "referentiel": "CECRL",
+          "niveau_estime": "B2",
+          "phase_assimil": "activation",
+          "points_faibles": [],
+          "score_confiance": 0.58,
+          "niveau_preliminaire": "A1",
+          "ecart_avec_niveau_preliminaire": 3
+        }
+      },
+      "criteres_acceptation": {
+        "deterministes": ["ecart_ordinal_exact", "ecart_absolu_superieur_ou_egal_au_seuil_2"],
+        "revue_humaine": ["Revoir la réponse et la provenance du niveau préliminaire avant toute décision pédagogique."]
+      }
+    }
+  ]
+}

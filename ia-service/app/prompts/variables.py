@@ -1,4 +1,4 @@
-"""Données structurées rendues dans les prompts du diagnostic."""
+"""Données structurées rendues dans les prompts du diagnostic et du chatbot."""
 
 from collections.abc import Sequence
 from typing import Literal
@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import Field, field_validator, model_validator
 
 from app.schemas.base import ModeleStrict
+from app.schemas.chatbot import HISTORIQUE_CHATBOT_MAX, MESSAGE_CHATBOT_MAX, MessageHistorique
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.diagnostic import PreuveReponse, ResultatDiagnostic
 from app.schemas.regles import CodeLangue, CodeNiveau, Competence, Referentiel, erreur, niveaux_du_referentiel
@@ -134,3 +135,11 @@ class VariablesEvaluationDiagnostic(ModeleStrict):
         ):
             raise erreur("Les descripteurs RAG doivent correspondre à la langue et au référentiel du diagnostic.")
         return self
+
+
+class VariablesConversationChatbot(ModeleStrict):
+    """Variables dynamiques du prompt de conversation du chatbot."""
+
+    contexte_apprenant: ContexteApprenant
+    historique: list[MessageHistorique] = Field(max_length=HISTORIQUE_CHATBOT_MAX)
+    message: str = Field(min_length=1, max_length=MESSAGE_CHATBOT_MAX)
