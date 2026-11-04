@@ -27,6 +27,9 @@ MODELES_INVALIDES: dict[str, tuple[type[BaseModel], str]] = {
     "contexte-apprenant-referentiel-incoherent.json": (ContexteApprenant, "impose le référentiel CECRL"),
     "resultat-diagnostic-ecart-incoherent.json": (ResultatDiagnostic, "ne correspond pas"),
     "resultat-diagnostic-phase-inconnue.json": (ResultatDiagnostic, "passive"),
+    "resultat-diagnostic-confiance-nulle-avec-point-faible.json": (ResultatDiagnostic, "sans confiance"),
+    "resultat-diagnostic-domaine-duplique.json": (ResultatDiagnostic, "une fois"),
+    "resultat-diagnostic-domaine-inconnu.json": (ResultatDiagnostic, "Input should be"),
     "reponse-diagnostic-empreinte-invalide.json": (ReponseAgent[ResultatDiagnostic], "String should match pattern"),
     "erreur-standard-retryable-incoherent.json": (ReponseErreur, "retryable doit valoir false"),
 }
