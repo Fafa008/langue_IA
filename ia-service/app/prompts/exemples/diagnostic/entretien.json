@@ -1,0 +1,57 @@
+[
+  {
+    "scenario": "entretien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "fr", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+      "reponses": [{"id_question": "q-entretien-fr-01", "competence": "oral", "type_reponse": "audio", "contenu": "Dans mon dernier emploi, j'accueillais les clients et je préparais les commandes. J'ai appris à organiser mon travail, même quand il y avait beaucoup de demandes."}],
+      "score_preliminaire": 64,
+      "descripteurs_rag": [{"identifiant": "exemple-fr-b1-oral", "code_langue": "fr", "referentiel": "CECRL", "niveau": "B1", "competence": "oral", "contenu": "Exemple pédagogique non normatif : raconter une expérience professionnelle familière et en expliquer un aspect."}]
+    },
+    "sortie": {"code_langue": "fr", "referentiel": "CECRL", "niveau_estime": "B1", "phase_assimil": "activation", "points_faibles": [], "score_confiance": 0.76, "niveau_preliminaire": "B1", "ecart_avec_niveau_preliminaire": 0},
+    "justification": "La réponse décrit des tâches et explique un apprentissage de façon suivie, conformément au descripteur fourni."
+  },
+  {
+    "scenario": "entretien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "A2"},
+      "reponses": [{"id_question": "q-entretien-en-01", "competence": "oral", "type_reponse": "audio", "contenu": "I worked in a small shop last year. I helped customers and I learned to solve simple problems. Sometimes I need more time to explain a difficult situation."}],
+      "score_preliminaire": 53,
+      "descripteurs_rag": [{"identifiant": "exemple-en-b1-oral", "code_langue": "en", "referentiel": "CECRL", "niveau": "B1", "competence": "oral", "contenu": "Exemple pédagogique non normatif : répondre à des questions simples sur son expérience et expliquer un événement familier."}]
+    },
+    "sortie": {"code_langue": "en", "referentiel": "CECRL", "niveau_estime": "B1", "phase_assimil": "activation", "points_faibles": [{"domaine": "expression_orale", "id_question": "q-entretien-en-01", "observation": "L'apprenant indique avoir besoin de plus de temps pour expliquer une situation difficile.", "justification": "Cette réserve, formulée dans la réponse, semble signaler une difficulté d'expression orale sur les explications complexes ; elle reste limitée à un seul exemple."}], "score_confiance": 0.7, "niveau_preliminaire": "A2", "ecart_avec_niveau_preliminaire": 1},
+    "justification": "La réponse raconte une expérience compréhensible ; la réserve sur l'explication complexe justifie un point faible oral prudent."
+  },
+  {
+    "scenario": "entretien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "zh", "referentiel": "HSK", "niveau_preliminaire": "HSK 2"},
+      "reponses": [{"id_question": "q-entretien-zh-01", "competence": "oral", "type_reponse": "audio", "contenu": "我在学校学习中文。我每天看书，也和朋友说中文。以后我想在办公室工作。"}],
+      "score_preliminaire": 36,
+      "descripteurs_rag": [{"identifiant": "exemple-zh-hsk2-oral", "code_langue": "zh", "referentiel": "HSK", "niveau": "HSK 2", "competence": "oral", "contenu": "Exemple pédagogique non normatif : échanger sur les études, les activités habituelles et des projets simples."}]
+    },
+    "sortie": {"code_langue": "zh", "referentiel": "HSK", "niveau_estime": "HSK 2", "phase_assimil": "activation", "points_faibles": [], "score_confiance": 0.67, "niveau_preliminaire": "HSK 2", "ecart_avec_niveau_preliminaire": 0},
+    "justification": "La transcription relie études, habitudes et projet dans un échange simple correspondant au descripteur HSK 2."
+  },
+  {
+    "scenario": "entretien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "it", "referentiel": "CECRL", "niveau_preliminaire": "A2"},
+      "reponses": [{"id_question": "q-entretien-it-01", "competence": "oral", "type_reponse": "audio", "contenu": "Ho lavorato in un negozio per sei mesi. Mi occupavo dei clienti e preparavo i prodotti. Vorrei migliorare le mie competenze e assumere più responsabilità."}],
+      "score_preliminaire": 43,
+      "descripteurs_rag": [{"identifiant": "exemple-it-b1-oral", "code_langue": "it", "referentiel": "CECRL", "niveau": "B1", "competence": "oral", "contenu": "Exemple pédagogique non normatif : décrire une expérience de travail et exprimer un objectif personnel."}]
+    },
+    "sortie": {"code_langue": "it", "referentiel": "CECRL", "niveau_estime": "B1", "phase_assimil": "activation", "points_faibles": [], "score_confiance": 0.73, "niveau_preliminaire": "A2", "ecart_avec_niveau_preliminaire": 1},
+    "justification": "L'expérience et le projet sont exprimés avec plusieurs phrases reliées correspondant au descripteur B1."
+  },
+  {
+    "scenario": "entretien",
+    "entree": {
+      "contexte_apprenant": {"code_langue": "de", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+      "reponses": [{"id_question": "q-entretien-de-01", "competence": "oral", "type_reponse": "audio", "contenu": "In meinem letzten Projekt habe ich die Termine geplant und mit drei Kollegen gearbeitet. Wenn ein Problem kam, haben wir zusammen eine Lösung gesucht. Ich möchte künftig mehr Verantwortung übernehmen."}],
+      "score_preliminaire": 67,
+      "descripteurs_rag": [{"identifiant": "exemple-de-b1-oral", "code_langue": "de", "referentiel": "CECRL", "niveau": "B1", "competence": "oral", "contenu": "Exemple pédagogique non normatif : expliquer une expérience de projet et un objectif professionnel."}]
+    },
+    "sortie": {"code_langue": "de", "referentiel": "CECRL", "niveau_estime": "B1", "phase_assimil": "activation", "points_faibles": [], "score_confiance": 0.74, "niveau_preliminaire": "B1", "ecart_avec_niveau_preliminaire": 0},
+    "justification": "Le récit explique la collaboration et un objectif professionnel avec des phrases suivies, cohérentes avec le descripteur."
+  }
+]

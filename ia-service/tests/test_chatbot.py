@@ -16,6 +16,7 @@ from app.llm import fabrique
 from app.llm.adaptateurs.factice import FakeLLMClient, ScenarioLLM
 from app.main import app
 from app.prompts import RegistrePrompts
+from app.prompts.registre import VERSION_EVALUATION_DIAGNOSTIC
 from app.prompts.variables import VariablesConversationChatbot
 from app.schemas.chatbot import HISTORIQUE_CHATBOT_MAX, MESSAGE_CHATBOT_MAX, EntreeChatbot, ResultatChatbot
 from app.schemas.commun import ReponseAgent, ReponseErreur, RequeteAgent
@@ -99,7 +100,10 @@ def test_rend_le_prompt_de_conversation_versionne() -> None:
     assert [message.role for message in rendu.messages] == ["system", "user"]
     assert rendu.version_prompt == "chatbot/conversation@1.0.0"
     assert rendu.empreinte_prompt.startswith("sha256:")
-    assert rendu.empreinte_prompt != RegistrePrompts().definition("diagnostic", "evaluation", "1.0.0")[1]
+    assert (
+        rendu.empreinte_prompt
+        != RegistrePrompts().definition("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC)[1]
+    )
     assert rendu.temperature == 0.5
     corps = donnees_prompt(rendu.messages[1].contenu)
     assert corps["message"] == "How are you?"

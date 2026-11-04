@@ -1,8 +1,9 @@
 """Point d'entrée du service IA.
 
 Le service expose ``GET /health`` et ``POST /chatbot/message`` (US67). Le client LLM unique, le Harness et ses agents
-sont construits au démarrage : une configuration LLM invalide empêche le service de démarrer, et le client est fermé
-proprement à l'arrêt.
+Diagnostic et chatbot sont enregistrés au démarrage : une configuration LLM invalide empêche le service de démarrer,
+et les ressources partagées sont fermées proprement à l'arrêt. L'agent Diagnostic n'a pas encore de route
+d'inférence.
 """
 
 import os
@@ -14,6 +15,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agents.chatbot import definir_agent_chatbot
+from app.agents.diagnostic import construire_definition
 from app.api import chatbot
 from app.core.erreurs import ErreurServiceIA
 from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service, gerer_erreur_validation
@@ -21,6 +23,7 @@ from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm.fabrique import obtenir_client, reinitialiser_client
 from app.prompts import RegistrePrompts
+from app.rag import RecuperateurVide
 
 
 @asynccontextmanager
@@ -29,17 +32,27 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     registre_prompts = RegistrePrompts()
     client_llm = obtenir_client()
     registre_agents = RegistreAgents()
+    recuperateur_rag = RecuperateurVide()
+
+    registre_agents.enregistrer(construire_definition(registre_prompts))
     registre_agents.enregistrer(definir_agent_chatbot(registre_prompts))
 
     app.state.client_llm = client_llm
     app.state.registre_agents = registre_agents
     app.state.registre_prompts = registre_prompts
-    app.state.harness = Harness(registre_agents, client_llm, registre_prompts=registre_prompts)
+    app.state.recuperateur_rag = recuperateur_rag
+    app.state.harness = Harness(
+        registre_agents,
+        client_llm,
+        registre_prompts=registre_prompts,
+        recuperateur_rag=recuperateur_rag,
+    )
 
     try:
         yield
     finally:
         await client_llm.fermer()
+        await recuperateur_rag.fermer()
         reinitialiser_client()
 
 

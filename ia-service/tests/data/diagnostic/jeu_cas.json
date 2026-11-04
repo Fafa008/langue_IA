@@ -23,7 +23,7 @@
           "code_langue": "fr",
           "referentiel": "CECRL",
           "niveau_estime": "A1",
-          "phase_assimil": "active",
+          "phase_assimil": "activation",
           "points_faibles": [],
           "score_confiance": 0.62,
           "niveau_preliminaire": "A1",
@@ -64,21 +64,16 @@
           "code_langue": "en",
           "referentiel": "CECRL",
           "niveau_estime": "B1",
-          "phase_assimil": "active",
-          "points_faibles": [
-            {
-              "competence": "ecoute",
-              "description": "La réponse signale une difficulté à saisir certains détails à l'oral."
-            }
-          ],
+          "phase_assimil": "activation",
+          "points_faibles": [],
           "score_confiance": 0.7,
           "niveau_preliminaire": "A2",
           "ecart_avec_niveau_preliminaire": 1
         }
       },
       "criteres_acceptation": {
-        "deterministes": ["sortie_pydantic_valide", "ecart_exact", "une_competence_par_point_faible"],
-        "revue_humaine": ["Le point faible retenu est appuyé par une difficulté explicitement déclarée."]
+        "deterministes": ["sortie_pydantic_valide", "ecart_exact", "aucune_faiblesse_sans_preuve_directe"],
+        "revue_humaine": ["La difficulté de compréhension déclarée n'est pas assimilée à une preuve objective de faiblesse en compréhension orale."]
       }
     },
     {
@@ -103,7 +98,7 @@
           "code_langue": "de",
           "referentiel": "CECRL",
           "niveau_estime": "C1",
-          "phase_assimil": "active",
+          "phase_assimil": "activation",
           "points_faibles": [],
           "score_confiance": 0.82,
           "niveau_preliminaire": "C1",
@@ -137,7 +132,7 @@
           "code_langue": "it",
           "referentiel": "CECRL",
           "niveau_estime": "A2",
-          "phase_assimil": "passive",
+          "phase_assimil": "impregnation",
           "points_faibles": [],
           "score_confiance": 0.0,
           "niveau_preliminaire": "A2",
@@ -178,7 +173,7 @@
           "code_langue": "fr",
           "referentiel": "CECRL",
           "niveau_estime": "B1",
-          "phase_assimil": "passive",
+          "phase_assimil": "impregnation",
           "points_faibles": [],
           "score_confiance": 0.0,
           "niveau_preliminaire": "B1",
@@ -212,7 +207,7 @@
           "code_langue": "en",
           "referentiel": "CECRL",
           "niveau_estime": "B2",
-          "phase_assimil": "passive",
+          "phase_assimil": "impregnation",
           "points_faibles": [],
           "score_confiance": 0.0,
           "niveau_preliminaire": "B2",
@@ -246,7 +241,7 @@
           "code_langue": "it",
           "referentiel": "CECRL",
           "niveau_estime": "B2",
-          "phase_assimil": "active",
+          "phase_assimil": "activation",
           "points_faibles": [],
           "score_confiance": 0.76,
           "niveau_preliminaire": "B2",
@@ -280,7 +275,7 @@
           "code_langue": "zh",
           "referentiel": "HSK",
           "niveau_estime": "HSK 3",
-          "phase_assimil": "active",
+          "phase_assimil": "activation",
           "points_faibles": [],
           "score_confiance": 0.7,
           "niveau_preliminaire": "HSK 3",
@@ -380,7 +375,7 @@
           "code_langue": "en",
           "referentiel": "CECRL",
           "niveau_estime": "B2",
-          "phase_assimil": "active",
+          "phase_assimil": "activation",
           "points_faibles": [],
           "score_confiance": 0.58,
           "niveau_preliminaire": "A1",
