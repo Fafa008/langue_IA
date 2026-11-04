@@ -26,7 +26,7 @@ from app.prompts import RegistrePrompts
 from app.rag import RecuperateurVide, RequeteRAG
 from app.schemas.commun import CodeErreur, ReponseAgent, ReponseErreur, RequeteAgent
 from app.schemas.contexte import ContexteApprenant
-from app.schemas.diagnostic import ResultatDiagnostic
+from app.schemas.diagnostic import PhaseAssimil, ResultatDiagnostic
 from tests.donnees import REQUEST_ID
 
 CONTEXTE_APPRENANT = {
@@ -66,8 +66,15 @@ RESULTAT = {
     "code_langue": "en",
     "referentiel": "CECRL",
     "niveau_estime": "B2",
-    "phase_assimil": "active",
-    "points_faibles": [{"competence": "ecrit", "description": "Emploi irrégulier des temps."}],
+    "phase_assimil": "activation",
+    "points_faibles": [
+        {
+            "domaine": "expression_ecrite",
+            "id_question": "q-1",
+            "observation": "La réponse comporte une phrase au présent là où le passé serait attendu.",
+            "justification": "Cette observation semble indiquer un emploi irrégulier des temps ; à confirmer.",
+        }
+    ],
     "score_confiance": 0.78,
     "niveau_preliminaire": "B1",
     "ecart_avec_niveau_preliminaire": 1,
@@ -77,7 +84,7 @@ RESULTAT_PRUDENT = {
     "code_langue": "en",
     "referentiel": "CECRL",
     "niveau_estime": "B1",
-    "phase_assimil": "passive",
+    "phase_assimil": "impregnation",
     "points_faibles": [],
     "score_confiance": 0.0,
     "niveau_preliminaire": "B1",
@@ -192,7 +199,7 @@ def test_execute_le_diagnostic_et_retourne_une_reponse_conforme() -> None:
     assert resultat.request_id == UUID(REQUEST_ID)
     assert resultat.agent == CODE_AGENT
     assert resultat.version_agent == VERSION_AGENT
-    assert resultat.version_prompt == "diagnostic/evaluation@1.0.0"
+    assert resultat.version_prompt == "diagnostic/evaluation@1.1.0"
     assert resultat.resultat == ResultatDiagnostic.model_validate(RESULTAT)
     assert resultat.meta.fournisseur == "factice"
     assert resultat.meta.modele == "factice-1"
@@ -369,6 +376,105 @@ def test_refuse_un_resultat_qui_ne_reprend_pas_le_niveau_preliminaire() -> None:
     assert resultat.erreur.code is CodeErreur.LLM_REPONSE_INVALIDE
 
 
+def test_refuse_un_point_faible_qui_cite_une_reponse_absente() -> None:
+    resultat_invente = {
+        **RESULTAT,
+        "points_faibles": [
+            {
+                **RESULTAT["points_faibles"][0],
+                "id_question": "q-inconnue",
+            }
+        ],
+    }
+    harness, _, _, _ = preparer(resultat=resultat_invente)
+
+    resultat = executer(harness, requete())
+
+    assert isinstance(resultat, ReponseErreur)
+    assert resultat.erreur.code is CodeErreur.LLM_REPONSE_INVALIDE
+    assert resultat.erreur.retryable is True
+
+
+def test_refuse_un_point_faible_fonde_sur_une_preuve_indirecte() -> None:
+    entree = {
+        **ENTREE,
+        "reponses": [
+            {
+                "id_question": "q-1",
+                "competence": "ecrit",
+                "type_reponse": "choix",
+                "contenu": "B",
+            }
+        ],
+    }
+    harness, _, _, _ = preparer()
+
+    resultat = executer(harness, requete(entree=entree))
+
+    assert isinstance(resultat, ReponseErreur)
+    assert resultat.erreur.code is CodeErreur.LLM_REPONSE_INVALIDE
+
+
+def test_refuse_l_activation_sans_production_libre() -> None:
+    entree = {
+        **ENTREE,
+        "reponses": [
+            {
+                "id_question": "q-1",
+                "competence": "lecture",
+                "type_reponse": "choix",
+                "contenu": "B",
+            }
+        ],
+    }
+    resultat_sans_production = {**RESULTAT, "points_faibles": []}
+    harness, _, _, _ = preparer(resultat=resultat_sans_production)
+
+    resultat = executer(harness, requete(entree=entree))
+
+    assert isinstance(resultat, ReponseErreur)
+    assert resultat.erreur.code is CodeErreur.LLM_REPONSE_INVALIDE
+
+
+def test_accepte_l_impregnation_avec_des_choix_seuls() -> None:
+    entree = {
+        **ENTREE,
+        "reponses": [
+            {
+                "id_question": "q-1",
+                "competence": "lecture",
+                "type_reponse": "choix",
+                "contenu": "B",
+            }
+        ],
+    }
+    resultat_impregnation = {
+        **RESULTAT_PRUDENT,
+        "score_confiance": 0.4,
+    }
+    harness, _, _, _ = preparer(resultat=resultat_impregnation)
+
+    resultat = executer(harness, requete(entree=entree))
+
+    assert isinstance(resultat, ReponseAgent)
+    assert resultat.resultat.phase_assimil is PhaseAssimil.IMPREGNATION
+    assert resultat.resultat.points_faibles == []
+
+
+def test_refuse_des_identifiants_de_question_dupliques() -> None:
+    entree = {
+        **ENTREE,
+        "reponses": [
+            {**REPONSES[0]},
+            {**REPONSES[1], "id_question": REPONSES[0]["id_question"]},
+        ],
+    }
+
+    with pytest.raises(ValidationError) as erreur:
+        EntreeDiagnostic.model_validate(entree)
+    assert "identifiant de question" in str(erreur.value)
+
+
 def test_refuse_un_descripteur_hors_contexte_sans_appeler_le_llm() -> None:
     descripteur_francais = {**DESCRIPTEURS[0], "code_langue": "fr"}
     harness, client, _, _ = preparer(descripteurs=(descripteur_francais,))
@@ -456,7 +562,7 @@ def test_utilise_le_referentiel_hsk_pour_le_mandarin() -> None:
         "code_langue": "zh",
         "referentiel": "HSK",
         "niveau_estime": "HSK 3",
-        "phase_assimil": "active",
+        "phase_assimil": "activation",
         "points_faibles": [],
         "score_confiance": 0.7,
         "niveau_preliminaire": "HSK 2",

@@ -56,14 +56,14 @@ contrat, de façon à ce que les neuf agents partagent la même enveloppe sans d
 | `app/schemas/base.py` | `ModeleStrict` : `extra="forbid"` pour tous les modèles |
 | `app/schemas/regles.py` | Langues, référentiels, niveaux, compétences, helpers |
 | `app/schemas/contexte.py` | `ContexteApprenant`, `MemoirePedagogique` |
-| `app/schemas/diagnostic.py` | `ResultatDiagnostic`, `PointFaible`, `PhaseAssimil`, calcul de l'écart |
+| `app/schemas/diagnostic.py` | `ResultatDiagnostic`, `PointFaible`, `PreuveReponse`, `PhaseAssimil`, calcul de l'écart |
 | `app/schemas/commun.py` | `RequeteAgent[T]`, `ReponseAgent[T]`, `MetaExecution`, `ErreurAgent`, `ReponseErreur` |
 | `app/schemas/__init__.py` | Réexports publics |
 | `tests/test_contexte.py` | Contexte et mémoire pédagogique |
 | `tests/test_diagnostic.py` | Résultat, phases, écarts, cohérence |
 | `tests/test_commun.py` | Enveloppes, métadonnées, erreurs |
 | `tests/test_exemples_json.py` | Exécution des exemples livrés |
-| `tests/exemples/valide/` et `invalide/` | 10 charges utiles JSON |
+| `tests/exemples/valide/` et `invalide/` | Charges utiles JSON valides et invalides du contrat courant |
 | `docs/contrat-modeles-ia.md` | Contrat détaillé (valeurs, bornes, exemples) |
 | `docs/US-151-validation-stricte-pydantic.md` | Le présent bilan de tâche |
 | `pyproject.toml`, `requirements-dev.txt` | Outillage local et CI |
@@ -80,7 +80,7 @@ contrat, de façon à ce que les neuf agents partagent la même enveloppe sans d
 | Champs inconnus | `extra="forbid"` hérité partout | Une faute de frappe ou un champ pirate produit une `422`, jamais un silence |
 | Référentiel | Exigé puis vérifié contre la langue (`zh` → HSK, sinon CECRL) | Reprend la règle du backend ; empêche `en` + `HSK` |
 | Niveaux | Listes fermées CECRL et HSK | Aucune valeur inventée (`A0`, `C3`, `HSK 7` refusés) |
-| Phase Assimil | `passive` et `active` seulement | Les deux phases existantes ; toute autre phase relève d'une décision pédagogique |
+| Phase Assimil | `impregnation` et `activation` (US30 ; `passive`/`active` archivés) | Les deux phases du contrat public ; toute autre phase relève d'une décision pédagogique |
 | Écart | Recalculé par différence d'indices et comparé au champ reçu | Rend l'arbitrage traçable et détecte une incohérence |
 | Score de confiance | Nombre entre 0 et 1, booléen et chaîne refusés | Ce n'est pas un score de bonnes réponses sur 100 |
 | Niveau préliminaire | Répété dans le résultat | Auditabilité et vérification de l'écart (point ouvert §10) |
@@ -96,10 +96,11 @@ contrat, de façon à ce que les neuf agents partagent la même enveloppe sans d
 2. Espaces normalisés (`str_strip_whitespace`, listes compactées).
 3. Langues fermées : `fr`, `en`, `zh`, `it`, `de` ; référentiel cohérent avec la langue.
 4. Niveaux fermés par référentiel ; compétences fermées : `grammaire`, `lecture`, `ecoute`, `ecrit`, `oral`.
-5. Longueurs bornées : résumé 2 000, point 120, description 200, message 500, agent 32, empreinte SHA-256.
+5. Longueurs bornées : résumé 2 000, point 120, observation 160, justification 240, message 500, agent 32,
+   empreinte SHA-256.
 6. Listes bornées : 5 points forts, 5 points faibles, 5 points faibles de diagnostic, 10 détails.
-7. Unicité : pas de doublon de point (casse ignorée) ni de compétence ; un point ne peut être à la fois fort et
-   faible.
+7. Unicité : pas de doublon de point (casse ignorée), de domaine de faiblesse ou d'identifiant de question ; un
+   point ne peut être à la fois fort et faible.
 8. Cohérence : référentiel/langue, niveau/référentiel, écart/niveaux, `retryable`/code.
 9. Formats : UUID, SemVer, `agent/tache@x.y.z`, `sha256:<64 hex>`, code d'agent en minuscules.
 
@@ -181,7 +182,7 @@ La ligne correspondante de `CONTRIBUTING.md` et la section « Tests IA » ont é
 
 | Sujet | État |
 | --- | --- |
-| Libellés des phases Assimil | `passive` et `active` retenus ; toute autre phase exige une validation pédagogique |
+| Libellés des phases Assimil | `impregnation` et `activation` retenus depuis US30 ; `passive`/`active` ne sont plus acceptés |
 | Maximum de 5 points faibles | Choix de conception aligné sur les 5 compétences du contrat |
 | `niveau_preliminaire` répété dans le résultat | Conservé pour l'auditabilité ; peut être retiré si le backend s'appuie uniquement sur le contexte |
 | Liste des neuf agents | Non arbitrée (D-07) : `agent` validé par format, pas par énumération |

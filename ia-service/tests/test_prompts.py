@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.core.erreurs import ErreurPromptIntrouvable, ErreurRegistre
-from app.prompts.registre import RegistrePrompts, _valider_template
+from app.prompts.registre import VERSION_EVALUATION_DIAGNOSTIC, RegistrePrompts, _valider_template
 from app.prompts.variables import VariablesEvaluationDiagnostic
 from tests.donnees import CONTEXTE_MINIMAL
 
@@ -45,11 +45,11 @@ def test_charge_et_rend_le_prompt_versionne_avec_toutes_les_variables() -> None:
     rendu = RegistrePrompts().rendre_evaluation_diagnostic(variables_diagnostic())
 
     assert [message.role for message in rendu.messages] == ["system", "user"]
-    assert rendu.version_prompt == "diagnostic/evaluation@1.0.0"
+    assert rendu.version_prompt == "diagnostic/evaluation@1.1.0"
     assert rendu.empreinte_prompt.startswith("sha256:")
     assert len(rendu.empreinte_prompt.removeprefix("sha256:")) == 64
     assert rendu.temperature == 0.2
-    assert rendu.max_tokens == 600
+    assert rendu.max_tokens == 900
 
     donnees = rendu.messages[1].contenu.split("<donnees_diagnostic_non_fiables>\n", 1)[1]
     donnees = donnees.split("\n</donnees_diagnostic_non_fiables>", 1)[0]
@@ -94,6 +94,42 @@ def test_selectionne_les_exemples_du_scenario_et_de_la_langue_demandes() -> None
 def test_refuse_une_version_de_prompt_inconnue() -> None:
     with pytest.raises(ErreurPromptIntrouvable):
         RegistrePrompts().rendre_evaluation_diagnostic(variables_diagnostic(), version="9.9.9")
+
+
+def test_la_version_archivee_n_est_plus_chargee() -> None:
+    """Les ressources 1.0.0 restent sur disque, mais seul le prompt publié est chargé et validé."""
+    with pytest.raises(ErreurPromptIntrouvable):
+        RegistrePrompts().rendre_evaluation_diagnostic(variables_diagnostic(), version="1.0.0")
+
+
+def test_le_prompt_actif_porte_les_regles_des_points_faibles_et_des_phases() -> None:
+    rendu = RegistrePrompts().rendre_evaluation_diagnostic(variables_diagnostic())
+    systeme = rendu.messages[0].contenu
+
+    for attendu in (
+        "observation",
+        "justification",
+        "id_question",
+        "Preuve directe",
+        "comprehension_ecrite",
+        "comprehension_orale",
+        "expression_ecrite",
+        "expression_orale",
+        "impregnation",
+        "activation",
+        "Une réponse à choix seule ne suffit jamais",
+        "`activation` est interdit si toutes les réponses sont des choix",
+    ):
+        assert attendu in systeme
+    assert "passive" not in systeme
+
+
+def test_les_ressources_des_deux_versions_restent_presentes() -> None:
+    repertoire = Path(__file__).parents[1] / "app" / "prompts" / "diagnostic"
+
+    for version in ("1.0.0", VERSION_EVALUATION_DIAGNOSTIC):
+        for suffixe in ("systeme.md", "utilisateur.md", "jsonl"):
+            assert (repertoire / f"evaluation@{version}.{suffixe}").is_file()
 
 
 def test_refuse_un_template_auquel_il_manque_une_variable() -> None:

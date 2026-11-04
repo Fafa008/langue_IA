@@ -40,7 +40,7 @@ pour US70 :
     "code_langue": "fr",
     "referentiel": "CECRL",
     "niveau_estime": "B1",
-    "phase_assimil": "active",
+    "phase_assimil": "activation",
     "points_faibles": [],
     "score_confiance": 0.76,
     "niveau_preliminaire": "B1",
@@ -50,8 +50,8 @@ pour US70 :
 }
 ```
 
-Le schéma Pydantic strict US70 vérifie les champs, les langues, le référentiel associé, les niveaux, les compétences,
-les bornes numériques, la cohérence du résultat avec le contexte et l'écart de niveau. Le champ `scenario` accepte
+Le schéma Pydantic strict US70 vérifie les champs, les langues, le référentiel associé, les niveaux, les domaines de
+faiblesse, les preuves citées, les bornes numériques, la cohérence du résultat avec le contexte et l'écart de niveau. Le champ `scenario` accepte
 uniquement `quotidien`, `entretien` ou `examen`. Son défaut `quotidien` permet de charger sans changement les
 exemples historiques de US70, dont la version de prompt reste intacte.
 
@@ -77,7 +77,9 @@ les appels existants ; le fournisseur d'exemples est sélectionné depuis cette 
 Le rendu US70 utilise ce résultat automatiquement si `exemples_few_shot` n'est pas fourni. Les exemples injectés
 restent compatibles avec les variables du prompt US70 (`entree`, `sortie`, `justification`) et avec le validateur de
 sortie `ResultatDiagnostic`. Une sélection explicite est également refusée si son scénario ou sa langue diffère.
-Le template et les fichiers du prompt `diagnostic/evaluation@1.0.0` ne sont pas modifiés.
+Le template et les fichiers du prompt `diagnostic/evaluation@1.0.0` ne sont pas modifiés par US71. Depuis US30, les
+exemples ont été alignés sur `diagnostic/evaluation@1.1.0` (preuves directes, phases `impregnation`/`activation`) ;
+les ressources `1.0.0` restent archivées et ne sont plus chargées.
 
 L'empreinte renvoyée par le rendu combine l'empreinte des ressources de prompt US70 et le JSON canonique de l'exemple
 effectivement sélectionné. Elle distingue donc les exemples utilisés sans modifier le contenu ou la version du
