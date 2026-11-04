@@ -91,7 +91,8 @@ client = FakeLLMClient([ScenarioLLM(reponse={"niveau_estime": "B2"})])
 
 ### Prompts versionnés (US70)
 
-Le registre partagé charge et valide `diagnostic/evaluation@1.0.0` au démarrage. Il expose les deux messages prêts
+Le registre partagé charge et valide `diagnostic/evaluation@1.1.0` au démarrage (les ressources `1.0.0` restent
+archivées, non chargées). Il expose les deux messages prêts
 pour `FournisseurLLM`, la version, l'empreinte SHA-256, la température et le nombre maximal de tokens. Le template
 exige exactement les sept variables déclarées et sérialise chaque valeur dynamique en JSON, en échappant les
 marqueurs HTML susceptibles de fermer le bloc des données non fiables.
@@ -109,6 +110,8 @@ resultat, meta = await contexte.outils.client_llm.generer_json(
 Le prompt et ses variables sont détaillés dans
 [`docs/US-70-prompt-diagnostic.md`](docs/US-70-prompt-diagnostic.md). Le score préliminaire reste celui du backend ;
 en cas de preuves insuffisantes, le prompt applique une sortie prudente compatible avec le schéma Pydantic actuel.
+Les points faibles justifiés et la phase Assimil sont détaillés dans
+[`docs/US-30-points-faibles-phase-assimil.md`](docs/US-30-points-faibles-phase-assimil.md).
 
 ### Bibliothèque few-shot (US71)
 
@@ -131,9 +134,14 @@ validation et les limites.
 1. interroge le port `RecuperateurRAG` (langue, référentiel, niveau, compétences, texte borné à 4 000 caractères) ;
 2. filtre les descripteurs (contexte, doublons, plafond de 8) ;
 3. laisse le registre sélectionner le few-shot du scénario et de la langue ;
-4. rend `diagnostic/evaluation@1.0.0` et appelle le client LLM partagé ;
-5. vérifie la cohérence du résultat avec le contexte ;
+4. rend `diagnostic/evaluation@1.1.0` et appelle le client LLM partagé ;
+5. vérifie la cohérence du résultat avec le contexte, puis que chaque point faible cite une preuve directe
+   disponible (US30) ;
 6. signale un écart d'au moins deux niveaux avec le niveau préliminaire.
+
+Chaque point faible porte un `domaine` (six valeurs du contrat public), l'`id_question` citée, une `observation`
+factuelle et une `justification` prudente. La phase `activation` exige au moins une production libre (`texte` ou
+`audio`) ; `impregnation` reste valide avec des choix seuls. Les anciennes valeurs `passive`/`active` sont refusées.
 
 ```python
 reponse = await harness.executer("diagnostic", requete)  # ReponseAgent[ResultatDiagnostic] ou ReponseErreur
@@ -142,8 +150,9 @@ reponse = await harness.executer("diagnostic", requete)  # ReponseAgent[Resultat
 `RecuperateurVide` retourne une séquence vide tant que le corpus n'est pas branché : le prompt applique sa règle de
 prudence et l'agent ne fabrique aucun descripteur. Le score objectif du backend n'est jamais recalculé, aucune
 donnée n'est persistée et aucune route d'inférence n'est encore exposée. Voir
-[`docs/US-29-agent-diagnostic.md`](docs/US-29-agent-diagnostic.md) pour l'entrée, le pipeline, les erreurs et
-l'exemple complet requête/réponse.
+[`docs/US-29-agent-diagnostic.md`](docs/US-29-agent-diagnostic.md) et
+[`docs/US-30-points-faibles-phase-assimil.md`](docs/US-30-points-faibles-phase-assimil.md) pour l'entrée, le
+pipeline, les preuves, les erreurs et l'exemple complet requête/réponse.
 
 ### Correspondance des erreurs
 
