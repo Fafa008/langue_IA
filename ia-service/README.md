@@ -229,6 +229,8 @@ tests/
 
 ## Documentation
 
+- [`docs/US-152-jeu-cas-test-diagnostic.md`](docs/US-152-jeu-cas-test-diagnostic.md) — jeu de cas synthétiques,
+  tests déterministes, critères de revue humaine et limites.
 - [`docs/US-69-llm-client-harness.md`](docs/US-69-llm-client-harness.md) — bilan de la tâche, interfaces, décisions,
   tests et extension aux neuf agents.
 - [`docs/US-67-api-chatbot.md`](docs/US-67-api-chatbot.md) — contrat de `POST /chatbot/message`, erreurs, décisions
