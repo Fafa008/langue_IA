@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from app.schemas.commun import ReponseAgent, ReponseErreur
+from app.agents.diagnostic import EntreeDiagnostic
+from app.schemas.commun import ReponseAgent, ReponseErreur, RequeteAgent
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.diagnostic import ResultatDiagnostic
 
@@ -15,6 +16,7 @@ EXEMPLES = Path(__file__).parent / "exemples"
 MODELES_VALIDES: dict[str, type[BaseModel]] = {
     "contexte-apprenant.json": ContexteApprenant,
     "resultat-diagnostic.json": ResultatDiagnostic,
+    "requete-diagnostic.json": RequeteAgent[EntreeDiagnostic],
     "reponse-diagnostic.json": ReponseAgent[ResultatDiagnostic],
     "erreur-standard.json": ReponseErreur,
 }
