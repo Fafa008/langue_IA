@@ -19,9 +19,14 @@ RESULTAT_VALIDE = {
     "code_langue": "en",
     "referentiel": "CECRL",
     "niveau_estime": "B2",
-    "phase_assimil": "active",
+    "phase_assimil": "activation",
     "points_faibles": [
-        {"competence": "ecrit", "description": "Emploi irrégulier des temps."},
+        {
+            "domaine": "expression_ecrite",
+            "id_question": "q-1",
+            "observation": "La réponse comporte une phrase au présent là où le passé serait attendu.",
+            "justification": "Cette observation semble indiquer un emploi irrégulier des temps ; à confirmer.",
+        },
     ],
     "score_confiance": 0.78,
     "niveau_preliminaire": "B1",
