@@ -82,6 +82,39 @@ def test_fournisseur_reel_exige_parametres() -> None:
         )
 
 
+def test_fournisseur_gemini_exige_un_modele_et_une_cle() -> None:
+    with pytest.raises(ValidationError, match="GEMINI_MODEL.*GEMINI_API_KEY"):
+        ConfigLLM(fournisseur="gemini")
+    with pytest.raises(ValidationError, match="GEMINI_API_KEY"):
+        ConfigLLM(fournisseur="gemini", gemini_modele="modele-configurable")
+
+
+def test_config_gemini_lit_les_variables_dediees(env_propre: pytest.MonkeyPatch) -> None:
+    env_propre.setenv("LLM_FOURNISSEUR", "gemini")
+    env_propre.setenv("GEMINI_MODEL", "modele-configurable")
+    env_propre.setenv("GEMINI_API_KEY", "cle-test-gemini")
+
+    c = charger_config()
+
+    assert c.fournisseur == "gemini"
+    assert c.gemini_modele == "modele-configurable"
+    assert c.gemini_cle_api is not None
+    assert c.gemini_cle_api.get_secret_value() == "cle-test-gemini"
+    assert "cle-test-gemini" not in repr(c)
+
+
+def test_charger_config_gemini_sans_cle_ne_revele_aucune_valeur(env_propre: pytest.MonkeyPatch) -> None:
+    env_propre.setenv("LLM_FOURNISSEUR", "gemini")
+    env_propre.setenv("GEMINI_MODEL", "modele-configurable")
+
+    with pytest.raises(ErreurConfiguration) as exc:
+        charger_config()
+
+    assert "GEMINI_API_KEY" in str(exc.value)
+    assert "GEMINI_MODEL" not in str(exc.value)
+    assert "cle-test-gemini" not in str(exc.value)
+
+
 def test_config_est_gelee() -> None:
     c = ConfigLLM()
     with pytest.raises(ValidationError):
@@ -106,6 +139,11 @@ def test_charger_config_lit_les_variables(env_propre: pytest.MonkeyPatch) -> Non
     assert c.politique_reprise.delai_initial_s == 0.2
     assert c.politique_reprise.delai_max_s == 2.5
     assert c.politique_reprise.budget_total_s == 18.0
+
+
+def test_charger_config_accepte_le_nom_timeout_sans_suffixe(env_propre: pytest.MonkeyPatch) -> None:
+    env_propre.setenv("LLM_TIMEOUT", "8")
+    assert charger_config().timeout_s == 8.0
 
 
 def test_charger_config_prod_factice(env_propre: pytest.MonkeyPatch) -> None:
@@ -153,7 +191,7 @@ def test_charger_config_fournisseur_inconnu(env_propre: pytest.MonkeyPatch) -> N
     [
         ("LLM_TEMPERATURE", "3", "temperature"),
         ("LLM_MAX_TOKENS", "0", "max_tokens"),
-        ("LLM_TIMEOUT_S", "0", "timeout_s"),
+        ("LLM_TIMEOUT_S", "0", "LLM_TIMEOUT"),
         ("LLM_MAX_RETRIES", "4", "max_retries"),
         ("LLM_REPRISE_DELAI_S", "-1", "reprise_delai_s"),
         ("LLM_REPRISE_DELAI_MAX_S", "61", "reprise_delai_max_s"),
