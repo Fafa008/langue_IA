@@ -72,8 +72,48 @@ class CompatibleOpenAI:
 
     @property
     def politique_reprise(self) -> PolitiqueReprise:
-        """Bornes de reprise appliquées aux appels JSON."""
+        """Bornes de reprise appliquées aux appels texte et JSON."""
         return self._politique
+
+    async def generer_texte(
+        self,
+        messages: Sequence[MessageLLM],
+        *,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        delai_s: float | None = None,
+    ) -> tuple[str, ReponseLLM]:
+        """Générer du texte avec la même politique de reprise et les mêmes métadonnées que le mode JSON."""
+        debut = time.monotonic()
+        corps = self._corps(messages, temperature, max_tokens, mode_json=False, flux=False)
+
+        async def tentative() -> tuple[str, dict | None]:
+            reponse_http = await self._poster(corps, self._delai(delai_s))
+            donnees = self._charger_json(reponse_http)
+            contenu = self._extraire_contenu(donnees)
+            if not contenu.strip():
+                raise ErreurReponseLlm(MESSAGE_REPONSE_INVALIDE)
+            usage = donnees.get("usage")
+            return contenu, usage if isinstance(usage, dict) else None
+
+        try:
+            async with asyncio.timeout(self._config.budget_total_s):
+                contenu, usage = await reessayer(
+                    tentative,
+                    politique=self._politique,
+                    attente=self._attente,
+                )
+        except TimeoutError as exc:
+            raise ErreurLlmTimeout(MESSAGE_TIMEOUT) from exc
+
+        return contenu, ReponseLLM(
+            contenu=contenu,
+            fournisseur=self.nom,
+            modele=self.modele,
+            duree_ms=self._duree_ms(debut),
+            tokens_entree=self._entier_ou_none(usage, "prompt_tokens"),
+            tokens_sortie=self._entier_ou_none(usage, "completion_tokens"),
+        )
 
     async def generer_json(
         self,

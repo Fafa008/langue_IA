@@ -1,8 +1,12 @@
 """Tests du câblage FastAPI (lifespan, santé)."""
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from google.genai import types
 
 from app.agents.diagnostic import CODE_AGENT, VERSION_AGENT
 from app.core.erreurs import ErreurConfiguration, ErreurLlmIndisponible, ErreurServiceIA
@@ -11,9 +15,11 @@ from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm import fabrique
 from app.llm.adaptateurs.factice import FakeLLMClient
+from app.llm.adaptateurs.gemini import GeminiClient
 from app.main import app
 from app.prompts import RegistrePrompts
 from app.rag import RecuperateurVide
+from tests.donnees import CONTEXTE_MINIMAL, REQUEST_ID
 
 
 @pytest.fixture(autouse=True)
@@ -42,6 +48,55 @@ def test_health_et_lifespan(env_propre: pytest.MonkeyPatch) -> None:
         assert app.state.registre_agents.resoudre(CODE_AGENT).schema_entree is not None
 
     assert client_llm.ferme is True
+
+
+def test_lifespan_gemini_sans_appel_reseau(env_propre: pytest.MonkeyPatch) -> None:
+    env_propre.setenv("LLM_FOURNISSEUR", "gemini")
+    env_propre.setenv("GEMINI_MODEL", "modele-test")
+    env_propre.setenv("GEMINI_API_KEY", "cle-test-gemini")
+
+    with TestClient(app) as client:
+        assert isinstance(app.state.client_llm, GeminiClient)
+        assert app.state.client_llm.modele == "modele-test"
+        assert client.get("/health").status_code == 200
+
+
+def test_chatbot_utilise_gemini_via_le_harness(env_propre: pytest.MonkeyPatch) -> None:
+    env_propre.setenv("LLM_FOURNISSEUR", "gemini")
+    env_propre.setenv("GEMINI_MODEL", "modele-test")
+    env_propre.setenv("GEMINI_API_KEY", "cle-test-gemini")
+
+    sdk = Mock()
+    sdk.aio = Mock()
+    sdk.aio.models = Mock()
+    sdk.aio.models.generate_content = AsyncMock(
+        return_value=SimpleNamespace(
+            text='{"reponse":"Bonjour !"}',
+            usage_metadata=None,
+            candidates=[SimpleNamespace(finish_reason=types.FinishReason.STOP)],
+        )
+    )
+    sdk.aio.models.generate_content_stream = AsyncMock()
+    sdk.aio.aclose = AsyncMock()
+    sdk.close = Mock()
+
+    with patch("app.llm.adaptateurs.gemini.genai.Client", return_value=sdk):
+        with TestClient(app) as client:
+            reponse = client.post(
+                "/chatbot/message",
+                json={
+                    "request_id": str(REQUEST_ID),
+                    "contexte": CONTEXTE_MINIMAL,
+                    "entree": {"message": "Bonjour"},
+                },
+            )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["resultat"] == {"reponse": "Bonjour !"}
+    assert reponse.json()["meta"]["fournisseur"] == "gemini"
+    assert reponse.json()["meta"]["modele"] == "modele-test"
+    sdk.aio.models.generate_content.assert_awaited_once()
+    sdk.aio.aclose.assert_awaited_once()
 
 
 def test_demarrage_refuse_une_configuration_invalide(

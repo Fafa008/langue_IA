@@ -51,6 +51,20 @@ def test_generer_json_valide_et_journalise() -> None:
     asyncio.run(scenario())
 
 
+def test_generer_texte_valide_et_journalise() -> None:
+    client = FakeLLMClient([ScenarioLLM(reponse="bonjour")], modele="factice-test")
+
+    async def scenario() -> None:
+        texte, reponse = await client.generer_texte(MESSAGES)
+        assert texte == "bonjour"
+        assert reponse.contenu == texte
+        assert reponse.fournisseur == "factice"
+        assert reponse.modele == "factice-test"
+        assert client.appels == [MESSAGES]
+
+    asyncio.run(scenario())
+
+
 def test_generer_json_accepte_un_modele_et_une_chaine() -> None:
     client = FakeLLMClient(
         [
