@@ -2,8 +2,17 @@
 
 from app.models.ateliers import Atelier
 from app.models.diagnostic import Question, Reponse, TestDiagnostic
-from app.models.enums import Role, StatutAbonnement, StatutAtelier, StatutDiagnostic, StatutUtilisateur
+from app.models.enums import (
+    Role,
+    StatutAbonnement,
+    StatutAtelier,
+    StatutDiagnostic,
+    StatutParcours,
+    StatutUtilisateur,
+    TypeExercice,
+)
 from app.models.facturation import Abonnement, Formule, formule_langue
+from app.models.parcours import Exercice, Parcours, ParcoursExercice
 from app.models.pedagogie import Langue, Niveau, langue_niveau
 from app.models.roles import Permission, RoleRBAC, role_permission
 from app.models.utilisateurs import (
@@ -24,6 +33,9 @@ __all__ = [
     "Formule",
     "Langue",
     "Niveau",
+    "Exercice",
+    "Parcours",
+    "ParcoursExercice",
     "Permission",
     "Question",
     "Reponse",
@@ -32,8 +44,10 @@ __all__ = [
     "StatutAbonnement",
     "StatutAtelier",
     "StatutDiagnostic",
+    "StatutParcours",
     "StatutUtilisateur",
     "TestDiagnostic",
+    "TypeExercice",
     "Utilisateur",
     "apprenant_langue",
     "formateur_langue",
