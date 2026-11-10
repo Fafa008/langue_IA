@@ -26,6 +26,13 @@ def creer_client(config: ConfigLLM) -> FournisseurLLM:
         return FakeLLMClient(modele=config.modele or "factice-1")
     if config.fournisseur == "compatible-openai":
         return CompatibleOpenAI(config)
+    if config.fournisseur == "gemini":
+        # Import paresseux : le SDK google-genai pèse plusieurs secondes au démarrage. Le charger uniquement
+        # lorsqu'il est réellement choisi évite de dépasser le ping de surveillance d'Uvicorn (5 s) avec
+        # ``--workers`` et garde courts les démarrages des fournisseurs compatibles OpenAI.
+        from app.llm.adaptateurs.gemini import GeminiClient
+
+        return GeminiClient(config)
     raise ErreurConfiguration("Fournisseur LLM inconnu : la configuration a été refusée.")
 
 
