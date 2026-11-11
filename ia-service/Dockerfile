@@ -21,6 +21,14 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload
 FROM base AS prod
 RUN useradd --create-home --uid 1001 app
 COPY --chown=app:app . .
+
+# Uvicorn avec ``--workers`` tue puis relance un worker qui ne répond pas à son ping de surveillance en 5 s.
+# Au premier démarrage à froid, l'import de la bibliothèque standard et de l'application depuis les sources
+# (``PYTHONDONTWRITEBYTECODE=1`` interdit de les cacher à l'exécution) peut dépasser ce délai sur une machine
+# lente : d'où les messages « Child process died » sans traceback, suivis d'un démarrage réussi après reprise.
+# Précompiler les .pyc au build supprime cette course et rend le démarrage déterministe.
+RUN python -m compileall -q "$(python -c 'import sysconfig; print(sysconfig.get_paths()["stdlib"])')" app
+
 USER app
 EXPOSE 8001
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]

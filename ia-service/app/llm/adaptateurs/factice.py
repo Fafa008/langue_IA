@@ -1,8 +1,8 @@
 """Client LLM simulé (FakeLLMClient).
 
 Il permet de tester le Harness et les agents sans clé API, sans réseau et sans dépendre d'un fournisseur. Les
-scénarios sont consommés dans l'ordre : chaque appel (JSON ou flux) prend le scénario suivant, ce qui rend les
-erreurs et les timeouts reproductibles.
+scénarios sont consommés dans l'ordre : chaque appel (texte, JSON ou flux) prend le scénario suivant, ce qui rend
+les erreurs et les timeouts reproductibles.
 """
 
 import asyncio
@@ -65,6 +65,39 @@ class FakeLLMClient:
         if not self._scenarios:
             raise ErreurConfiguration("Aucun scénario factice n'est disponible pour cet appel.")
         return self._scenarios.popleft()
+
+    async def generer_texte(
+        self,
+        messages: Sequence[MessageLLM],
+        *,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        delai_s: float | None = None,
+    ) -> tuple[str, ReponseLLM]:
+        """Retourner le texte du scénario courant avec ses métadonnées normalisées."""
+        self.appels.append(list(messages))
+        scenario = self._prochain_scenario()
+        debut = self._horloge()
+
+        if scenario.delai_s > 0:
+            await asyncio.sleep(scenario.delai_s)
+        if scenario.erreur is not None:
+            raise scenario.erreur
+        if scenario.reponse is None:
+            raise ErreurReponseLlm("Le scénario factice ne contient aucune réponse texte.")
+
+        contenu = "".join(self._morceaux_depuis_reponse(scenario.reponse))
+        if not contenu.strip():
+            raise ErreurReponseLlm("Le scénario factice ne contient aucun texte exploitable.")
+
+        return contenu, ReponseLLM(
+            contenu=contenu,
+            fournisseur=self.nom,
+            modele=self.modele,
+            duree_ms=self._duree_ms(debut),
+            tokens_entree=self._tokens_entree(messages),
+            tokens_sortie=len(contenu.split()),
+        )
 
     async def generer_json(
         self,

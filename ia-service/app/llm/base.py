@@ -57,13 +57,24 @@ class MorceauFlux:
 class FournisseurLLM(Protocol):
     """Contrat structurel d'un adaptateur LLM.
 
-    Aucun héritage n'est imposé : un objet qui expose ces trois méthodes et les deux attributs est un fournisseur
-    valide. ``generer_json`` valide la réponse avec le schéma fourni ; ``generer_flux`` ne rejoue jamais un flux
-    commencé.
+    Aucun héritage n'est imposé : un objet qui expose ces quatre méthodes et les deux attributs est un fournisseur
+    valide. ``generer_texte`` retourne du texte et ses métadonnées ; ``generer_json`` valide la réponse avec le
+    schéma fourni ; ``generer_flux`` ne rejoue jamais un flux commencé.
     """
 
     nom: str
     modele: str
+
+    async def generer_texte(
+        self,
+        messages: Sequence[MessageLLM],
+        *,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        delai_s: float | None = None,
+    ) -> tuple[str, ReponseLLM]:
+        """Générer du texte de façon asynchrone et retourner une réponse normalisée."""
+        ...
 
     async def generer_json(
         self,
