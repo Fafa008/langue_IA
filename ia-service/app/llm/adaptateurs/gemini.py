@@ -32,6 +32,24 @@ MESSAGE_INDISPONIBLE = "Le fournisseur LLM est injoignable."
 MESSAGE_REQUETE_INVALIDE = "Le fournisseur LLM a refusé la requête."
 MESSAGE_REPONSE_INVALIDE = "Le fournisseur LLM a renvoyé une réponse inexploitable."
 
+# Mots-clés JSON Schema que l'API Gemini refuse dans ``response_schema``.
+# Pydantic émet ``additionalProperties: false`` dès que ``extra="forbid"`` est posé ; ``default`` n'est pas
+# accepté non plus. La validation finale restant celle de Pydantic, les retirer ne change pas le contrat.
+_CLES_SCHEMA_REFUSEES = frozenset({"additionalProperties", "default"})
+
+
+def _schema_compatible_gemini(valeur: object) -> object:
+    """Copier un schéma JSON en retirant récursivement les mots-clés refusés par l'API Gemini."""
+    if isinstance(valeur, dict):
+        return {
+            cle: _schema_compatible_gemini(sous_valeur)
+            for cle, sous_valeur in valeur.items()
+            if cle not in _CLES_SCHEMA_REFUSEES
+        }
+    if isinstance(valeur, list):
+        return [_schema_compatible_gemini(element) for element in valeur]
+    return valeur
+
 
 class GeminiClient:
     """Client Gemini partageant le contrat ``FournisseurLLM``."""
@@ -142,7 +160,7 @@ class GeminiClient:
         }
         if schema is not None:
             options["response_mime_type"] = "application/json"
-            options["response_schema"] = schema
+            options["response_schema"] = _schema_compatible_gemini(schema.model_json_schema())
         configuration = types.GenerateContentConfig(**options)
         debut = time.monotonic()
 
