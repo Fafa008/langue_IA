@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Service IA FastAPI (Python 3.11) — image multi-étapes.
-#   cible « dev »  : uvicorn --reload (docker-compose.dev.yml monte les sources)
+#   cible « dev »  : uvicorn --reload et outils de test (docker-compose.dev.yml monte les sources)
 #   cible « prod » : uvicorn avec plusieurs workers, utilisateur non-root
 
 FROM python:3.11-slim AS base
@@ -14,6 +14,9 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 FROM base AS dev
+# Outils de test et de lint (make test-ia, make check), absents de l'image de production
+COPY requirements-dev.txt .
+RUN pip install -r requirements-dev.txt
 COPY . .
 EXPOSE 8001
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
