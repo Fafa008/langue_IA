@@ -190,6 +190,34 @@ class TestMigration:
     def test_la_migration_du_diagnostic_est_reversible(self, db: Session):
         """Chaque migration du diagnostic peut être annulée puis rejouée sans toucher aux autres tables."""
         config = Config("alembic.ini")
+
+        colonnes_tentative = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'test_diagnostic'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert {"analyse_ia", "score"} <= set(colonnes_tentative)
+
+        # PRE-05 : la colonne d'analyse IA est la dernière ajoutée, donc annulée en premier.
+        command.downgrade(config, "-1")
+        colonnes_tentative = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'test_diagnostic'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert "analyse_ia" not in colonnes_tentative
+        assert "score" in colonnes_tentative
+
         command.downgrade(config, "-1")
 
         colonnes_question = (

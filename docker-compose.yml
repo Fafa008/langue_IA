@@ -75,6 +75,9 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       # Comptes de démonstration (mot de passe Demo2026) : false en production
       SEED_DEMO: ${SEED_DEMO:-true}
+      # Analyse IA du diagnostic (PRE-05). Une panne du service IA dégrade en résultat partiel, sans bloquer.
+      IA_SERVICE_URL: ${IA_SERVICE_URL:-http://ia-service:8001}
+      IA_SERVICE_TIMEOUT_S: ${IA_SERVICE_TIMEOUT_S:-55}
     volumes:
       # Photos de profil (servies sous /media), conservées d'un redémarrage à l'autre
       - media_data:/srv/media

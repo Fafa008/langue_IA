@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.ia import CompetenceIA, DomaineFaiblesseIA, PhaseAssimilIA
+
 
 class QuestionOut(BaseModel):
     """Question affichable par l'apprenant ; aucune donnée de correction n'est exposée."""
@@ -68,8 +70,27 @@ class TentativeOut(BaseModel):
     code_niveau: str
 
 
+class CompetenceResultatOut(BaseModel):
+    """Score déterministe sur les questions à choix d'une compétence."""
+
+    competence: CompetenceIA
+    score: int = Field(ge=0)
+    total: int = Field(gt=0)
+
+
+class PointFaibleOut(BaseModel):
+    """Point faible issu de l'analyse IA, réduit à ce que le contrat public expose."""
+
+    domaine: DomaineFaiblesseIA
+    detail: str | None = None
+
+
 class ScoreDiagnosticOut(BaseModel):
-    """Score final et niveau de référence renvoyés par le service scoring."""
+    """Score final, niveau de référence et analyse IA facultative.
+
+    Les champs d'analyse restent ``None`` quand le service IA est indisponible ou qu'aucune réponse n'est
+    exploitable : le frontend affiche alors un résultat partiel.
+    """
 
     id_tentative: int
     score: float
@@ -77,3 +98,6 @@ class ScoreDiagnosticOut(BaseModel):
     percentage: float
     level: str
     framework: Literal["CECRL", "HSK"]
+    competences: list[CompetenceResultatOut] | None = None
+    points_faibles: list[PointFaibleOut] | None = None
+    phase_assimil: PhaseAssimilIA | None = None
