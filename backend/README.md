@@ -102,6 +102,9 @@ backend/
   réponses est isolée dans `app/services/diagnostic.py`. Le score déterministe et le niveau de référence sont
   calculés dans `app/services/scoring.py`, à partir des questions à choix configurées. Le futur service IA pourra
   compléter cette évaluation sans modifier le contrat de persistance des réponses.
+- **Parcours** : un test diagnostique peut générer un seul parcours. `lecon_atteinte` détermine la phase
+  (passive jusqu’à la leçon 49, active à partir de la leçon 50) ; seules les leçons multiples de sept en phase
+  active sont des révisions.
 
 ## Ajouter une table
 
