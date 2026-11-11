@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 CODE_AGENT = "diagnostic"
 VERSION_AGENT = "1.0.0"
-BUDGET_MS = 15_000
+BUDGET_MS = 45_000
 SEUIL_ECART_IMPORTANT = 2
 
 
