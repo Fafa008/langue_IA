@@ -136,6 +136,8 @@ docker compose up --build -d --wait      # ou : make up
 | Voir l'état / les journaux        | `docker compose ps` / `docker compose logs -f`                              | `make ps` / `make logs` |
 | Arrêter (données conservées)      | `docker compose down`                                                       | `make down`             |
 | Repartir d'une base vide          | `docker compose down --volumes`                                             | `make reset`            |
+| Recharger les données de départ   | `docker compose exec backend python -m app.seed`                            | `make seed`             |
+| Contrôles de la CI, avant une PR  | ruff, pytest + couverture (backend, IA), typage, lint, Jest (frontend)      | `make check`            |
 
 Bon à savoir :
 
@@ -147,9 +149,14 @@ Bon à savoir :
   [`docs/api/contrat-frontend.md`](docs/api/contrat-frontend.md). Cette valeur est intégrée au build du frontend :
   relancer `docker compose up --build` après un changement (en mode `dev`, un simple redémarrage suffit).
 - **Backend** : implémente le contrat du frontend (voir [`backend/README.md`](backend/README.md)). Au démarrage, il
-  applique les migrations et crée les comptes de démonstration (`admin@digitheque.mg`, `Demo2026`…) si
-  `SEED_DEMO=true`. Tests : `make test`. Le service IA expose `/health` et contient le Harness partagé ainsi que
+  applique les migrations puis le seed (`backend/app/seed.py`, sans doublon) : référentiel toujours ; comptes de
+  démonstration (`apprenant@`, `formateur@`, `admin@digitheque.mg`, mot de passe `Demo2026`) et banque de questions
+  du diagnostic (anglais, français) si `SEED_DEMO=true`. Tests : `make test` (backend), `make test-ia` (service IA). Le service IA expose `/health` et contient le Harness partagé ainsi que
   les contrats et prompts versionnés ; l'agent diagnostic et son endpoint d'inférence restent à intégrer.
+- **« No module named … » après un `git pull`** : une dépendance a changé et l'image dev est périmée. `make dev`
+  reconstruit les images ; en mode dev, les conteneurs ne redémarrent plus seuls au démarrage de la machine.
+- **Windows** : `.gitattributes` impose des fins de ligne LF (un `docker-entrypoint.sh` en CRLF bloque le backend).
+  Clone fait avant ce fichier : supprimer `backend/docker-entrypoint.sh` puis `git checkout -- backend/docker-entrypoint.sh`.
 - **Modèles IA** : déposer les fichiers entraînés dans `ia-service/models/` (non versionnés), montés en lecture seule.
 
 ### Installation manuelle
