@@ -12,7 +12,7 @@ agents du Harness).
   du diagnostic et erreurs standardisées.
 - `app/core/` : configuration du client LLM (`SecretStr`, variables d'environnement), catalogue des codes d'erreur,
   exceptions typées, politique de reprise et gestionnaire d'erreurs central (US-69, US-154).
-- `app/llm/` : client LLM fournisseur-agnostique, fabrique, adaptateur `factice` et adaptateur `compatible-openai`
+- `app/llm/` : client LLM fournisseur-agnostique, fabrique et adaptateurs `factice`, `compatible-openai` et Gemini
   (US-69).
 - `app/harness/` : définition d'agent, registre et pipeline commun d'exécution (US-69).
 - `app/prompts/` : registre partagé et prompts versionnés `diagnostic/evaluation@1.1.0` (US30) et
@@ -40,19 +40,25 @@ contrat `FournisseurLLM`. Aucun accès à la base de données, aucun stockage pe
 
 ### Configuration
 
-Toutes les valeurs viennent de l'environnement ; aucune clé n'est écrite dans le code. `LLM_API_KEY` est un
-`SecretStr` : il n'apparaît ni dans `repr`, ni dans les erreurs, ni dans les journaux.
+Toutes les valeurs viennent de l'environnement ; aucune clé n'est écrite dans le code. Les clés `LLM_API_KEY` et
+`GEMINI_API_KEY` sont des `SecretStr` : elles n'apparaissent ni dans `repr`, ni dans les erreurs, ni dans les
+journaux. Le fournisseur principal est **Groq** via son API compatible OpenAI (`LLM_FOURNISSEUR=compatible-openai`) ;
+**Gemini** reste disponible comme alternative (`LLM_FOURNISSEUR=gemini`). Pour Gemini, `GEMINI_MODEL` attend
+l'identifiant du modèle (par exemple `gemini-3.5-flash-lite`), pas son nom d'affichage, et doit correspondre à un
+modèle activé pour le compte Google utilisé. Aucun changement de code n'est nécessaire pour changer de fournisseur.
 
 | Variable | Défaut | Rôle |
 | --- | --- | --- |
 | `ENVIRONNEMENT` | `dev` | `dev`, `test` ou `prod` ; `prod` interdit le fournisseur `factice` |
-| `LLM_FOURNISSEUR` | `factice` | `factice` ou `compatible-openai` |
-| `LLM_MODELE` | — | nom du modèle (obligatoire hors `factice`) |
-| `LLM_BASE_URL` | — | racine de l'API, par exemple `https://api.openai.com/v1` |
-| `LLM_API_KEY` | — | clé d'API (obligatoire hors `factice`) |
+| `LLM_FOURNISSEUR` | `factice` | `factice`, `compatible-openai` ou `gemini` |
+| `LLM_MODELE` | — | nom du modèle, obligatoire pour `compatible-openai` |
+| `LLM_BASE_URL` | — | racine de l'API, obligatoire pour `compatible-openai` |
+| `LLM_API_KEY` | — | clé de `compatible-openai`, jamais journalisée |
+| `GEMINI_MODEL` | — | identifiant du modèle Gemini disponible pour le compte |
+| `GEMINI_API_KEY` | — | clé Google Gemini, jamais journalisée |
 | `LLM_TEMPERATURE` | `0.2` | entre 0 et 2 |
 | `LLM_MAX_TOKENS` | `600` | entre 1 et 8 192 |
-| `LLM_TIMEOUT_S` | `12` | délai d'un appel, entre 0 exclu et 120 secondes |
+| `LLM_TIMEOUT` | `12` | délai d'un appel, entre 0 exclu et 120 secondes (`LLM_TIMEOUT_S` reste accepté) |
 | `LLM_MAX_RETRIES` | `1` | reprises sur erreur temporaire, entre 0 et 3 |
 | `LLM_REPRISE_DELAI_S` | `0.5` | délai initial entre deux tentatives, entre 0 et 10 secondes |
 | `LLM_REPRISE_DELAI_MAX_S` | `4` | plafond d'une attente, entre 0 et 60 secondes |
@@ -79,6 +85,55 @@ from app.harness.registre import RegistreAgents
 harness = Harness(RegistreAgents(), obtenir_client())
 reponse = await harness.executer("diagnostic", requete)  # ReponseAgent ou ReponseErreur
 ```
+
+### Vérification locale Groq (fournisseur principal)
+
+Les scripts chargent automatiquement le `.env` racine s'il existe, sans remplacer une variable déjà définie et sans
+afficher aucune valeur. Depuis `ia-service`, avec `LLM_FOURNISSEUR=compatible-openai`,
+`LLM_MODELE=openai/gpt-oss-20b`, `LLM_BASE_URL=https://api.groq.com/openai/v1` et `LLM_API_KEY` renseignée dans le
+`.env` racine :
+
+```powershell
+python -m scripts.verifier_groq
+```
+
+Le script vérifie le fournisseur et l'hôte Groq, envoie un prompt fixe non sensible et affiche le fournisseur, le
+modèle, l'URL, la latence et la réponse. Il ne lit ni n'affiche la clé.
+
+### Vérification locale Gemini (alternative)
+
+```powershell
+python -m scripts.verifier_gemini
+```
+
+Avec `LLM_FOURNISSEUR=gemini`, `GEMINI_MODEL` (identifiant du modèle, pas son nom d'affichage) et `GEMINI_API_KEY`
+définis dans le `.env` racine ou exportés dans l'environnement. Le script envoie un prompt fixe non sensible et
+affiche le fournisseur, le modèle, la latence et la réponse. Il ne lit ni n'affiche la clé, et ne journalise pas le
+prompt. Ne remplacez les valeurs factices que dans l'environnement local, jamais dans le dépôt.
+
+Avec Docker, renseignez les mêmes variables dans le `.env` à la racine (copié depuis `.env.example`), puis démarrez
+le service : `docker compose up --build -d --wait ia-service`. Compose transmet au service IA uniquement les
+paramètres nécessaires ; les clés LLM sont laissées vides côté Backend. Le Dockerfile ne contient aucune clé.
+Après une modification de dépendances, reconstruisez l'image ; un changement de configuration seul ne requiert
+qu'un redémarrage du conteneur.
+
+L'image de production précompile le bytecode Python au build. Avec `uvicorn --workers`, le superviseur tue puis
+relance un worker qui ne répond pas à son ping en 5 secondes ; une compilation à froid sur une machine lente peut
+dépasser ce délai et produire des messages « Child process died » sans traceback, suivis d'un démarrage réussi
+après reprise. La précompilation supprime cette course au premier démarrage.
+
+### Erreurs fréquentes
+
+- `LLM_CONFIGURATION` au démarrage : vérifiez `LLM_FOURNISSEUR` et les paramètres du fournisseur choisi
+  (`LLM_MODELE`, `LLM_BASE_URL`, `LLM_API_KEY` pour Groq ; `GEMINI_MODEL`, `GEMINI_API_KEY` pour Gemini).
+- `LLM_AUTHENTIFICATION` (401/403) : vérifiez la clé du fournisseur actif et ses droits.
+- `LLM_REQUETE_INVALIDE` (400/404) : le modèle peut être indisponible ou mal nommé ; pour Groq, vérifiez
+  `LLM_MODELE=openai/gpt-oss-20b` et `LLM_BASE_URL=https://api.groq.com/openai/v1` ; pour Gemini, remplacez
+  `GEMINI_MODEL` par un identifiant auquel le compte a accès.
+- `LLM_LIMITE_REQUETES` (429) : vérifiez le quota et la limite de débit du compte. Les reprises restent bornées et
+  ne s'appliquent qu'aux erreurs temporaires.
+- `LLM_TIMEOUT` : augmentez `LLM_TIMEOUT` dans sa limite configurée, tout en gardant un budget total cohérent dans
+  `LLM_BUDGET_TOTAL_S`.
 
 ### Tests sans clé API
 
@@ -239,9 +294,22 @@ pytest --cov=app --cov-report=term-missing --cov-fail-under=70
 ruff check . && ruff format --check .
 ```
 
-Les tests n'appellent aucun service externe, ne nécessitent aucune clé API et n'utilisent pas de base de données.
-L'adaptateur HTTP est vérifié avec `httpx.MockTransport`. Les exemples JSON de `tests/exemples/` sont validés par
-les tests : un exemple invalide doit échouer pour la raison documentée.
+Les tests unitaires n'appellent aucun service externe, ne nécessitent aucune clé API et n'utilisent pas de base de
+données. L'adaptateur HTTP est vérifié avec `httpx.MockTransport`. Les exemples JSON de `tests/exemples/` sont
+validés par les tests : un exemple invalide doit échouer pour la raison documentée.
+
+Le test réel Gemini de `tests/integration/` est ignoré par défaut. Pour l'activer volontairement, configurez
+`LLM_FOURNISSEUR`, `GEMINI_MODEL` et `GEMINI_API_KEY`, puis définissez `TEST_GEMINI_INTEGRATION=1` :
+
+```powershell
+$env:TEST_GEMINI_INTEGRATION = "1"
+$env:LLM_FOURNISSEUR = "gemini"
+$env:GEMINI_MODEL = "<modèle activé pour votre compte>"
+$env:GEMINI_API_KEY = "<clé fournie par Google>"
+python -m pytest tests/integration/test_gemini_reel.py
+```
+
+Ce test envoie une requête réelle et peut consommer du quota ; ne l'activez pas dans la suite automatisée habituelle.
 
 ## Structure
 
@@ -277,11 +345,15 @@ app/
 │   ├── fabrique.py      # sélection et instance unique du client
 │   └── adaptateurs/
 │       ├── factice.py           # FakeLLMClient (tests, hors ligne)
-│       └── compatible_openai.py # HTTP + SSE, sans SDK propriétaire
+│       ├── compatible_openai.py # HTTP + SSE, sans SDK propriétaire
+│       └── gemini.py            # SDK Google officiel, génération async et validation Pydantic
+├── scripts/
+│   └── verifier_gemini.py       # vérification locale, sans route HTTP
 ├── prompts/             # registre et ressources versionnées (diagnostic/, chatbot/)
 └── schemas/             # modèles Pydantic du contrat interne
 tests/
 ├── exemples/            # charges utiles valides et invalides
+├── integration/         # test réel Gemini, opt-in
 └── test_*.py
 ```
 
