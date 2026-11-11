@@ -1,0 +1,19 @@
+# Fins de ligne LF partout, y compris sous Windows (core.autocrlf=true) : les scripts copiés dans les images
+# Docker (backend/docker-entrypoint.sh) échouent avec « /bin/sh^M: not found » s'ils arrivent en CRLF.
+* text=auto eol=lf
+
+# Fichiers binaires : jamais convertis
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.docx binary
+*.mp3 binary
+*.wav binary
+*.pkl binary
+*.joblib binary

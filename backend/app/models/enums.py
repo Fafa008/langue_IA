@@ -40,12 +40,34 @@ class StatutDiagnostic(str, enum.Enum):
     ANNULE = "ANNULE"
 
 
+class StatutParcours(str, enum.Enum):
+    EN_COURS = "EN_COURS"
+    TERMINE = "TERMINE"
+    ABANDONNE = "ABANDONNE"
+
+
+class TypeExercice(str, enum.Enum):
+    GRAMMAIRE = "GRAMMAIRE"
+    VOCABULAIRE = "VOCABULAIRE"
+    COMPREHENSION = "COMPREHENSION"
+    ECOUTE = "ECOUTE"
+    ORAL = "ORAL"
+
+
 CODES: dict[type[enum.Enum], dict[enum.Enum, int]] = {
     Role: {Role.APPRENANT: 1, Role.FORMATEUR: 2, Role.ADMINISTRATEUR: 3},
     StatutUtilisateur: {StatutUtilisateur.ACTIF: 1, StatutUtilisateur.INACTIF: 2, StatutUtilisateur.SUSPENDU: 3},
     StatutAbonnement: {StatutAbonnement.ACTIF: 1, StatutAbonnement.EXPIRE: 2, StatutAbonnement.SUSPENDU: 3},
     StatutAtelier: {StatutAtelier.OUVERT: 1, StatutAtelier.COMPLET: 2, StatutAtelier.ANNULE: 3},
     StatutDiagnostic: {StatutDiagnostic.EN_COURS: 1, StatutDiagnostic.TERMINE: 2, StatutDiagnostic.ANNULE: 3},
+    StatutParcours: {StatutParcours.EN_COURS: 1, StatutParcours.TERMINE: 2, StatutParcours.ABANDONNE: 3},
+    TypeExercice: {
+        TypeExercice.GRAMMAIRE: 1,
+        TypeExercice.VOCABULAIRE: 2,
+        TypeExercice.COMPREHENSION: 3,
+        TypeExercice.ECOUTE: 4,
+        TypeExercice.ORAL: 5,
+    },
 }
 
 

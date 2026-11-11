@@ -123,6 +123,35 @@ def test_generer_json_utilise_les_defauts_de_configuration(env_propre: pytest.Mo
     assert corps_vus[0]["max_tokens"] == 77
 
 
+def test_generer_texte_retourne_le_texte_et_les_metadonnees(env_propre: pytest.MonkeyPatch) -> None:
+    captures: list[httpx.Request] = []
+
+    def handler(requete: httpx.Request) -> httpx.Response:
+        captures.append(requete)
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "Bonjour"}}],
+                "usage": {"prompt_tokens": 12, "completion_tokens": 1},
+            },
+        )
+
+    async def scenario() -> None:
+        adaptateur = CompatibleOpenAI(config(), client=client_simule(handler))
+        texte, reponse = await adaptateur.generer_texte(MESSAGES)
+        await adaptateur.fermer()
+
+        assert texte == "Bonjour"
+        assert reponse.contenu == "Bonjour"
+        assert reponse.tokens_entree == 12
+        assert reponse.tokens_sortie == 1
+        corps = json.loads(captures[0].content)
+        assert "response_format" not in corps
+        assert "stream" not in corps
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize(
     "reponse",
     [

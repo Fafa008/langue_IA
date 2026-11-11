@@ -4,6 +4,9 @@
   Les valeurs reprennent celles du frontend en mode simulé (frontend/src/mocks).
 - Comptes de démonstration (un par rôle, mot de passe Demo2026), seulement si SEED_DEMO=true :
   ce sont les comptes proposés sur la page de connexion. Jamais en production.
+- Banque de questions du diagnostic (anglais, français), seulement si SEED_DEMO=true (app/seed_diagnostic.py).
+
+Relancer à la main (Docker) : `make seed`, ou `docker compose exec backend python -m app.seed`.
 """
 
 import logging
@@ -32,6 +35,7 @@ from app.models import (
 )
 from app.models.enums import CODES
 from app.models.roles import DROITS_PAR_ROLE, PERMISSIONS_INITIALES
+from app.seed_diagnostic import charger_questions_demo
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +175,8 @@ def main() -> None:
         if os.getenv("SEED_DEMO", "false").lower() == "true":
             charger_comptes_demo(db)
             logger.info("Comptes de démonstration chargés (mot de passe %s).", MOT_DE_PASSE_DEMO)
+            creees = charger_questions_demo(db)
+            logger.info("Questions de diagnostic de démonstration : %d ajoutée(s).", creees)
 
 
 if __name__ == "__main__":

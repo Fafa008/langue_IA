@@ -78,6 +78,9 @@ services:
       # Analyse IA du diagnostic (PRE-05). Une panne du service IA dégrade en résultat partiel, sans bloquer.
       IA_SERVICE_URL: ${IA_SERVICE_URL:-http://ia-service:8001}
       IA_SERVICE_TIMEOUT_S: ${IA_SERVICE_TIMEOUT_S:-55}
+      # Les clés des fournisseurs LLM sont réservées au service IA.
+      LLM_API_KEY: ""
+      GEMINI_API_KEY: ""
     volumes:
       # Photos de profil (servies sous /media), conservées d'un redémarrage à l'autre
       - media_data:/srv/media
@@ -97,11 +100,22 @@ services:
       context: ./ia-service
       target: prod
     restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
     environment:
-      <<: *python-env
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
+      ENVIRONNEMENT: ${ENVIRONNEMENT:-dev}
+      LLM_FOURNISSEUR: ${LLM_FOURNISSEUR:-factice}
+      LLM_MODELE: ${LLM_MODELE:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.2}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-600}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-12}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-1}
+      LLM_REPRISE_DELAI_S: ${LLM_REPRISE_DELAI_S:-0.5}
+      LLM_REPRISE_DELAI_MAX_S: ${LLM_REPRISE_DELAI_MAX_S:-4}
+      LLM_BUDGET_TOTAL_S: ${LLM_BUDGET_TOTAL_S:-30}
     volumes:
       # Modèles entraînés (*.pkl, *.joblib…) : non versionnés, déposés dans ia-service/models
       - ./ia-service/models:/app/models:ro
