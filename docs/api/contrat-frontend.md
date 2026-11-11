@@ -600,15 +600,23 @@ Le mandarin (`zh`) utilise HSK ; les autres langues utilisent CECRL. Erreurs : *
 annulée ou questions/clés de correction non configurées.
 
 Après l'enregistrement de la dernière réponse, le frontend appelle cette route et affiche le score, le niveau et le
-cadre de référence retournés par le backend. Les réponses détaillées (`evaluation`) restent disponibles pour une
-future évaluation IA. La progression fixe et les champs de personnalisation `objectif` et `creneaux` ne sont pas
-encore pilotés ou persistés par le backend.
+cadre de référence retournés par le backend. Les réponses détaillées (`evaluation`) restent réservées à une future
+évaluation par réponse ; l'analyse globale du test est stockée sur la tentative. La progression fixe et les champs de
+personnalisation `objectif` et `creneaux` ne sont pas encore pilotés ou persistés par le backend.
 
 #### Analyse détaillée : points faibles, phase Assimil, justification (RAG)
 
 Champs **facultatifs** ajoutés à la réponse **200** quand l'analyse (LLM + RAG) est disponible. Chacun peut être
 absent ou `null` : l'écran de résultats affiche alors le niveau et le score, et signale « Résultat partiel » avec la
 liste des parties encore à venir. Le backend n'a donc pas besoin de tout fournir en même temps.
+
+**P0 (actuel)** — l'analyse est **synchrone** : le backend clôt le score, appelle le service IA puis renvoie un
+**200** unique. `competences` est calculé par le backend sur les seules questions à choix (une compétence sans
+question corrigeable est absente), `points_faibles` et `phase_assimil` viennent du service IA. `justification` et ses
+`sources` restent en P1. Si le service IA est indisponible, si la langue n'est pas couverte par l'IA ou si aucune
+réponse n'est exploitable, la route renvoie quand même **200** avec le score déterministe et sans ces champs. La
+réponse **202** décrite plus bas reste un contrat futur : le backend ne l'émet pas encore.
+
 
 ```json
 {
