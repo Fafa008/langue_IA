@@ -9,6 +9,7 @@ from app.core.erreurs import ErreurConfiguration
 from app.llm import fabrique
 from app.llm.adaptateurs.compatible_openai import CompatibleOpenAI
 from app.llm.adaptateurs.factice import FakeLLMClient
+from app.llm.adaptateurs.gemini import GeminiClient
 
 
 @pytest.fixture(autouse=True)
@@ -37,6 +38,20 @@ def test_creer_client_compatible_openai() -> None:
     assert isinstance(client, CompatibleOpenAI)
     assert client.nom == "compatible-openai"
     assert client.url == "http://localhost:11434/v1/chat/completions"
+    asyncio.run(client.fermer())
+
+
+def test_creer_client_gemini() -> None:
+    config = ConfigLLM(
+        environnement="dev",
+        fournisseur="gemini",
+        gemini_modele="modele-test",
+        gemini_cle_api="cle-test",
+    )
+    client = fabrique.creer_client(config)
+    assert isinstance(client, GeminiClient)
+    assert client.nom == "gemini"
+    assert client.modele == "modele-test"
     asyncio.run(client.fermer())
 
 

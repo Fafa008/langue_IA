@@ -4,7 +4,11 @@
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 #
 # Une modification dans frontend/, backend/ ou ia-service/ est prise en compte sans reconstruire l'image.
-# Reconstruire seulement après un changement de package.json ou de requirements.txt.
+# Reconstruire seulement après un changement de package.json ou de requirements.txt : `make dev` le fait.
+#
+# Les services applicatifs ne redémarrent pas seuls (restart: "no") : après un redémarrage de la machine, un
+# conteneur dev relancé automatiquement monterait les sources du jour sur une image aux dépendances périmées
+# (ex. : « No module named 'pydantic_settings' »). On relance donc explicitement avec `make dev`.
 # ============================================================
 
 services:
@@ -21,18 +25,21 @@ services:
   backend:
     build:
       target: dev
+    restart: "no"
     volumes:
       - ./backend:/app
 
   ia-service:
     build:
       target: dev
+    restart: "no"
     volumes:
       - ./ia-service:/app
 
   frontend:
     build:
       target: dev
+    restart: "no"
     environment:
       # En dev, lues à chaque démarrage de next dev (pas besoin de reconstruire l'image)
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
