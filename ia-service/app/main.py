@@ -1,9 +1,9 @@
 """Point d'entrée du service IA.
 
-Le service expose ``GET /health`` et ``POST /chatbot/message`` (US67). Le client LLM unique, le Harness et ses agents
-Diagnostic et chatbot sont enregistrés au démarrage : une configuration LLM invalide empêche le service de démarrer,
-et les ressources partagées sont fermées proprement à l'arrêt. L'agent Diagnostic n'a pas encore de route
-d'inférence.
+Le service expose ``GET /health``, ``POST /chatbot/message`` (US67) et ``POST /diagnostic/evaluer`` (PRE-05). Le
+client LLM unique, le Harness et ses agents Diagnostic et chatbot sont enregistrés au démarrage : une configuration
+LLM invalide empêche le service de démarrer, et les ressources partagées sont fermées proprement à l'arrêt. Le
+service ne persiste rien : c'est le backend qui valide et enregistre l'analyse du diagnostic.
 """
 
 import os
@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.agents.chatbot import definir_agent_chatbot
 from app.agents.diagnostic import construire_definition
-from app.api import chatbot
+from app.api import chatbot, diagnostic
 from app.core.erreurs import ErreurServiceIA
 from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service, gerer_erreur_validation
 from app.harness.execution import Harness
@@ -82,3 +82,4 @@ def health() -> dict[str, str]:
 
 
 app.include_router(chatbot.router)
+app.include_router(diagnostic.router)
