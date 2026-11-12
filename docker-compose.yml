@@ -116,9 +116,15 @@ services:
       LLM_REPRISE_DELAI_S: ${LLM_REPRISE_DELAI_S:-0.5}
       LLM_REPRISE_DELAI_MAX_S: ${LLM_REPRISE_DELAI_MAX_S:-4}
       LLM_BUDGET_TOTAL_S: ${LLM_BUDGET_TOTAL_S:-30}
+      # Corpus CECRL (PRE-08) : désactivé par défaut, descripteurs privés non versionnés
+      RAG_CORPUS_ACTIF: ${RAG_CORPUS_ACTIF:-false}
+      RAG_CORPUS_CHEMIN: ${RAG_CORPUS_CHEMIN:-/app/corpus/cecrl}
+      RAG_CORPUS_VERIFIER_EMPREINTE: ${RAG_CORPUS_VERIFIER_EMPREINTE:-true}
     volumes:
       # Modèles entraînés (*.pkl, *.joblib…) : non versionnés, déposés dans ia-service/models
       - ./ia-service/models:/app/models:ro
+      # Manifeste versionné + descripteurs privés générés hors dépôt (lecture seule)
+      - ./ia-service/corpus:/app/corpus:ro
     depends_on:
       redis:
         condition: service_healthy

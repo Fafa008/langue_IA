@@ -23,7 +23,7 @@ from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm.fabrique import obtenir_client, reinitialiser_client
 from app.prompts import RegistrePrompts
-from app.rag import RecuperateurVide
+from app.rag import construire_recuperateur
 
 
 @asynccontextmanager
@@ -32,7 +32,7 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     registre_prompts = RegistrePrompts()
     client_llm = obtenir_client()
     registre_agents = RegistreAgents()
-    recuperateur_rag = RecuperateurVide()
+    recuperateur_rag = construire_recuperateur()
 
     registre_agents.enregistrer(construire_definition(registre_prompts))
     registre_agents.enregistrer(definir_agent_chatbot(registre_prompts))
