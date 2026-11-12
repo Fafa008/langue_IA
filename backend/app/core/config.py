@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     # Fuseau des statistiques par jour (inscriptions)
     timezone: str = "Indian/Antananarivo"
 
+    # Service IA (PRE-05) : vide = analyse désactivée, le diagnostic renvoie un résultat partiel.
+    ia_service_url: str = ""
+    ia_service_timeout_s: float = 55.0
+
     # E-mails : sans SMTP_HOST (ou avec les valeurs d'exemple), le message est écrit dans les journaux
     smtp_host: str = ""
     smtp_port: int = 587

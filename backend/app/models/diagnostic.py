@@ -66,6 +66,8 @@ class TestDiagnostic(Base):
     score: Mapped[float | None] = mapped_column(Numeric(5, 2))
     # Niveau de référence estimé à l'issue du diagnostic.
     id_niveau_final: Mapped[int | None] = mapped_column(ForeignKey("niveau.id_niveau", ondelete="RESTRICT"))
+    # Enveloppe validée de l'agent Diagnostic (PRE-05) ; null tant que l'analyse n'a pas abouti.
+    analyse_ia: Mapped[dict | None] = mapped_column(JSONB)
 
     apprenant: Mapped["Apprenant"] = relationship()  # noqa: F821
     langue: Mapped[Langue] = relationship()
