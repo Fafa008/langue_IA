@@ -85,6 +85,12 @@ data/private/
 *.csv
 !ia-service/tests/data/*.csv
 
+# Corpus documentaire CECRL (PRE-08) : le manifeste et le README sont versionnés, jamais les descripteurs
+# officiels. Ils sont générés hors dépôt par scripts/ingestion_cecrl.py puis montés en lecture seule.
+ia-service/corpus/**/descripteurs.jsonl
+ia-service/corpus/**/*.xlsx
+ia-service/corpus/**/*.zip
+
 # ===== Python cache =====
 *.pyc
 *.pyo
