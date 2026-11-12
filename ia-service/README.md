@@ -18,8 +18,8 @@ agents du Harness).
 - `app/prompts/` : registre partagé et prompts versionnés `diagnostic/evaluation@1.1.0` (US30) et
   `chatbot/conversation@1.0.0` (US67).
 - `app/prompts/exemples/diagnostic/` : bibliothèque few-shot synthétique triée par scénario et langue (US71).
-- `app/rag/` : port `RecuperateurRAG` et récupérateur neutre `RecuperateurVide` (US29). Aucun index réel n'est
-  encore branché.
+- `app/rag/` : port `RecuperateurRAG`, récupérateur neutre `RecuperateurVide` (US29) et, derrière
+  `RAG_CORPUS_ACTIF`, corpus CECRL local et `RecuperateurLocal` BM25 (PRE-08).
 - `app/agents/` : agents Diagnostic (`diagnostic@1.0.0`, US29) et chatbot (`chatbot@1.0.0`, US67), enregistrés
   au démarrage. Seul `POST /chatbot/message` est exposé ; l'agent Diagnostic n'a pas encore de route HTTP.
 
@@ -211,6 +211,36 @@ donnée n'est persistée et aucune route d'inférence n'est encore exposée. Voi
 [`docs/US-30-points-faibles-phase-assimil.md`](docs/US-30-points-faibles-phase-assimil.md) pour l'entrée, le
 pipeline, les preuves, les erreurs et l'exemple complet requête/réponse.
 
+### Corpus CECRL local (PRE-08)
+
+Le RAG documentaire peut s'appuyer sur un corpus CECRL local, **désactivé par défaut**. Sans corpus, le service
+conserve `RecuperateurVide` : le prompt applique sa règle de prudence et l'agent ne fabrique aucun descripteur.
+
+| Variable | Défaut | Rôle |
+| --- | --- | --- |
+| `RAG_CORPUS_ACTIF` | `false` | Charge le corpus au démarrage |
+| `RAG_CORPUS_CHEMIN` | `corpus/cecrl` | Dossier contenant `manifeste.json` et `descripteurs.jsonl` |
+| `RAG_CORPUS_VERIFIER_EMPREINTE` | `true` | Vérifie le SHA256 du fichier de descripteurs |
+
+Seul `corpus/cecrl/manifeste.json` est versionné : les descripteurs officiels restent un artefact privé, généré
+hors dépôt par `python -m scripts.ingestion_cecrl` (voir [`corpus/README.md`](corpus/README.md)). Le manifeste
+porte la version, la source, le statut juridique et l'empreinte du fichier attendu.
+
+- `CorpusCecrl.charger` valide le manifeste, chaque ligne JSONL et les comptages ; toute anomalie lève
+  `ErreurCorpusIndisponible` plutôt que de servir un index partiel.
+- `RecuperateurLocal` classe les descripteurs par score BM25 après filtrage par langue, niveau et compétence ;
+  l'ordre de tri est total, donc reproductible.
+- Les niveaux `A2+`, `B1+` et `B2+` sont normalisés vers leur niveau de base et conservent l'étiquette d'origine
+  dans `sous_niveau`.
+- Le mandarin (`zh`, HSK) n'a aucun descripteur CECRL : la recherche retourne une séquence vide.
+- Le corpus distingue `lexique`, absent du contrat `Competence` : ces échelles restent candidates pour toute
+  compétence demandée et sont étiquetées avec la compétence de la requête.
+- Une requête sans terme exploitable, un corpus absent ou incohérent donnent une séquence vide, jamais une
+  sélection arbitraire ; le service démarre toujours.
+
+Voir [`docs/PRE-08-corpus-cecrl.md`](docs/PRE-08-corpus-cecrl.md) pour l'architecture, la procédure d'ingestion,
+les tests et les limites liées aux droits documentaires.
+
 ### Correspondance des erreurs
 
 Le catalogue complet (messages publics, statuts HTTP, caractère rejouable) est décrit dans
@@ -335,7 +365,11 @@ app/
 │   └── diagnostic.py    # EntreeDiagnostic, DiagnosticAgent, définition enregistrée
 ├── rag/
 │   ├── base.py          # port RecuperateurRAG et RequeteRAG
-│   └── vide.py          # RecuperateurVide (aucun corpus)
+│   ├── vide.py          # RecuperateurVide (aucun corpus)
+│   ├── corpus.py        # manifeste, descripteurs et chargement validé du corpus CECRL
+│   ├── local.py         # RecuperateurLocal BM25 déterministe (PRE-08)
+│   ├── config.py        # RAG_CORPUS_ACTIF, RAG_CORPUS_CHEMIN, RAG_CORPUS_VERIFIER_EMPREINTE
+│   └── fabrique.py      # construire_recuperateur : local si activé et valide, sinon vide
 ├── prompts/
 │   ├── registre.py      # chargement, empreinte et rendu des prompts
 │   ├── bibliotheque_few_shot.py  # sélection scénario/langue
@@ -374,3 +408,5 @@ tests/
 - [`docs/codes-erreur-ia.md`](docs/codes-erreur-ia.md) — catalogue des codes d'erreur et garanties de
   non-divulgation.
 - [`docs/contrat-modeles-ia.md`](docs/contrat-modeles-ia.md) — contrat interne détaillé.
+- [`docs/PRE-08-corpus-cecrl.md`](docs/PRE-08-corpus-cecrl.md) — corpus CECRL local : manifeste, chargeur,
+  récupérateur BM25, configuration, procédure d'ingestion, tests et limites de droits.

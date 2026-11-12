@@ -1,0 +1,53 @@
+{
+  "version": "cecrl-2020.1",
+  "edition": "2020",
+  "genere_le": "2026-11-11",
+  "source": {
+    "oeuvre": "CEFR Descriptors 2020 (illustrative descriptors, Companion volume)",
+    "editeur": "Conseil de l'Europe",
+    "annee": 2020,
+    "url": "https://rm.coe.int/cefr-descriptors-2020-/16809ed2c7",
+    "format": "ZIP/XLSX (6 feuilles alignées EN/FR/DE/IT/ES/BG)",
+    "empreinte_sha256": "7c80f798758b7c780225376f1bdedaef7a073c8f6616810f36e13b74b6f614d7"
+  },
+  "licence": {
+    "statut": "non_clarifiee",
+    "citation": "© Conseil de l'Europe, 2020",
+    "note": "Aucune licence de réutilisation explicite sur le classeur : corpus interne, non distribué, usage non commercial uniquement tant que les droits ne sont pas clarifiés par écrit."
+  },
+  "langues": [
+    "en"
+  ],
+  "niveaux": [
+    "A1",
+    "A2",
+    "B1",
+    "B2"
+  ],
+  "competences": [
+    "ecoute",
+    "lecture",
+    "ecrit",
+    "oral",
+    "grammaire",
+    "lexique"
+  ],
+  "comptages": {
+    "total": 325,
+    "par_niveau": {
+      "A1": 64,
+      "A2": 93,
+      "B1": 93,
+      "B2": 75
+    },
+    "par_competence": {
+      "ecoute": 46,
+      "ecrit": 50,
+      "grammaire": 12,
+      "lecture": 59,
+      "lexique": 13,
+      "oral": 145
+    }
+  },
+  "empreinte_descripteurs_sha256": "b0bce621e8bde633d0aa8e40eb6fa502b40c6a796b0627cdb61f57575f586be7"
+}
