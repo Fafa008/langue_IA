@@ -58,8 +58,46 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      # Le binaire Chromium vient du CDN Playwright, les paquets système des miroirs Ubuntu. Un incident DNS
+      # sur ces derniers ne doit pas faire échouer le job : les images ubuntu-latest fournissent déjà les
+      # bibliothèques de Chrome/Chromium. apt n'est donc lancé que si une bibliothèque manque réellement.
+      - name: Cache des navigateurs Playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
       - name: Navigateur Chromium
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 12
+        run: |
+          set -euo pipefail
+          for tentative in 1 2 3; do
+            if npx playwright install chromium; then
+              break
+            fi
+            echo "::warning::Téléchargement de Chromium échoué (tentative ${tentative}/3)."
+            if [ "${tentative}" -eq 3 ]; then
+              echo "::error::Chromium reste indisponible après 3 tentatives."
+              exit 1
+            fi
+            sleep $((tentative * 10))
+          done
+
+          chrome=$(find ~/.cache/ms-playwright -type f -name chrome -perm -u+x -print -quit 2>/dev/null || true)
+          if [ -z "${chrome}" ]; then
+            echo "::error::Binaire Chromium introuvable après installation."
+            exit 1
+          fi
+          ldd "${chrome}" > /tmp/chromium-ldd.txt 2>/dev/null || true
+          if grep -q "not found" /tmp/chromium-ldd.txt; then
+            echo "Bibliothèques système manquantes, installation des dépendances Playwright…"
+            if ! npx playwright install-deps chromium; then
+              echo "::warning title=Dépendances système::Miroirs Ubuntu injoignables ; poursuite avec les bibliothèques du runner."
+            fi
+          else
+            echo "Toutes les bibliothèques de Chromium sont déjà présentes sur le runner."
+          fi
       - name: Tests E2E
         run: npm run test:e2e
       - name: Rapport en cas d'échec (traces Playwright)
