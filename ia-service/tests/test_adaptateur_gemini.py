@@ -30,6 +30,15 @@ class Sortie(ModeleStrict):
     valeur: str = Field(min_length=1)
 
 
+class Detail(ModeleStrict):
+    domaine: str = Field(default="grammaire")
+    observation: str = Field(min_length=1)
+
+
+class SortieImbriquee(ModeleStrict):
+    details: list[Detail] = Field(min_length=1)
+
+
 MESSAGES = [
     MessageLLM(role="system", contenu="Tu réponds clairement."),
     MessageLLM(role="user", contenu="Bonjour"),
@@ -135,7 +144,41 @@ def test_generer_json_demande_et_valide_le_schema_pydantic() -> None:
         assert resultat == Sortie(valeur="ok")
         config = sdk.aio.models.generate_content.await_args.kwargs["config"]
         assert config.response_mime_type == "application/json"
-        assert config.response_schema is Sortie
+        assert isinstance(config.response_schema, dict)
+        assert config.response_schema["properties"]["valeur"]["type"] == "string"
+
+    asyncio.run(scenario())
+
+
+def _cles_recursives(valeur: object) -> set[str]:
+    """Collecter toutes les clés d'un schéma JSON, y compris dans les objets et tableaux imbriqués."""
+    if isinstance(valeur, dict):
+        cles = set(valeur)
+        for sous_valeur in valeur.values():
+            cles |= _cles_recursives(sous_valeur)
+        return cles
+    if isinstance(valeur, list):
+        return set().union(*(_cles_recursives(element) for element in valeur)) if valeur else set()
+    return set()
+
+
+def test_generer_json_retire_les_mots_cles_refuses_par_gemini() -> None:
+    """L'API Gemini rejette ``additionalProperties`` (émis par ``extra="forbid"``) et ``default``."""
+    sdk = client_simule(reponse_simulee('{"details":[{"observation":"accord"}]}'))
+    adaptateur = GeminiClient(configuration(), client=sdk)
+
+    async def scenario() -> None:
+        await adaptateur.generer_json(MESSAGES, schema=SortieImbriquee)
+
+        schema = sdk.aio.models.generate_content.await_args.kwargs["config"].response_schema
+        assert isinstance(schema, dict)
+        cles = _cles_recursives(schema)
+        assert "additionalProperties" not in cles
+        assert "default" not in cles
+        # Le contrat utile est conservé, y compris dans les modèles imbriqués.
+        detail = schema["$defs"]["Detail"]
+        assert detail["properties"]["observation"]["type"] == "string"
+        assert "observation" in detail["required"]
 
     asyncio.run(scenario())
 
