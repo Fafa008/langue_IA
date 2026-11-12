@@ -15,6 +15,7 @@ from app.schemas.diagnostic import (
     TentativeCreate,
     TentativeOut,
 )
+from app.services.analyse_diagnostic import analyser_tentative
 from app.services.diagnostic import (
     CodeErreurDiagnostic,
     ErreurDiagnostic,
@@ -203,13 +204,14 @@ def enregistrer_reponse(
 @router.post(
     "/diagnostic/tentatives/{id_tentative}/terminer",
     response_model=ScoreDiagnosticOut,
+    response_model_exclude_none=True,
 )
 def terminer_tentative(
     id_tentative: Annotated[int, Path(gt=0)],
     db: DbSession,
     utilisateur: UtilisateurConnecte,
 ) -> ScoreDiagnosticOut:
-    """Calcule le score déterministe et fixe le niveau de référence de la tentative."""
+    """Calcule le score déterministe, fixe le niveau puis ajoute l'analyse IA si elle est disponible."""
     if utilisateur.role != Role.APPRENANT:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Droits insuffisants.")
 
@@ -218,10 +220,18 @@ def terminer_tentative(
     except ErreurScoring as erreur:
         raise _convertir_erreur_scoring(erreur) from None
 
+    # Libérer la connexion PostgreSQL avant l'appel HTTP : le service IA peut prendre plusieurs dizaines de secondes.
+    id_test = tentative.id_test
+    db.close()
+    analyse = analyser_tentative(id_test)
+
     return ScoreDiagnosticOut(
-        id_tentative=tentative.id_test,
+        id_tentative=id_test,
         score=float(score),
         percentage=float(score),
         level=code_niveau,
         framework=cadre.value,
+        competences=analyse.competences if analyse else None,
+        points_faibles=analyse.points_faibles if analyse else None,
+        phase_assimil=analyse.phase_assimil if analyse else None,
     )

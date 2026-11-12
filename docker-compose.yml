@@ -75,6 +75,9 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       # Comptes de démonstration (mot de passe Demo2026) : false en production
       SEED_DEMO: ${SEED_DEMO:-true}
+      # Analyse IA du diagnostic (PRE-05). Une panne du service IA dégrade en résultat partiel, sans bloquer.
+      IA_SERVICE_URL: ${IA_SERVICE_URL:-http://ia-service:8001}
+      IA_SERVICE_TIMEOUT_S: ${IA_SERVICE_TIMEOUT_S:-55}
       # Les clés des fournisseurs LLM sont réservées au service IA.
       LLM_API_KEY: ""
       GEMINI_API_KEY: ""
