@@ -22,13 +22,13 @@ Trois principes structurent tout le service :
 3. **Tout est borné** : taille d'entrée, budget de temps, nombre de reprises, schéma de sortie,
    catalogue d'erreurs fermé.
 
-Aujourd'hui, **une seule route métier est exposée** : `POST /chatbot/message` (plus la sonde
-`GET /health`). L'agent Diagnostic est enregistré au démarrage mais **n'a pas de route**. Le
-backend n'appelle jamais ce service.
+Aujourd'hui, **deux routes métier sont exposées** : `POST /chatbot/message` et
+`POST /diagnostic/evaluer` (plus la sonde `GET /health`). L'agent Diagnostic est enregistré au
+démarrage et **appelé par le backend** à la clôture d'une tentative — en best-effort.
 
 ```mermaid
 graph LR
-    B[backend FastAPI] -.->|prévu, non branché| IA[ia-service]
+    B[backend FastAPI] -->|POST /diagnostic/evaluer<br/>best-effort| IA[ia-service]
     F[frontend] -.->|aucun appel direct| IA
     IA --> H[Harness]
     H --> AG1[agent diagnostic 1.0.0]
@@ -50,9 +50,10 @@ ia-service/
 ├── app/
 │   ├── main.py               # lifespan, routes, CORS, gestionnaires d'erreurs
 │   ├── api/
-│   │   └── chatbot.py        # POST /chatbot/message
+│   │   ├── chatbot.py        # POST /chatbot/message
+│   │   └── diagnostic.py     # POST /diagnostic/evaluer
 │   ├── agents/
-│   │   ├── diagnostic.py     # évaluation diagnostique (sans route)
+│   │   ├── diagnostic.py     # évaluation diagnostique (route exposée)
 │   │   └── chatbot.py        # conversation (route exposée)
 │   ├── harness/
 │   │   ├── agent.py          # contrat DefinitionAgent + ContexteExecution
@@ -170,7 +171,7 @@ async with asyncio.timeout(definition.budget_ms / 1000):
     resultat_brut = await definition.executer(entree, contexte)
 ```
 
-Le budget de l'agent (15 s pour le diagnostic, 30 s pour le chatbot) englobe **toutes** les
+Le budget de l'agent (45 s pour le diagnostic, 30 s pour le chatbot) englobe **toutes** les
 reprises du client LLM. Un fournisseur lent ne peut pas bloquer indéfiniment la requête.
 
 ---
@@ -398,7 +399,7 @@ self._verifier_coherence(resultat, apprenant, entree.reponses)
 self._signaler_ecart(resultat, contexte)
 ```
 
-### 8.3 Séquence complète (état cible, non branché au backend)
+### 8.3 Séquence complète (branchée en best-effort)
 
 ```mermaid
 sequenceDiagram
@@ -412,14 +413,10 @@ sequenceDiagram
 
     F->>B: POST /diagnostic/tentatives/{id}/terminer
     B->>B: scoring déterministe (score, niveau)
-    Note over B: aujourd'hui la réponse s'arrête ici
-    B-->>F: 200 {score, level, framework}
-
-    rect rgb(240,240,240)
-    Note over B,L: prévu — non implémenté
-    B->>IA: POST /diagnostic (RequeteAgent)
+    B->>B: ferme la session PostgreSQL
+    B->>IA: POST /diagnostic/evaluer (RequeteAgent)
     IA->>H: executer("diagnostic", requete)
-    H->>H: valider entrée + budget 15 s
+    H->>H: valider entrée + budget 45 s
     H->>AG: executer(entree, contexte)
     AG->>RAG: rechercher(requete RAG)
     RAG-->>AG: descripteurs validés
@@ -430,24 +427,31 @@ sequenceDiagram
     AG-->>H: ResultatDiagnostic
     H-->>IA: ReponseAgent(resultat, meta)
     IA-->>B: 200
-    B->>B: persister l'analyse
-    B-->>F: 200 avec compétences, points faibles…
+    B->>B: persister analyse_ia (verrou)
+    B-->>F: 200 {score, competences, points_faibles, phase_assimil}
+
+    alt service IA absent, en panne ou timeout
+        B-->>F: 200 {score} sans champs d'analyse
+        Note over F: écran « Résultat partiel »
     end
 ```
 
-La partie grise est la **cible** : elle n'existe pas dans le code actuel.
+Le backend ne bloque jamais la clôture : l'appel est borné à **55 s** côté backend et **45 s**
+côté agent, et toute erreur devient un résultat partiel.
 
 ### 8.4 Budget et erreurs
 
-- budget agent : **15 000 ms** ;
-- budget LLM total : **30 000 ms** par défaut, donc le budget agent coupe avant ;
+- budget agent diagnostic : **45 000 ms** (`BUDGET_MS`) ;
+- budget agent chatbot : **30 000 ms** (`BUDGET_CHATBOT_MS`) ;
+- budget LLM total : **30 000 ms par appel** (reprises du client comprises) ; l'agent
+  diagnostic dispose de 45 s, ce qui laisse de la marge, et le backend coupe à 55 s ;
 - une incohérence du résultat devient `LLM_REPONSE_INVALIDE` (rejouable) ;
 - un corpus cassé devient `CORPUS_INDISPONIBLE` (rejouable), mais la fabrique RAG absorbe
   l'erreur au démarrage et retombe sur un récupérateur vide.
 
 ---
 
-## 9. La seule route métier : le chatbot
+## 9. Les routes métier : chatbot et diagnostic
 
 `api/chatbot.py` ne contient aucune logique :
 
@@ -482,8 +486,26 @@ L'enveloppe d'entrée est **commune** à tous les agents :
 L'enveloppe de succès contient `request_id`, `agent`, `version_agent`, `version_prompt`,
 `resultat`, `meta` (durée, fournisseur, modèle, version du corpus, empreinte du prompt).
 
-**Important** : cette route n'est appelée par **personne**. Ni le frontend ni le backend ne
-l'utilisent. En local, le fournisseur par défaut est `factice`.
+**Important** : cette route chatbot n'est appelée par **personne**. Ni le frontend ni le backend
+ne l'utilisent. En local, le fournisseur par défaut est `factice`.
+
+La seconde route, `api/diagnostic.py`, suit exactement le même gabarit :
+
+```python
+@router.post("/evaluer", response_model=ReponseAgent[ResultatDiagnostic], responses={...})
+async def evaluer(requete: RequeteAgent[EntreeDiagnostic], request: Request):
+    reponse = await request.app.state.harness.executer(CODE_AGENT, requete)
+    if isinstance(reponse, ReponseErreur):
+        return JSONResponse(
+            status_code=STATUTS_HTTP[reponse.erreur.code],
+            content=reponse.model_dump(mode="json"),
+        )
+    return reponse
+```
+
+Elle est appelée par le backend (`backend/app/services/ia.py`). La différence d'enveloppe est
+dans `entree` : le diagnostic reçoit `reponses` + `score_preliminaire`, le chatbot reçoit
+`message` + `historique`.
 
 ---
 
@@ -568,9 +590,10 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm ia-servi
 
 ## 13. Limites et dettes techniques
 
-1. **Agent Diagnostic sans route** : la logique existe, rien ne peut l'appeler.
-2. **Backend non branché** : aucun client HTTP vers `ia-service`, aucune persistance de
-   l'analyse.
+1. **Diagnostic branché en best-effort seulement** : une panne, un timeout ou une URL absente
+   dégrade silencieusement en résultat partiel ; rien ne remonte à l'utilisateur.
+2. **Aucune reprise après échec** : l'analyse n'est pas rejouée en tâche de fond ; une tentative
+   sans `analyse_ia` le reste jusqu'à une nouvelle clôture (impossible une fois terminée).
 3. **Chatbot sans appelant** : la route fonctionne, mais aucun écran ne l'utilise.
 4. **Fournisseur `factice` par défaut** : en local, les réponses sont simulées. C'est voulu,
    mais il faut le savoir avant de conclure qu'un agent « fonctionne ».
@@ -584,8 +607,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm ia-servi
    l'utilise.
 9. **Le service n'authentifie pas ses appelants** : il est supposé interne. S'il était exposé,
    n'importe qui pourrait consommer le budget LLM.
-10. **Budget agent < budget LLM** : avec un budget de 15 s et un budget LLM de 30 s, c'est
-    l'agent qui coupe. Un réglage incohérent ne produit pas d'erreur de configuration.
+10. **Budgets à surveiller** : agent diagnostic 45 s, backend 55 s, budget LLM 30 s. Un réglage
+    incohérent ne produit pas d'erreur de configuration.
 11. **Modèles non versionnés** : `ia-service/models/` est ignoré par Git ; un modèle absent n'est
     pas détecté au démarrage.
 
@@ -642,5 +665,6 @@ problèmes d'échappement.
    Quel risque évite-t-on ?
 4. Le corpus RAG est activé mais le dossier est absent. Que fait `construire_recuperateur` ?
    Quel est l'effet sur la réponse du diagnostic, et est-ce un bon choix ?
-5. Le budget de l'agent Diagnostic est de 15 s et `LLM_BUDGET_TOTAL_S` de 30 s. Qui coupe en
-   premier ? Que se passe-t-il si l'on inverse les deux valeurs sans changer le code ?
+5. Le budget de l'agent Diagnostic est de 45 s, le backend attend 55 s et
+   `LLM_BUDGET_TOTAL_S` vaut 30 s. Qui coupe en premier ? Que se passe-t-il si l'on abaisse le
+   budget de l'agent sous celui du LLM ?

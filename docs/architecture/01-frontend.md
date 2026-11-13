@@ -366,8 +366,9 @@ const questions = trierParEtape(questionDtos.filter((q) => q.type_reponse !== "a
 Le backend, lui, n'accepte que `choix` et `texte` (`TYPES_ENREGISTRABLES`). La fonctionnalité
 audio est donc annoncée par le contrat mais **inatteignable des deux côtés**.
 
-Pour une réponse écrite, le délai passe à **60 s** (`TIMEOUT_ANALYSE_MS`), au cas où le
-backend ferait appel à un LLM. Aujourd'hui, il répond immédiatement.
+Pour une réponse écrite, le délai passe à **60 s** (`TIMEOUT_ANALYSE_MS`), et la clôture du
+test utilise le même délai. C'est nécessaire depuis PRE-05 : le backend peut appeler le
+service IA, dont le budget est de **55 s** (`IA_SERVICE_TIMEOUT_S`).
 
 ### 8.3 Résultat
 
@@ -382,9 +383,11 @@ const VERIFICATIONS_AUTOMATIQUES_MAX = 30;
 Or le backend ne renvoie **jamais** 202 : `terminer` est synchrone. Cette branche est testée
 avec les mocks mais **inatteignable en production**.
 
-Le backend ne renvoie pas non plus `competences`, `points_faibles`, `phase_assimil` ni
-`justification`. L'écran `TestResult` affiche donc toujours **« Résultat partiel »** et liste
-les informations manquantes. Le code est prêt pour l'analyse IA, pas la donnée.
+Le backend renvoie désormais `competences`, `points_faibles` et `phase_assimil` **si** le
+service IA répond (ou si une analyse est déjà persistée). En cas d'absence de
+`IA_SERVICE_URL`, de panne ou de timeout, ces champs sont omis : l'écran `TestResult` affiche
+alors **« Résultat partiel »** et liste les informations manquantes. `justification` reste
+toujours absent du backend : il n'existe pas de champ correspondant dans `ScoreDiagnosticOut`.
 
 ### 8.4 Validation stricte du score
 

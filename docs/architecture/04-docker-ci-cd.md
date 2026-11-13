@@ -131,8 +131,9 @@ La syntaxe `${VAR:-défaut}` fournit une valeur si la variable n'est pas défini
 `.env` à la racine est **facultatif** : Compose l'utilise pour l'interpolation, et le service
 `backend` le déclare explicitement avec `env_file: { path: .env, required: false }`.
 
-Attention : `IA_SERVICE_URL` est bien injectée au backend, mais **aucun code backend ne la lit**.
-De même, `REDIS_HOST`/`REDIS_PORT` sont fournies mais Redis n'est utilisé nulle part.
+Attention : `IA_SERVICE_URL` est bien injectée au backend **et lue** depuis PRE-05
+(`app/core/config.py`, `app/services/ia.py`) pour l'analyse du diagnostic. En revanche
+`REDIS_HOST`/`REDIS_PORT` sont fournies sans être utilisées.
 
 ### 2.3 Healthchecks
 
@@ -430,7 +431,8 @@ passent. Le job `e2e` n'est pas dans `needs` : il tourne en parallèle.
 - pas de test de charge ;
 - pas d'analyse de sécurité (dépendances, image, secrets) ;
 - pas de scan de vulnérabilités ;
-- pas de vérification que le service IA et le backend se parlent (ils ne se parlent pas) ;
+- pas de vérification que le service IA et le backend se parlent (l'appel est best-effort, donc
+  une régression passerait inaperçue) ;
 - pas de test du vrai parcours navigateur contre le vrai backend : les E2E simulent HTTP.
 
 ---
@@ -490,8 +492,8 @@ L'URL de l'API est lue dans la variable de dépôt `NEXT_PUBLIC_API_URL`, avec u
    faut un proxy (Caddy, Nginx, Traefik) et des certificats.
 6. **La CD ne déploie pas** : publier une image n'est pas livrer.
 7. **La CD ne dépend pas de la CI** : une image peut être publiée alors que les tests échouent.
-8. **`IA_SERVICE_URL` et Redis sont fournis mais inutilisés** : ne pas croire qu'ils sont
-   branchés.
+8. **Redis est fourni mais inutilisé** ; `IA_SERVICE_URL` est lu, mais l'appel reste
+   best-effort et non testé de bout en bout par la CI.
 9. **Le Makefile n'est pas portable sous Windows** : `--user "$(id -u):$(id -g)"` est POSIX.
    Utiliser les commandes `docker compose` équivalentes.
 10. **`/health` ne teste pas la base** : un conteneur peut être « healthy » et l'API en erreur.

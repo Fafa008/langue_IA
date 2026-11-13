@@ -316,6 +316,7 @@ sequenceDiagram
     participant UI as Frontend
     participant API as Backend
     participant DB as PostgreSQL
+    participant IA as ia-service
 
     U->>UI: ouvre /espace/apprenant/test-diagnostic
     UI->>API: GET /diagnostic/langues
@@ -349,8 +350,16 @@ sequenceDiagram
     API->>DB: SELECT questions à choix + réponses
     API->>API: score = correctes × 100 / total
     API->>DB: UPDATE score, niveau_final, statut=TERMINE
-    API-->>UI: 200 {score, max_score: 100, percentage, level, framework}
-    UI->>UI: affiche le score + « Résultat partiel »
+    API->>IA: POST /diagnostic/evaluer (best-effort, 55 s max)
+    IA-->>API: 200 {niveau_estime, phase_assimil, points_faibles}
+    API->>DB: UPDATE analyse_ia (JSONB)
+    API-->>UI: 200 {score, max_score, percentage, level, framework,<br/>competences, points_faibles, phase_assimil}
+    UI->>UI: affiche le score + l'analyse
+
+    alt service IA absent, en panne ou timeout
+        API-->>UI: 200 {score, ...} sans champs d'analyse
+        UI->>UI: affiche le score + « Résultat partiel »
+    end
 ```
 
 Points à observer :
@@ -358,8 +367,8 @@ Points à observer :
 - **le niveau de départ est choisi par le backend**, pas par l'apprenant ;
 - **les questions audio sont renvoyées** par le backend puis **filtrées** par le frontend ;
 - **le score est synchrone** : pas de `202`, pas d'attente ;
-- **l'écran de résultats est volontairement partiel** : le backend ne fournit pas encore
-  l'analyse détaillée.
+- **l'analyse IA est facultative** : la clôture aboutit même si le service IA est absent ; le
+  frontend distingue un résultat complet d'un résultat partiel.
 
 ---
 
@@ -370,10 +379,10 @@ Points à observer :
 | `GET /diagnostic/tentatives/en-cours` | décrit | appelé au montage | **absent** | `404`, reprise impossible |
 | `POST …/abandonner` | décrit | appelé | **absent** | `404`, abandon impossible |
 | `202 {statut:"en_attente"}` | décrit | géré + polling | **jamais renvoyé** | branche morte |
-| `competences` | décrit | lu | **absent du schéma** | toujours vide |
-| `points_faibles` | décrit | lu | **absent** | « Résultat partiel » |
-| `phase_assimil` | décrit | lu | **absent** | « Résultat partiel » |
-| `justification` | décrit | lu | **absent** | « Résultat partiel » |
+| `competences` | décrit | lu | **renvoyé si l'IA répond** | vide en cas de panne |
+| `points_faibles` | décrit | lu | **renvoyé si l'IA répond** | « Résultat partiel » sinon |
+| `phase_assimil` | décrit | lu | **renvoyé si l'IA répond** | « Résultat partiel » sinon |
+| `justification` | décrit | lu | **absent du schéma** | toujours vide |
 | `objectif`, `creneaux` | décrits | dans l'interface | **ignorés** | aucune personnalisation |
 | `audio` | décrit | types + UI | **refusé** (`422`) | fonctionnalité morte |
 | `max_score` | 100 | exige `=== 100` | renvoie `100` | passe, mais rigide |
@@ -433,8 +442,10 @@ Par ordre de priorité :
 
 1. **Implémenter `en-cours` et `abandonner`** (ou retirer les appels). Sans elles, la reprise et
    l'abandon sont cassés. C'est le plus visible pour l'utilisateur.
-2. **Compléter `ScoreDiagnosticOut`** avec `competences`, `points_faibles`, `phase_assimil`,
-   `justification` (ou une route d'analyse séparée). Sinon l'écran restera « Résultat partiel ».
+2. **Compléter l'analyse de bout en bout** : `competences`, `points_faibles` et
+   `phase_assimil` existent désormais côté backend, mais restent conditionnés à la
+   disponibilité du service IA. Prévoir une reprise asynchrone et exposer `justification`
+   (absent de `ScoreDiagnosticOut`) si l'écran doit l'afficher.
 3. **Décider du statut de `terminer`** : soit synchrone (`200`), soit asynchrone (`202` +
    polling). Aujourd'hui le contrat et le frontend prévoient `202`, le backend renvoie `200`.
    Aligner les trois.
