@@ -1,0 +1,4 @@
+code,langue,niveau,competence,type_reponse,enonce,choix_1,choix_2,choix_3,choix_4,bonne_reponse,support,audio_texte,source,auteur,date_revue,statut
+en-a1-gra-001,en,A1,grammaire,choix,She ___ a student.,is,are,am,be,1,,,À définir,À définir,,à rédiger
+fr-a1-gra-001,fr,A1,grammaire,choix,Je ___ malade aujourd'hui.,suis,es,sommes,sont,1,,,À définir,À définir,,à rédiger
+en-a2-lect-001,en,A2,lecture,choix,What does Anna do on Saturday morning?,She works.,She goes to the market.,She sleeps.,She studies English.,2,"Anna sleeps late on Saturday. She has breakfast, then goes to the market with her sister. In the afternoon, she rests.",,À définir,À définir,,à rédiger
