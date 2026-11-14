@@ -3,6 +3,8 @@
 > Synthèse des chapitres 01 à 05. Constat du **14 novembre 2026**, branche `develop` (`95543db`).
 > Cette matrice répond à une seule question : **pour chaque fonctionnalité, quelle couche fait quoi, et
 > jusqu'où va-t-elle réellement ?**
+> La lecture **par rôle** (qui peut faire quoi, route par route) est dans
+> [`07-fonctionnalites-par-role.md`](07-fonctionnalites-par-role.md).
 
 ---
 
