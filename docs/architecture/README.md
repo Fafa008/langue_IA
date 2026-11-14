@@ -2,7 +2,7 @@
 
 > Documentation pédagogique fondée sur l'inspection du code réel du dépôt
 > (backend FastAPI, frontend Next.js, service IA, Docker et CI/CD).
-> Version du 12 novembre 2026.
+> Version du 13 novembre 2026.
 
 Ce document n'est pas une spécification idéale : il décrit **ce qui existe**, distingue
 **ce qui est partiel** de **ce qui est seulement prévu**, et signale les écarts entre le
@@ -17,9 +17,16 @@ code, le contrat d'API et la documentation existante.
 | [03-ia-service.md](03-ia-service.md) | Harness, agents, prompts, fournisseurs LLM, RAG, catalogue d'erreurs |
 | [04-docker-ci-cd.md](04-docker-ci-cd.md) | Compose, Dockerfiles multi-étapes, CI GitHub Actions, CD GHCR |
 | [05-integration-frontend-backend.md](05-integration-frontend-backend.md) | Chaîne du contrat, DTO, erreurs, séquence du diagnostic, dérives |
+| [../donnees/README.md](../donnees/README.md) | État réel des données : emplacements, 22 tables, seed, données hors base, risques |
+| [../donnees/directive-donnees.md](../donnees/directive-donnees.md) | Directive de production et de gouvernance des six jeux de données |
+| [../fonctionnalites/README.md](../fonctionnalites/README.md) | Ce qui fonctionne réellement, couche par couche, et ce qui reste à brancher |
 
-Ordre de lecture conseillé : ce README, puis 01 → 02 → 05 → 03 → 04. Le chapitre 05 fait le
-lien entre le frontend et le backend ; il se lit mieux après les deux premiers.
+Ordre de lecture conseillé : ce README, puis 01 → 02 → 05 → 03 → 04, et enfin le dossier
+[`docs/donnees/`](../donnees/README.md) pour savoir **quelles données** alimentent cette
+architecture. Le chapitre 05 fait le lien entre le frontend et le backend ; il se lit mieux
+après les deux premiers. Le dossier [`docs/fonctionnalites/`](../fonctionnalites/README.md)
+répond à la question complémentaire : **qu'est-ce qui marche vraiment, et qu'est-ce qui reste
+à brancher ?**
 
 ---
 
@@ -42,7 +49,7 @@ graph LR
     NAV[Navigateur] -->|HTTP 3000| F[frontend<br/>Next.js 14]
     NAV -->|HTTP 8000 + JWT| B[backend<br/>FastAPI]
     B -->|SQL| DB[(PostgreSQL 16)]
-    B -.->|non branché aujourd'hui| IA[ia-service<br/>FastAPI]
+    B -.->|POST /diagnostic/evaluer<br/>best-effort| IA[ia-service<br/>FastAPI]
     F -.->|aucun appel direct| IA
     IA -.->|LLM| EXT[Groq / Gemini]
     B -->|volumes| MEDIA[(photos)]
@@ -68,9 +75,11 @@ donc autoriser l'origine du frontend en CORS.
    état React.
 2. **Chemin d'une migration** : modèle SQLAlchemy → `make migration m="..."` → fichier Alembic
    → `alembic upgrade head` au démarrage du conteneur backend.
-3. **Chemin d'une analyse IA (prévu, non branché)** : frontend → backend → `ia-service` →
-   Harness → agent → prompt + RAG → LLM → sortie validée → backend → frontend.
-   Aujourd'hui, le backend **n'appelle jamais** le service IA : le diagnostic est déterministe.
+3. **Chemin d'une analyse IA** : frontend → backend → `ia-service` (`POST /diagnostic/evaluer`) →
+   Harness → agent → prompt + RAG → LLM → sortie validée → backend (`analyse_ia` en base) →
+   frontend. L'appel est **best-effort** : sans `IA_SERVICE_URL` ou si le service tombe, la
+   clôture renvoie `200` avec le seul score (`competences`, `points_faibles` et
+   `phase_assimil` omis).
 
 ---
 
@@ -92,7 +101,7 @@ le parcours est incomplet ; **Prévu** = modèles, contrats ou UI sans implémen
 | Tableau de bord admin | Implémenté | statistiques + inscriptions par jour | — |
 | Diagnostic — création / réponses / score | Implémenté | tentative, questions, réponses, score déterministe | — |
 | Diagnostic — reprise / abandon | Prévu | le frontend appelle `en-cours` et `abandonner` | routes absentes côté backend → 404 |
-| Diagnostic — analyse IA détaillée | Prévu | agent `diagnostic@1.0.0`, prompts, RAG | aucune route d'inférence, backend non connecté |
+| Diagnostic — analyse IA détaillée | Partiel | agent `diagnostic@1.0.0`, route `POST /diagnostic/evaluer`, appel backend best-effort, `analyse_ia` persistée | aucun appelant frontend direct ; dégradation silencieuse en « Résultat partiel » si le service est absent |
 | Chatbot | Partiel | `POST /chatbot/message` dans `ia-service` | aucun appelant (ni frontend ni backend), fournisseur `factice` par défaut |
 | Questions audio | Partiel | modèle, UI d'enregistrement, contrat | le backend refuse les réponses audio ; le frontend les masque |
 | Parcours / ateliers | Partiel | tables `Parcours`, `Exercice`, `Atelier`, migration `us45_parcours` ; `Atelier` est compté dans le tableau de bord admin | aucune route de gestion, aucune UI de parcours |
@@ -118,7 +127,7 @@ le parcours est incomplet ; **Prévu** = modèles, contrats ou UI sans implémen
 | Authentification / JWT | `backend/app/core/security.py`, `backend/app/api/deps.py` |
 | Modèles et codes d'énumération | `backend/app/models/*.py`, `backend/app/models/enums.py` |
 | Calcul du score | `backend/app/services/scoring.py` |
-| Migration la plus récente | `backend/alembic/versions/20261110_us45_parcours.py` |
+| Migration la plus récente | `backend/alembic/versions/20261110_diagnostic_analyse_ia.py` (tête unique après `us45_parcours`) |
 | Données de départ | `backend/app/seed.py`, `backend/app/seed_diagnostic.py` |
 | Client HTTP du frontend | `frontend/src/lib/api-client.ts` |
 | Routes appelées par le frontend | `frontend/src/services/endpoints.ts` |
@@ -128,9 +137,12 @@ le parcours est incomplet ; **Prévu** = modèles, contrats ou UI sans implémen
 | Test de positionnement (UI) | `frontend/src/hooks/useTestDiagnostic.ts`, `frontend/src/store/test-diagnostic.store.ts` |
 | Test de positionnement (API) | `backend/app/api/routes/diagnostic.py`, `backend/app/services/diagnostic.py` |
 | Harness IA | `ia-service/app/harness/execution.py` |
-| Agents IA | `ia-service/app/agents/diagnostic.py`, `backend` n'y accède pas encore |
+| Agents IA | `ia-service/app/agents/diagnostic.py`, appelé par le backend via `POST /diagnostic/evaluer` |
 | Prompts versionnés | `ia-service/app/prompts/` |
 | Catalogue d'erreurs IA | `ia-service/app/core/codes_erreur.py` |
+| Client IA du backend | `backend/app/services/ia.py`, `backend/app/services/analyse_diagnostic.py` |
+| État des données | `docs/donnees/README.md` |
+| Directive données | `docs/donnees/directive-donnees.md`, `modele-questions.csv`, `exemple-questions.jsonl` |
 | Stack Docker | `docker-compose.yml`, `docker-compose.dev.yml`, `Makefile` |
 | CI / CD | `.github/workflows/ci.yml`, `.github/workflows/cd.yml` |
 
@@ -143,8 +155,10 @@ le parcours est incomplet ; **Prévu** = modèles, contrats ou UI sans implémen
 | **API** | Interface HTTP par laquelle le frontend demande des données au backend. |
 | **App Router** | Système de routage de Next.js 14 fondé sur les dossiers de `frontend/src/app/`. |
 | **BFF** | Backend For Frontend : serveur intermédiaire dédié à l'UI. **Absent ici**. |
+| **Best-effort** | Appel facultatif : en cas d'échec, on dégrade la réponse au lieu de renvoyer une erreur (ici, l'analyse IA). |
 | **CECRL / HSK** | Référentiels de niveaux : A1→C2 pour les langues européennes, HSK 1→6 pour le chinois. |
 | **CI / CD** | Intégration continue (tester à chaque push) / livraison continue (publier des images). |
+| **Corpus** | Ensemble de documents fournis au RAG ; ici les descripteurs CECRL, non versionnés. |
 | **Composant serveur / client** | En Next.js, un composant est serveur par défaut ; `"use client"` active hooks et état navigateur. |
 | **DTO** | Objet de transfert : la forme exacte des données échangées avec l'API (`snake_case`). |
 | **Few-shot** | Exemples donnés au modèle dans le prompt pour orienter son format de réponse. |
@@ -152,6 +166,7 @@ le parcours est incomplet ; **Prévu** = modèles, contrats ou UI sans implémen
 | **Healthcheck** | Commande périodique qui dit à Docker si un conteneur est prêt. |
 | **Hook** | Fonction React qui encapsule de la logique réutilisable (`useTestDiagnostic`, `useForm`…). |
 | **Idempotent** | Rejouable sans effet supplémentaire (le seed, par exemple). |
+| **Jeu de cas** | Collection d'entrées et de sorties attendues qui sert à tester un agent IA. |
 | **JWT** | Jeton signé contenant l'identité et une date d'expiration (`exp`). |
 | **Mapper** | Fonction qui traduit un DTO `snake_case` en objet métier `camelCase`. |
 | **Migration** | Fichier versionné qui fait évoluer le schéma de la base (Alembic). |
@@ -290,7 +305,8 @@ Ces écarts sont réels et vérifiés dans le code ; les connaître évite de pe
 | --- | --- |
 | `AGENTS.md` : la CI du service IA ne vérifie que l'import | La CI exécute aussi **ruff** et **pytest avec couverture ≥ 70 %**. |
 | `backend/README.md` : le contrat frontend est couvert | `GET /diagnostic/tentatives/en-cours` et `POST .../abandonner` sont absents ; les champs d'analyse ne sont jamais renvoyés. |
-| `IA_SERVICE_URL` est injectée au backend | Aucun code backend ne la lit. |
+| `ia-service/README.md` : l'agent Diagnostic n'a pas de route HTTP | `POST /diagnostic/evaluer` existe et le backend l'appelle. |
+| `IA_SERVICE_URL` est injectée au backend | Elle **est** lue par `backend/app/services/ia.py` (contrairement à une ancienne note). |
 | Redis sert de cache | Aucun code backend ou IA ne l'utilise. |
 | `RATE_LIMIT_PER_MINUTE`, `BACKUP_*` sont configurables | Ces variables ne sont lues par aucun code. |
 | `NEXT_PUBLIC_IA_URL` est configurée | Le frontend n'appelle jamais directement le service IA. |
