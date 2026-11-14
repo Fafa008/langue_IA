@@ -19,11 +19,14 @@ code, le contrat d'API et la documentation existante.
 | [05-integration-frontend-backend.md](05-integration-frontend-backend.md) | Chaîne du contrat, DTO, erreurs, séquence du diagnostic, dérives |
 | [../donnees/README.md](../donnees/README.md) | État réel des données : emplacements, 22 tables, seed, données hors base, risques |
 | [../donnees/directive-donnees.md](../donnees/directive-donnees.md) | Directive de production et de gouvernance des six jeux de données |
+| [../fonctionnalites/README.md](../fonctionnalites/README.md) | Ce qui fonctionne réellement, couche par couche, et ce qui reste à brancher |
 
 Ordre de lecture conseillé : ce README, puis 01 → 02 → 05 → 03 → 04, et enfin le dossier
 [`docs/donnees/`](../donnees/README.md) pour savoir **quelles données** alimentent cette
 architecture. Le chapitre 05 fait le lien entre le frontend et le backend ; il se lit mieux
-après les deux premiers.
+après les deux premiers. Le dossier [`docs/fonctionnalites/`](../fonctionnalites/README.md)
+répond à la question complémentaire : **qu'est-ce qui marche vraiment, et qu'est-ce qui reste
+à brancher ?**
 
 ---
 
@@ -302,7 +305,8 @@ Ces écarts sont réels et vérifiés dans le code ; les connaître évite de pe
 | --- | --- |
 | `AGENTS.md` : la CI du service IA ne vérifie que l'import | La CI exécute aussi **ruff** et **pytest avec couverture ≥ 70 %**. |
 | `backend/README.md` : le contrat frontend est couvert | `GET /diagnostic/tentatives/en-cours` et `POST .../abandonner` sont absents ; les champs d'analyse ne sont jamais renvoyés. |
-| `IA_SERVICE_URL` est injectée au backend | Aucun code backend ne la lit. |
+| `ia-service/README.md` : l'agent Diagnostic n'a pas de route HTTP | `POST /diagnostic/evaluer` existe et le backend l'appelle. |
+| `IA_SERVICE_URL` est injectée au backend | Elle **est** lue par `backend/app/services/ia.py` (contrairement à une ancienne note). |
 | Redis sert de cache | Aucun code backend ou IA ne l'utilise. |
 | `RATE_LIMIT_PER_MINUTE`, `BACKUP_*` sont configurables | Ces variables ne sont lues par aucun code. |
 | `NEXT_PUBLIC_IA_URL` est configurée | Le frontend n'appelle jamais directement le service IA. |
