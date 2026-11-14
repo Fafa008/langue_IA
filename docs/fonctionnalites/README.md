@@ -116,8 +116,11 @@ Le détail pas à pas est dans [`06-matrice-fonctionnalites.md`](06-matrice-fonc
 | [04-frontend.md](04-frontend.md) | Pages, gardes de rôle, chaîne service → hook → composant, mocks, E2E | Écrans réels vs « Bientôt » |
 | [05-ia-service.md](05-ia-service.md) | Harness, agents, prompts, fournisseurs LLM, RAG, budgets, enveloppes | IA branchée / non branchée |
 | [06-matrice-fonctionnalites.md](06-matrice-fonctionnalites.md) | Matrice fonctionnalité × couche, parcours de démo, checklist de vérification | Synthèse et preuves |
+| [07-fonctionnalites-par-role.md](07-fonctionnalites-par-role.md) | Tout ce que chaque rôle peut faire, les 32 routes par rôle, le parcours de démo par rôle | Droits réels vs droits apparents |
 
 Ordre de lecture conseillé : **01 → 06** pour une démonstration, **01 → 02 → 03 → 04 → 05 → 06** pour comprendre.
+Le chapitre 07 est la synthèse « par rôle » : à lire après le 02 (backend) et le 04 (frontend), ou juste avant
+une démonstration pour savoir qui peut montrer quoi.
 
 ---
 
