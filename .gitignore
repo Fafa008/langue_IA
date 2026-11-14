@@ -84,6 +84,9 @@ data/raw/
 data/private/
 *.csv
 !ia-service/tests/data/*.csv
+# Modèles et livraisons de questions pédagogiques : versionnés (aucune donnée personnelle)
+!docs/donnees/*.csv
+!docs/donnees/livraisons/*.csv
 
 # Corpus documentaire CECRL (PRE-08) : le manifeste et le README sont versionnés, jamais les descripteurs
 # officiels. Ils sont générés hors dépôt par scripts/ingestion_cecrl.py puis montés en lecture seule.

@@ -16,9 +16,11 @@ Le backend est **le seul composant qui fait autorité**. Il :
 - applique les règles métier (création de tentative, enregistrement des réponses, scoring) ;
 - expose un contrat JSON en `snake_case` que le frontend traduit ensuite en `camelCase`.
 
-Il **n'appelle pas** le service IA aujourd'hui. Le scoring du diagnostic est **déterministe** :
-aucun LLM, aucun `httpx`, aucun `IA_SERVICE_URL` lu par le code. Le service IA est provisionné
-dans Docker, mais le backend l'ignore.
+Il **appelle** le service IA depuis PRE-05, mais uniquement pour l'analyse du diagnostic :
+`POST /diagnostic/evaluer` via `backend/app/services/ia.py`. Le score, lui, reste
+**déterministe** : aucun LLM ne le calcule. L'appel est **best-effort** — sans
+`IA_SERVICE_URL`, en panne ou au-delà de 55 s, la clôture renvoie quand même `200` avec un
+résultat partiel.
 
 Il ne rend aucune page HTML : le frontend est une application séparée. La seule chose servie
 hors API est le dossier des photos, monté en lecture publique sur `/media`.
@@ -333,6 +335,7 @@ Migrations présentes, dans l'ordre :
 4. `diagnostic_question_payload`
 5. `diagnostic_scoring`
 6. `us45_parcours`
+7. `diagnostic_analyse_ia` (colonne `test_diagnostic.analyse_ia`, PRE-05)
 
 ---
 
@@ -346,7 +349,7 @@ Migrations présentes, dans l'ordre :
 | GET | `/diagnostic/questions?code_langue=&code_niveau=` | apprenant | questions du niveau |
 | POST | `/diagnostic/tentatives` | apprenant | `201` tentative créée |
 | POST | `/diagnostic/reponse` | apprenant | `201` réponse enregistrée |
-| POST | `/diagnostic/tentatives/{id}/terminer` | apprenant | `200` score + niveau |
+| POST | `/diagnostic/tentatives/{id}/terminer` | apprenant | `200` score + niveau + analyse IA facultative |
 
 **Routes absentes** (appelées par le frontend, donc 404) :
 
@@ -460,15 +463,48 @@ def _convertir_erreur(erreur: ErreurDiagnostic) -> HTTPException:
 Le service ne connaît pas HTTP ; la route traduit. C'est ce qui permet de tester le service sans
 client HTTP et de réutiliser la logique ailleurs (une tâche de fond, par exemple).
 
+### 6.6 Analyse IA facultative (PRE-05)
+
+Après le scoring, la route `terminer` **ferme la session PostgreSQL** puis tente l'analyse IA :
+
+```python
+id_test = tentative.id_test
+db.close()                       # ne pas immobiliser une connexion pendant l'appel HTTP
+analyse = analyser_tentative(id_test)
+
+return ScoreDiagnosticOut(
+    # ... score, percentage, level, framework
+    competences=analyse.competences if analyse else None,
+    points_faibles=analyse.points_faibles if analyse else None,
+    phase_assimil=analyse.phase_assimil if analyse else None,
+)
+```
+
+`analyser_tentative` (`app/services/analyse_diagnostic.py`) applique quatre règles :
+
+1. **idempotence** : si `test_diagnostic.analyse_ia` est déjà rempli, on le relit sans rappeler
+   le service ;
+2. **garde-fous** : langue non supportée, niveau hors référentiel ou aucune réponse exploitable →
+   `None` (résultat partiel), sans erreur ;
+3. **best-effort** : `ErreurServiceIA` (`non_configure`, `timeout`, `indisponible`,
+   `reponse_invalide`, `http_<statut>`) est journalisée puis absorbée ;
+4. **persistance** : le document JSON validé est écrit dans `analyse_ia` sous verrou
+   (`with_for_update`), ce qui rend deux clôtures concurrentes sûres.
+
+`competences` est calculé **localement**, pas par le LLM : on ne compte que les questions
+`choix`, compétence par compétence. Une compétence inconnue (par exemple `vocabulaire`) est
+ignorée par `_normaliser_competence`, donc la liste peut être partielle.
+
 ---
 
 ## 7. Seed : données de départ et idempotence
 
 `app/seed.py` charge :
 
-- **toujours** : les 5 langues, les niveaux CECRL/HSK, les formules ;
-- **si `SEED_DEMO=true`** : trois comptes de démonstration et la banque de questions
-  (`app/seed_diagnostic.py`).
+- **toujours** : les 5 langues, les 12 niveaux CECRL/HSK, les 3 formules, les 3 rôles et les
+  9 permissions ;
+- **si `SEED_DEMO=true`** : trois comptes de démonstration, un abonnement et **35 questions**
+  (`app/seed_diagnostic.py` : 18 en anglais, 17 en français, toutes à choix).
 
 ```python
 MOT_DE_PASSE_DEMO = "Demo2026"
@@ -485,6 +521,9 @@ Deux pièges :
 - `SEED_DEMO` vaut `true` par défaut dans `docker-compose.yml`. En production, il **faut** le
   passer à `false`, sinon les comptes `Demo2026` existent.
 - Le seed s'exécute à **chaque** démarrage du conteneur, pas seulement au premier.
+- La déduplication des questions se fait sur `(langue, niveau, énoncé)`, et non sur un code
+  stable : corriger un énoncé crée une **nouvelle** question au lieu de modifier l'ancienne.
+- Les questions `zh`, `it`, `de` ne sont pas seedées : le test y est indisponible.
 
 ---
 
@@ -557,11 +596,13 @@ une route sans test peut faire échouer la CI même si tous les tests passent.
 
 ## 10. Limites et dettes techniques
 
-1. **Service IA non branché** : aucun appel sortant, aucune route d'analyse. Le diagnostic
-   s'arrête au score déterministe.
+1. **Service IA appelé en best-effort** : `POST /diagnostic/evaluer` est tenté à la clôture ;
+   sans URL configurée, en panne ou en timeout, le résultat reste partiel sans erreur visible.
 2. **Routes manquantes** : `en-cours` et `abandonner` (404 côté frontend).
-3. **Réponse de score incomplète** : `ScoreDiagnosticOut` ne contient ni `competences`, ni
-   `points_faibles`, ni `phase_assimil`, ni `justification`.
+3. **Réponse de score dépendante de l'IA** : `ScoreDiagnosticOut` expose bien `competences`,
+   `points_faibles` et `phase_assimil`, mais ils sont **omis** de la réponse
+   (`response_model_exclude_none=True`) quand l'analyse échoue. `justification` n'existe pas
+   dans le schéma backend, même si le frontend sait le lire.
 4. **`terminer` synchrone** : renvoie `200`, jamais `202` ; le polling du frontend est inutile.
 5. **Questions texte non notées** et **questions sans réponse comptées fausses**.
 6. **Audio impossible** : le backend refuse le type `audio`, le frontend le masque.

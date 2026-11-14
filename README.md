@@ -476,6 +476,8 @@ langue_IA/
 | Document     | Lien                                     |
 | ------------ | ---------------------------------------- |
 | Architecture | [docs/architecture/](docs/architecture/) |
+| Fonctionnalités et démarrage | [docs/fonctionnalites/](docs/fonctionnalites/) |
+| Données      | [docs/donnees/](docs/donnees/)           |
 | UML          | [docs/uml/](docs/uml/)                   |
 | API          | [docs/api/](docs/api/)                   |
 | Mémoires     | [docs/memoires/](docs/memoires/)         |
