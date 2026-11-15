@@ -676,6 +676,9 @@ docker compose logs ia-service | Select-String "Corpus|LLM|démarrage"
 | README obsolète | laisse croire que la route diagnostic n'existe pas |
 | Aucun modèle local | `models/` vide : tout passe par un fournisseur externe |
 
+> Ces limites sont reprises une par une, avec priorité, effort et critères d'acceptation, dans
+> [`08-taches-ia.md`](08-taches-ia.md) — c'est le backlog technique de cette couche.
+
 ### Ce que le développeur doit maîtriser
 
 1. **L'enveloppe avant l'agent** : `RequeteAgent[T]` est le contrat ; un champ en trop est refusé.
