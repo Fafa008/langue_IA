@@ -299,13 +299,17 @@ Cocher chaque ligne ; si une ligne échoue, le diagnostic est dans le chapitre i
 Dans l'ordre de coût croissant :
 
 1. **Reprise de test** : deux routes backend (`en-cours`, `abandonner`) + un champ `statut`.
-2. **`justification`** : exposer `niveau_estime` et un texte de justification dans `ScoreDiagnosticOut`.
+2. **`justification`** : elle n'existe **nulle part** aujourd'hui — le résultat de l'agent Diagnostic ne contient ni
+   résumé ni sources. Il faut d'abord la produire côté service IA, puis l'exposer dans `ScoreDiagnosticOut`.
 3. **Chatbot** : une route backend qui relaie `/chatbot/message` + un panneau frontend.
 4. **Administration des rôles** : un écran qui consomme `GET /roles` et `PUT /roles/{id}/permissions`.
 5. **Banque de questions** : fournir des questions A1→C2 pour `zh`, `it`, `de`, et plus de 2 par niveau.
 6. **Fournisseur LLM** : configurer `compatible-openai` ou `gemini` dans l'environnement de démonstration.
 7. **RAG** : fournir le corpus CECRL hors dépôt et activer `RAG_CORPUS_ACTIF`.
 8. **Parcours et ateliers** : routes, écrans, données — le chantier le plus lourd.
+
+> Cette liste est un ordre de **valeur** ; l'ordre d'**exécution**, les dépendances, les priorités P0/P1/P2 et les
+> critères d'acceptation sont dans [`08-taches-ia.md`](08-taches-ia.md).
 
 ---
 
