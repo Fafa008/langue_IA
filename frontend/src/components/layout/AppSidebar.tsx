@@ -1,8 +1,9 @@
 "use client";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ImageLogo } from "@/components/ui/Logo";
 import { useSession } from "@/hooks/useSession";
+import { CITATION } from "@/lib/marque";
 import { NAVIGATION } from "@/lib/navigation";
 
 /** Navigation de l'espace connecté, selon le rôle (écrans larges ; sur mobile, le menu du compte la remplace). */
@@ -42,8 +43,8 @@ export default function AppSidebar() {
       </nav>
 
       <div className="mt-auto rounded-card bg-primary/5 p-5 text-small text-content">
-        <Image src="/logo.jpg" alt="" width={40} height={40} className="mb-3 h-10 w-10 rounded-full object-cover shadow-card ring-2 ring-primary/15" />
-        Apprendre aujourd&apos;hui, réussir demain.
+        <ImageLogo className="h-10 w-10" />
+        <p className="mt-3 font-medium leading-snug">{CITATION}</p>
       </div>
     </aside>
   );

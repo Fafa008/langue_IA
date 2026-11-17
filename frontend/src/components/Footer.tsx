@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/ui/Logo";
+import { CITATION } from "@/lib/marque";
 
 export default function Footer() {
   return (
@@ -7,11 +8,7 @@ export default function Footer() {
       <div className="container-page flex flex-col gap-6 py-8 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-10">
           <Logo light />
-          <p className="text-small leading-snug">
-            Apprendre aujourd&apos;hui,
-            <br />
-            réussir demain.
-          </p>
+          <p className="max-w-[16rem] text-small leading-snug">{CITATION}</p>
         </div>
 
         <div className="flex flex-col gap-2 md:items-end">
