@@ -94,6 +94,42 @@ ia-service/corpus/**/descripteurs.jsonl
 ia-service/corpus/**/*.xlsx
 ia-service/corpus/**/*.zip
 
+# ===== Corpus pédagogiques volumineux (PRE-12) =====
+# Sources PDF/audio et dérivés générés : stockage hors dépôt. Les scripts, README,
+# manifestes légers et la documentation restent versionnés.
+ia-service/corpus/**/*.pdf
+ia-service/corpus/**/*.mp3
+ia-service/corpus/**/*.wav
+ia-service/corpus/**/*.m4a
+ia-service/corpus/**/*.aac
+ia-service/corpus/**/*.ogg
+ia-service/corpus/**/*.flac
+ia-service/corpus/**/*.wma
+ia-service/corpus/**/*.7z
+ia-service/corpus/**/*.rar
+ia-service/corpus/**/*.tar
+ia-service/corpus/**/*.tgz
+ia-service/corpus/**/*.gz
+ia-service/corpus/**/*.bz2
+ia-service/corpus/**/*.xz
+ia-service/corpus/**/normalise/**
+ia-service/corpus/**/temp/**
+ia-service/corpus/**/tmp/**
+ia-service/corpus/**/extraction/**
+!ia-service/corpus/**/normalise/
+!ia-service/corpus/**/normalise/**/
+!ia-service/corpus/**/temp/
+!ia-service/corpus/**/temp/**/
+!ia-service/corpus/**/tmp/
+!ia-service/corpus/**/tmp/**/
+!ia-service/corpus/**/extraction/
+!ia-service/corpus/**/extraction/**/
+!ia-service/corpus/**/normalise/**/README.md
+!ia-service/corpus/**/normalise/**/manifeste.json
+!ia-service/corpus/**/temp/**/README.md
+!ia-service/corpus/**/tmp/**/README.md
+!ia-service/corpus/**/extraction/**/README.md
+
 # ===== Python cache =====
 *.pyc
 *.pyo
