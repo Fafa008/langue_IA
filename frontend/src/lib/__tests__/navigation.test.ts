@@ -1,4 +1,4 @@
-import { ACCUEIL_PAR_ROLE, NAVIGATION } from "@/lib/navigation";
+import { ACCUEIL_PAR_ROLE, estActif, NAVIGATION } from "@/lib/navigation";
 import { ROLES } from "@/lib/roles";
 import { ROUTES } from "@/lib/routes";
 
@@ -22,6 +22,21 @@ describe("navigation par rôle", () => {
     expect(NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.testDiagnostic.demarrage)).toMatchObject({
       label: "Test de positionnement",
     });
+  });
+
+  it("le parcours personnalisé est accessible dans l'espace apprenant", () => {
+    const parcours = NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.parcours.accueil);
+    expect(parcours).toMatchObject({ label: "Mon parcours" });
+    expect(parcours?.bientot).toBeUndefined();
+  });
+
+  it("« Mon parcours » reste en évidence sur les pages des modules et des leçons", () => {
+    const parcours = NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.parcours.accueil)!;
+    expect(estActif(parcours, ROUTES.apprenant.parcours.module(2))).toBe(true);
+    expect(estActif(parcours, ROUTES.apprenant.parcours.lecon(12))).toBe(true);
+    expect(estActif(parcours, "/espace/apprenant/parcours-autre")).toBe(false);
+    // L'accueil de l'apprenant n'est pas mis en évidence sur les pages du parcours
+    expect(estActif(NAVIGATION.APPRENANT[0], ROUTES.apprenant.parcours.accueil)).toBe(false);
   });
 
   it("chaque rôle arrive dans son dossier de l'espace connecté", () => {
