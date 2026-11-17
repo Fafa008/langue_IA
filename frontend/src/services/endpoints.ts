@@ -28,7 +28,10 @@ export const ENDPOINTS = {
     langues: `${API}/diagnostic/langues`,
     tentatives: `${API}/diagnostic/tentatives`,
     terminerTentative: (idTentative: number) => `${API}/diagnostic/tentatives/${idTentative}/terminer`,
-    /** Tentative commencée et non terminée de l'apprenant connecté (204 s'il n'y en a pas). */
+    /**
+     * Routes prévues par le contrat mais absentes du backend : elles répondent 404 hors mode mock.
+     * Vérifier backend/app/api/routes/diagnostic.py avant de les considérer comme opérationnelles.
+     */
     tentativeEnCours: `${API}/diagnostic/tentatives/en-cours`,
     abandonnerTentative: (idTentative: number) => `${API}/diagnostic/tentatives/${idTentative}/abandonner`,
     questions: `${API}/diagnostic/questions`,

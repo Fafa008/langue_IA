@@ -2,7 +2,7 @@
 
 > Documentation pédagogique fondée sur l'inspection du code réel du dépôt
 > (backend FastAPI, frontend Next.js, service IA, Docker et CI/CD).
-> Version du 13 novembre 2026.
+> Version du 17 novembre 2026.
 
 Ce document n'est pas une spécification idéale : il décrit **ce qui existe**, distingue
 **ce qui est partiel** de **ce qui est seulement prévu**, et signale les écarts entre le
@@ -17,11 +17,12 @@ code, le contrat d'API et la documentation existante.
 | [03-ia-service.md](03-ia-service.md) | Harness, agents, prompts, fournisseurs LLM, RAG, catalogue d'erreurs |
 | [04-docker-ci-cd.md](04-docker-ci-cd.md) | Compose, Dockerfiles multi-étapes, CI GitHub Actions, CD GHCR |
 | [05-integration-frontend-backend.md](05-integration-frontend-backend.md) | Chaîne du contrat, DTO, erreurs, séquence du diagnostic, dérives |
+| [06-guide-fonctions.md](06-guide-fonctions.md) | Rôle et règle de chaque fonction importante, du clic React à l'appel LLM |
 | [../donnees/README.md](../donnees/README.md) | État réel des données : emplacements, 22 tables, seed, données hors base, risques |
 | [../donnees/directive-donnees.md](../donnees/directive-donnees.md) | Directive de production et de gouvernance des six jeux de données |
 | [../fonctionnalites/README.md](../fonctionnalites/README.md) | Ce qui fonctionne réellement, couche par couche, et ce qui reste à brancher |
 
-Ordre de lecture conseillé : ce README, puis 01 → 02 → 05 → 03 → 04, et enfin le dossier
+Ordre de lecture conseillé : ce README, puis 01 → 02 → 05 → 03 → 04 → 06 (guide des fonctions), et enfin le dossier
 [`docs/donnees/`](../donnees/README.md) pour savoir **quelles données** alimentent cette
 architecture. Le chapitre 05 fait le lien entre le frontend et le backend ; il se lit mieux
 après les deux premiers. Le dossier [`docs/fonctionnalites/`](../fonctionnalites/README.md)
@@ -305,7 +306,8 @@ Ces écarts sont réels et vérifiés dans le code ; les connaître évite de pe
 | --- | --- |
 | `AGENTS.md` : la CI du service IA ne vérifie que l'import | La CI exécute aussi **ruff** et **pytest avec couverture ≥ 70 %**. |
 | `backend/README.md` : le contrat frontend est couvert | `GET /diagnostic/tentatives/en-cours` et `POST .../abandonner` sont absents ; les champs d'analyse ne sont jamais renvoyés. |
-| `ia-service/README.md` : l'agent Diagnostic n'a pas de route HTTP | `POST /diagnostic/evaluer` existe et le backend l'appelle. |
+| `ia-service/README.md` et `AUDIT_LANGGRAPH.md` : l'agent Diagnostic n'a pas de route HTTP | `POST /diagnostic/evaluer` existe et le backend l'appelle. |
+| `AUDIT_LANGGRAPH.md` : le RAG est `RecuperateurVide` | `RecuperateurLocal` est implémenté et activable par `RAG_CORPUS_ACTIF` ; `RecuperateurVide` reste le repli. L'audit est daté et corrigé en tête. |
 | `IA_SERVICE_URL` est injectée au backend | Elle **est** lue par `backend/app/services/ia.py` (contrairement à une ancienne note). |
 | Redis sert de cache | Aucun code backend ou IA ne l'utilise. |
 | `RATE_LIMIT_PER_MINUTE`, `BACKUP_*` sont configurables | Ces variables ne sont lues par aucun code. |

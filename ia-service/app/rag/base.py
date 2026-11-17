@@ -1,9 +1,10 @@
 """Port du récupérateur documentaire (RAG).
 
-Le RAG n'est pas encore déployé. L'agent Diagnostic ne dépend donc que de ce protocole : un récupérateur réel
-(index vectoriel, recherche lexicale, service externe) pourra être injecté par le Harness sans modifier ni l'agent,
-ni le pipeline. Les descripteurs renvoyés reprennent exactement ``DescripteurRAGPrompt``, la forme déjà rendue par
-le prompt d'évaluation.
+Le port est déjà implémenté localement par ``RecuperateurLocal`` (recherche lexicale BM25), activable par
+``RAG_CORPUS_ACTIF`` ; ``RecuperateurVide`` reste le repli par défaut. L'agent Diagnostic ne dépend que de ce
+protocole : un autre récupérateur (index vectoriel, service externe) pourra être injecté par le Harness sans
+modifier ni l'agent, ni le pipeline. Les descripteurs renvoyés reprennent exactement ``DescripteurRAGPrompt``, la
+forme déjà rendue par le prompt d'évaluation.
 
 Le port ne journalise ni les réponses de l'apprenant, ni les descripteurs : il reçoit une requête et retourne une
 séquence de descripteurs typés.
