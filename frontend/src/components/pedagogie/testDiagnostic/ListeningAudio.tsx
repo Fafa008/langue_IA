@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Headphones, Square } from "lucide-react";
+import { localeDe } from "@/lib/voix";
 
 interface ListeningAudioProps {
   langue: string;
@@ -13,15 +14,6 @@ interface ListeningAudioProps {
 
 /** Comme à l'examen, l'extrait ne peut être écouté que deux fois. */
 export const ECOUTES_MAX = 2;
-
-/** Voix de synthèse par langue ; pour une autre langue, le code seul (« es ») suffit au navigateur. */
-const LOCALES: Record<string, string> = {
-  en: "en-US",
-  fr: "fr-FR",
-  zh: "zh-CN",
-  it: "it-IT",
-  de: "de-DE",
-};
 
 /** Compréhension orale : un bouton unique lit l'extrait (fichier audio ou synthèse vocale), deux fois au plus. */
 export default function ListeningAudio({ langue, audioUrl, audioTexte }: ListeningAudioProps) {
@@ -51,7 +43,7 @@ export default function ListeningAudio({ langue, audioUrl, audioTexte }: Listeni
     if (!audioTexte) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(audioTexte);
-    utterance.lang = LOCALES[langue] ?? langue;
+    utterance.lang = localeDe(langue);
     utterance.rate = 0.9;
     utterance.onstart = () => setLectureEnCours(true);
     utterance.onend = () => setLectureEnCours(false);

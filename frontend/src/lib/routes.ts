@@ -2,6 +2,8 @@
 const ESPACE = "/espace";
 /** Module Diagnostic (domaine Pédagogie) : src/app/espace/apprenant/(pedagogie)/test-diagnostic (démarrage, test, résultats). */
 const DIAGNOSTIC = `${ESPACE}/apprenant/test-diagnostic`;
+/** Module Parcours personnalisé (domaine Pédagogie) : src/app/espace/apprenant/(pedagogie)/parcours. */
+const PARCOURS = `${ESPACE}/apprenant/parcours`;
 
 export const ROUTES = {
   home: "/",
@@ -19,7 +21,12 @@ export const ROUTES = {
       test: `${DIAGNOSTIC}/test`,
       resultats: `${DIAGNOSTIC}/resultats`,
     },
-    mesCours: `${ESPACE}/apprenant/mes-cours`,
+    /** Mon parcours (parcours, leçon du jour, exercices), puis une page par module et par leçon. */
+    parcours: {
+      accueil: PARCOURS,
+      module: (numero: number) => `${PARCOURS}/modules/${numero}`,
+      lecon: (numero: number) => `${PARCOURS}/lecons/${numero}`,
+    },
     ateliers: `${ESPACE}/apprenant/ateliers`,
     mesInscriptions: `${ESPACE}/apprenant/mes-inscriptions`,
     parametres: `${ESPACE}/apprenant/parametres`,

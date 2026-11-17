@@ -6,7 +6,7 @@ import { ACCUEIL_PAR_ROLE, NAVIGATION } from "@/lib/navigation";
 import { ROLE_LABELS } from "@/lib/roles";
 
 const SOUS_TITRES = {
-  APPRENANT: "Retrouvez vos cours, vos ateliers et vos inscriptions.",
+  APPRENANT: "Retrouvez votre parcours, vos ateliers et vos inscriptions.",
   FORMATEUR: "Préparez vos séances et suivez vos apprenants.",
   ADMINISTRATEUR: "Pilotez les utilisateurs, les formations et l'activité du centre.",
 };

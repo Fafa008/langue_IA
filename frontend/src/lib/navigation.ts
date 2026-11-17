@@ -1,5 +1,4 @@
 import {
-  BookOpen,
   CalendarCheck,
   CalendarDays,
   ClipboardList,
@@ -9,6 +8,7 @@ import {
   House,
   LayoutDashboard,
   Presentation,
+  Route,
   Settings,
   UserRound,
   UsersRound,
@@ -25,6 +25,13 @@ export interface NavItem {
   bientot?: true;
   /** Autres pages où l'entrée est aussi mise en évidence (onglets d'une même page). */
   aussiActifSur?: string[];
+  /** L'entrée reste en évidence sur les pages rangées sous son adresse (modules et leçons du parcours). */
+  sousPages?: true;
+}
+
+/** Vrai si l'entrée du menu correspond à la page affichée. */
+export function estActif({ href, aussiActifSur, sousPages }: NavItem, pathname: string): boolean {
+  return pathname === href || !!aussiActifSur?.includes(pathname) || (!!sousPages && pathname.startsWith(`${href}/`));
 }
 
 /** Page d'arrivée de chaque rôle après la connexion. */
@@ -37,7 +44,7 @@ export const ACCUEIL_PAR_ROLE: Record<Role, string> = {
 const APPRENANT: NavItem[] = [
   { label: "Tableau de bord", href: ROUTES.apprenant.dashboard, icon: House },
   { label: "Test de positionnement", href: ROUTES.apprenant.testDiagnostic.demarrage, icon: ClipboardList },
-  { label: "Mes cours", href: ROUTES.apprenant.mesCours, icon: BookOpen, bientot: true },
+  { label: "Mon parcours", href: ROUTES.apprenant.parcours.accueil, icon: Route, sousPages: true },
   { label: "Ateliers", href: ROUTES.apprenant.ateliers, icon: CalendarDays, bientot: true },
   { label: "Mon profil", href: ROUTES.profil, icon: UserRound },
   { label: "Mes inscriptions", href: ROUTES.apprenant.mesInscriptions, icon: ClipboardList, bientot: true },
