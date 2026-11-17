@@ -8,11 +8,6 @@ interface UseFormOptions<T> {
   onSubmit: (values: T) => void;
 }
 
-/**
- * État de formulaire minimal : valeurs, erreurs et soumission.
- * Les erreurs n'apparaissent qu'après une première tentative d'envoi,
- * puis sont recalculées à chaque frappe. En cas d'erreur, le premier champ invalide reçoit le focus.
- */
 /** Place le focus (et donc fait défiler la page) sur le premier champ marqué aria-invalid. */
 function focusFirstInvalidField(form: HTMLFormElement) {
   // Attend l'affichage des erreurs, qui pose les attributs aria-invalid
@@ -24,6 +19,11 @@ function focusFirstInvalidField(form: HTMLFormElement) {
   });
 }
 
+/**
+ * État de formulaire minimal : valeurs, erreurs et soumission.
+ * Les erreurs n'apparaissent qu'après une première tentative d'envoi, puis sont recalculées à chaque frappe.
+ * En cas d'erreur au moment de l'envoi, le premier champ invalide reçoit le focus.
+ */
 export function useForm<T extends object>({ initialValues, validate, onSubmit }: UseFormOptions<T>) {
   const [values, setValues] = useState<T>(initialValues);
   const [errors, setErrors] = useState<FieldErrors<T>>({});

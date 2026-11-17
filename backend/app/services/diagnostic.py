@@ -25,7 +25,7 @@ class CodeErreurDiagnostic(str, Enum):
 
 
 TYPES_ENREGISTRABLES = ("choix", "texte")
-"""Types de questions posées pendant le test (l'audio attend un stockage des médias)."""
+"""Types de réponses enregistrables : l'audio est refusé, faute de stockage de médias pour les réponses."""
 
 
 @dataclass(frozen=True)

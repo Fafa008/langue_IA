@@ -40,6 +40,11 @@ def _ajouter_mois(depart: date, mois: int) -> date:
 
 @router.post("/login", response_model=TokenOut)
 def login(donnees: LoginIn, db: DbSession) -> TokenOut:
+    """Connecte un utilisateur et renvoie son JWT.
+
+    Un e-mail inconnu et un mauvais mot de passe donnent la même 401, pour ne pas révéler les comptes existants ;
+    un compte inactif ou suspendu donne une 403.
+    """
     utilisateur = db.scalar(select(Utilisateur).where(Utilisateur.email == donnees.email))
     # Même réponse pour un e-mail inconnu et un mauvais mot de passe : ne pas révéler les comptes existants
     if utilisateur is None or not verifier_mot_de_passe(donnees.mot_de_passe, utilisateur.mot_de_passe):

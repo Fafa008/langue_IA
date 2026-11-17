@@ -331,8 +331,12 @@ export const httpTestDiagnosticService = {
     };
   },
 
+  /**
+   * Reprise d'une tentative interrompue. Le backend n'expose pas encore `GET .../en-cours` : hors mode mock,
+   * cet appel échoue en 404. Le 204 ci-dessous décrit le contrat attendu, pas le comportement actuel.
+   */
   async testEnCours(): Promise<TestInterrompu | null> {
-    // 204 : aucune tentative en cours
+    // 204 : aucune tentative en cours (contrat attendu)
     const dto = await apiRequest<TentativeEnCoursDto | undefined>(ENDPOINTS.diagnostic.tentativeEnCours);
     if (!dto) return null;
     if (!Number.isInteger(dto.id_tentative) || !dto.code_langue || !dto.code_niveau || !Array.isArray(dto.reponses)) {
@@ -354,6 +358,7 @@ export const httpTestDiagnosticService = {
     };
   },
 
+  /** Abandon sans corps de réponse ; la route backend n'existe pas encore (404 hors mode mock). */
   async abandonner(idSession: string): Promise<void> {
     await apiRequest<void>(ENDPOINTS.diagnostic.abandonnerTentative(Number(idSession)), { method: "POST" });
   },
