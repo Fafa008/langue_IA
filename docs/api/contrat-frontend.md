@@ -817,3 +817,84 @@ d'un autre rôle), **422** langue inconnue ou liste vide.
 
 Pas de `DELETE` : un formateur est lié à ses ateliers (`Atelier.id_formateur`, `ON DELETE RESTRICT`), il est donc
 désactivé plutôt que supprimé. Un compte `INACTIF` est refusé à la connexion (**403**), comme pour tout utilisateur.
+
+## Parcours personnalisé (US41/US42) — rôle `APPRENANT` — contrat frontend, routes à créer côté backend
+
+Le frontend fonctionne aujourd'hui **sans backend** (`NEXT_PUBLIC_API_MOCK=true`, données de
+`frontend/src/mocks/parcours-personnalise.mock.ts`). Ce contrat décrit ce que le backend devra exposer pour le
+brancher ; aucune route n'existe encore. Conversion côté frontend : `frontend/src/services/parcours-personnalise.mapper.ts`.
+
+Écrans : « Mon parcours » (`/espace/apprenant/parcours`), un module (`/parcours/modules/{numero}`) et une leçon
+(`/parcours/lecons/{numero}`) ; la barre latérale liste les modules sous « Mon parcours ».
+
+**Tables concernées** (`backend/app/models/parcours.py`) :
+
+| Table | Utilisée pour |
+|---|---|
+| `parcours` | statut, `lecon_atteinte`, langue, niveau visé ; propriétés `phase` et `est_lecon_de_revision` (`services/phase_parcours.py`) |
+| `parcours_exercice` | exercices d'une leçon (`numero_lecon`), `score_obtenu` (le statut en est déduit) |
+| `exercice` | `type` (`GRAMMAIRE`, `VOCABULAIRE`, `COMPREHENSION`, `ECOUTE`, `ORAL`), `difficulte`, `contenu` (JSON décrit plus bas) |
+| `test_diagnostic` | niveau de départ (facultatif) |
+| *aucune* | **modules** : regroupement de leçons consécutives sous un thème — à décider (table `module` ou configuration) |
+
+Le frontend **affiche** la phase et les statuts reçus, il ne les recalcule pas. Une valeur d'énumération inconnue
+est refusée (message d'erreur) plutôt qu'interprétée ; la casse n'a pas d'importance.
+
+### `GET /parcours/en-cours`
+
+**200** :
+
+```json
+{
+  "id_parcours": 7, "statut": "EN_COURS", "date_creation": "2026-10-02T09:30:00Z",
+  "code_langue": "fr", "libelle_langue": "Français",
+  "cadre": "CECRL", "niveaux_cadre": ["A1", "A2", "B1", "B2", "C1", "C2"],
+  "niveau_depart": "A2", "niveau_vise": "B1",
+  "lecon_atteinte": 23, "phase": "PASSIVE", "est_lecon_de_revision": false,
+  "modules": [{ "numero": 1, "titre": "Premiers contacts", "description": "…", "premiere_lecon": 1, "derniere_lecon": 7 }]
+}
+```
+
+Statut d'un module ou d'une leçon, déduit côté frontend de `lecon_atteinte` : terminé avant, en cours, à venir après.
+**404** : aucun parcours (le frontend invite à passer le test de positionnement).
+
+### `GET /parcours/{id_parcours}/exercices`
+
+Une ligne par `parcours_exercice` jusqu'à la leçon atteinte (le backend ne crée pas les leçons futures) :
+
+```json
+[{ "id_parcours_exercice": 231, "id_exercice": 1231, "numero_lecon": 23, "type": "GRAMMAIRE",
+   "difficulte": 2, "intitule": "Le passé composé", "statut": "REUSSI", "score_obtenu": 85 }]
+```
+
+`statut` : `A_FAIRE` si `score_obtenu` est `null`, `REUSSI` si ≥ 50, `A_REVOIR` sinon (seuil à confirmer).
+
+### `GET /parcours/{id_parcours}/lecons/{numero_lecon}`
+
+Mêmes lignes que ci-dessus pour une leçon, plus le `contenu` de chaque exercice (texte JSON de `exercice.contenu`) :
+
+```json
+{ "numero_lecon": 23, "est_lecon_de_revision": false, "code_langue": "fr",
+  "exercices": [{ "id_parcours_exercice": 233, "type": "ECOUTE", "…": "…",
+                  "contenu": "{\"format\":\"ecoute\",\"consigne\":\"…\",\"question\":\"…\",\"choix\":[\"…\"],\"audio_url\":null,\"texte_audio\":\"…\"}" }] }
+```
+
+Formats de `contenu` : `choix` (`enonce`, `choix`), `texte` (`enonce`, `___` marque un trou), `ecoute` (`question`,
+`choix`, `audio_url` ou `texte_audio` lu par le navigateur), `prononciation` (`phrase` à lire à voix haute, transcrite
+par la reconnaissance vocale du navigateur), `conversation` (`sujet`, `message_initial`, `echanges_minimum`).
+**403** leçon pas encore atteinte (le `detail` est affiché).
+
+### `POST /parcours/{id_parcours}/exercices/{id_parcours_exercice}/reponse`
+
+Corps : `{ "format": "choix" | "texte" | "ecoute" | "prononciation", "reponse": "…" }` (pour la prononciation, la
+transcription), ou `{ "format": "conversation", "messages": [{ "role": "apprenant", "contenu": "…" }] }`.
+Délai côté frontend : 45 s (correction possible par l'IA).
+
+**200** : `{ "statut": "REUSSI", "score_obtenu": 85, "commentaire": "…", "reponse_attendue": null }`. Le backend
+enregistre `score_obtenu` et avance `lecon_atteinte` quand tous les exercices de la leçon atteinte ont une réponse.
+
+### `POST /chatbot/message` — relais du service IA (tâche B-10)
+
+Mêmes champs que `ia-service` (`app/schemas/chatbot.py`) : `{ "message": "…", "historique": [{ "role": "assistant",
+"contenu": "…" }] }` (20 derniers tours au plus) → `{ "reponse": "…" }`. Le frontend ne garde la conversation que
+dans l'écran (aucun historique conservé, voir F-08) ; sans backend, le professeur IA est simulé et l'écran l'indique.

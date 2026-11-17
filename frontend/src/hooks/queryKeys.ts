@@ -20,6 +20,12 @@ export const queryKeys = {
   languesDiagnostic: ["diagnostic", "langues"] as const,
   /** Tentative interrompue de l'apprenant connecté, à reprendre ou abandonner. */
   testInterrompu: ["diagnostic", "test-interrompu"] as const,
+  /** Parcours en cours de l'apprenant connecté et exercices de ce parcours. */
+  parcours: ["parcours", "en-cours"] as const,
+  exercicesParcours: (idParcours: number) => ["parcours", idParcours, "exercices"] as const,
+  leconParcours: (idParcours: number, numeroLecon: number) => ["parcours", idParcours, "lecon", numeroLecon] as const,
+  /** Préfixe commun : tout le parcours est relu après une réponse (statuts, leçon atteinte, phase). */
+  parcoursTout: ["parcours"] as const,
   statistiquesAdmin: ["statistiques-admin"] as const,
   inscriptions: (jours: PeriodeInscriptions) => ["inscriptions", jours] as const,
 };
