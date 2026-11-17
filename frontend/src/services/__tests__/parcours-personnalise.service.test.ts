@@ -1,4 +1,4 @@
-import { choisirScenarioParcoursMock, scorePrononciation } from "@/mocks/parcours-personnalise.mock";
+import { choisirScenarioParcoursMock, corrigerRedaction, scorePrononciation } from "@/mocks/parcours-personnalise.mock";
 import {
   toContenuExercice,
   toExerciceParcours,
@@ -97,18 +97,18 @@ describe("conversion du contrat d'API", () => {
 });
 
 describe("parcours simulé (démo sans backend)", () => {
-  it("regroupe les leçons en 8 modules de 7 leçons et donne 5 exercices par leçon atteinte", async () => {
+  it("regroupe les leçons en 8 modules de 7 leçons et donne 6 exercices par leçon atteinte", async () => {
     const parcours = await mock.enCours();
     expect(parcours.modules).toHaveLength(8);
     expect(parcours.modules[3]).toMatchObject({ numero: 4, premiereLecon: 22, derniereLecon: 28 });
     const exercices = await mock.exercices(7);
-    expect(exercices).toHaveLength(23 * 5);
+    expect(exercices).toHaveLength(23 * 6);
     expect(new Set(exercices.map((e) => e.type))).toEqual(new Set(["GRAMMAIRE", "COMPREHENSION", "VOCABULAIRE", "ECOUTE", "ORAL"]));
   });
 
-  it("propose l'écoute, la prononciation et la conversation dans chaque leçon", async () => {
+  it("propose QCM, phrase à compléter, écoute, prononciation, conversation et rédaction dans chaque leçon", async () => {
     const lecon = await mock.lecon(7, 23);
-    expect(lecon.exercices.map((e) => e.contenu.format)).toEqual(["choix", "texte", "ecoute", "prononciation", "conversation"]);
+    expect(lecon.exercices.map((e) => e.contenu.format)).toEqual(["choix", "texte", "ecoute", "prononciation", "conversation", "redaction"]);
   });
 
   it("refuse une leçon pas encore atteinte", async () => {
@@ -117,7 +117,7 @@ describe("parcours simulé (démo sans backend)", () => {
 
   it("corrige chaque forme de réponse et ouvre la leçon suivante quand la leçon du jour est finie", async () => {
     const { exercices } = await mock.lecon(7, 23);
-    const [, texte, ecoute, prononciation, conversation] = exercices;
+    const [, texte, ecoute, prononciation, conversation, redaction] = exercices;
 
     expect(await mock.corriger(7, texte.idParcoursExercice, { format: "texte", reponse: "mauvais" })).toMatchObject({
       statut: "A_REVOIR",
@@ -136,8 +136,45 @@ describe("parcours simulé (démo sans backend)", () => {
     expect(await mock.corriger(7, conversation.idParcoursExercice, { format: "conversation", messages })).toMatchObject({
       statut: "REUSSI",
       scoreObtenu: 100,
+      mode: "IA",
     });
+    expect((await mock.enCours()).leconAtteinte).toBe(23);
+    await mock.corriger(7, redaction.idParcoursExercice, { format: "redaction", reponse: "Samedi, je suis allé au marché." });
     expect((await mock.enCours()).leconAtteinte).toBe(24);
+  });
+
+  it("corrige le QCM de façon déterministe : bonne réponse et explication seulement après la réponse", async () => {
+    const { exercices } = await mock.lecon(7, 22);
+    const qcm = exercices[0];
+    if (qcm.contenu.format !== "choix") throw new Error("QCM attendu");
+    expect(JSON.stringify(qcm.contenu)).not.toMatch(/reponse|explication/);
+
+    const faux = await mock.corriger(7, qcm.idParcoursExercice, { format: "choix", reponse: "réponse fausse" });
+    expect(faux).toMatchObject({ statut: "A_REVOIR", scoreObtenu: 0, mode: "AUTOMATIQUE" });
+    expect(faux.reponseAttendue).toBeTruthy();
+    expect(faux.explication).toBeTruthy();
+    // Même réponse, même correction
+    expect(await mock.corriger(7, qcm.idParcoursExercice, { format: "choix", reponse: faux.reponseAttendue! })).toMatchObject({
+      statut: "REUSSI",
+      scoreObtenu: 100,
+      reponseAttendue: null,
+    });
+  });
+
+  it("fait corriger une rédaction par le professeur IA : erreurs, points forts et conseil", () => {
+    const correction = corrigerRedaction("samedi j'ai allé au marché avec ma sœur mais il pleuvait", 25);
+    expect(correction.mode_correction).toBe("IA");
+    expect(correction.erreurs?.map((e) => e.correction)).toEqual(["je suis allé(e)", "Samedi", "pleuvait."]);
+    expect(correction.points_forts).toContain("Vous reliez vos idées avec des connecteurs (mais, parce que, ensuite…).");
+    expect(correction.conseil).toMatch(/au moins 25 mots/);
+    expect(correction.score_obtenu).toBeLessThan(50);
+
+    const bon = corrigerRedaction(
+      "Samedi, je suis allée au marché avec ma sœur. Nous avons acheté des fruits, puis nous avons pris un café parce qu'il faisait froid. Le soir, nous avons regardé un film à la maison.",
+      25,
+    );
+    expect(bon).toMatchObject({ score_obtenu: 100, erreurs: [] });
+    expect(bon.points_forts).toContain("Vous employez le passé composé.");
   });
 
   it("note la prononciation sur les mots reconnus, sans accents ni ponctuation", () => {
@@ -169,12 +206,17 @@ describe("service HTTP (prêt pour le backend)", () => {
   });
 
   it("envoie une réponse à corriger avec un délai adapté à l'IA", async () => {
-    apiRequest.mockResolvedValueOnce({ statut: "REUSSI", score_obtenu: 80, commentaire: "Bien" });
+    apiRequest.mockResolvedValueOnce({ statut: "REUSSI", score_obtenu: 80, mode_correction: "automatique", commentaire: "Bien" });
     expect(await http.corriger(7, 231, { format: "prononciation", reponse: "bonjour" })).toEqual({
       statut: "REUSSI",
       scoreObtenu: 80,
+      mode: "AUTOMATIQUE",
       commentaire: "Bien",
       reponseAttendue: null,
+      explication: null,
+      pointsForts: [],
+      erreurs: [],
+      conseil: null,
     });
     expect(apiRequest).toHaveBeenCalledWith("/api/v1/parcours/7/exercices/231/reponse", {
       method: "POST",

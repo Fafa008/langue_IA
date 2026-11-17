@@ -10,7 +10,7 @@ const ICONES = { TERMINE: CheckCircle2, EN_COURS: CircleDot, A_VENIR: Lock } as 
 
 /**
  * Sous-menu de « Mon parcours » : un lien par module (Module 1, Module 2…) vers la page de ses leçons.
- * Affiché dans la section du parcours ; rien n'est affiché tant que le parcours n'est pas chargé.
+ * Se déplie et se replie depuis la barre latérale ; rien n'est affiché tant que le parcours n'est pas chargé.
  */
 export default function SousMenuModules({ pathname }: { pathname: string }) {
   const { data: parcours } = useParcoursPersonnalise();
@@ -22,7 +22,7 @@ export default function SousMenuModules({ pathname }: { pathname: string }) {
   const moduleDeLaLecon = numeroLecon ? moduleDeLecon(parcours.modules, numeroLecon)?.numero : undefined;
 
   return (
-    <ul aria-label="Modules du parcours" className="ml-6 mt-1 flex flex-col gap-0.5 border-l border-border pl-3">
+    <ul id="sous-menu-modules" aria-label="Modules du parcours" className="ml-6 mt-1 flex flex-col gap-0.5 border-l border-border pl-3">
       {parcours.modules.map((module) => {
         const href = ROUTES.apprenant.parcours.module(module.numero);
         const actif = pathname === href || moduleDeLaLecon === module.numero;
