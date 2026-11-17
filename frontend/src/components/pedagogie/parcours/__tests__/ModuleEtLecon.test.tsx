@@ -69,13 +69,21 @@ describe("Page d'un module", () => {
 });
 
 describe("Page d'une leçon", () => {
-  it("corrige une phrase à compléter et propose de réessayer", async () => {
+  it("corrige automatiquement une phrase à compléter, fige la réponse puis propose de réessayer", async () => {
     afficher(<LeconVue numero={23} />);
     const exercice = await screen.findByRole("region", { name: "Les salutations" });
     fireEvent.change(within(exercice).getByLabelText("Votre réponse"), { target: { value: "Merci" } });
     fireEvent.click(within(exercice).getByRole("button", { name: "Valider ma réponse" }));
-    expect(await within(exercice).findByText("Vous pouvez réessayer.")).toBeInTheDocument();
-    expect(within(exercice).getByText("Réponse attendue : Bonjour")).toBeInTheDocument();
+    const retour = await within(exercice).findByRole("region", { name: "Correction" });
+    expect(retour).toHaveTextContent("À revoir · 0/100");
+    expect(retour).toHaveTextContent("Correction automatique");
+    expect(retour).toHaveTextContent("Bonne réponse : Bonjour");
+    // Réponse figée pendant l'affichage de la correction, puis rouverte par « Réessayer »
+    expect(within(exercice).getByLabelText("Votre réponse")).toHaveAttribute("readonly");
+    expect(within(exercice).queryByRole("button", { name: "Valider ma réponse" })).not.toBeInTheDocument();
+    fireEvent.click(within(retour).getByRole("button", { name: "Réessayer" }));
+    await waitFor(() => expect(within(exercice).getByLabelText("Votre réponse")).not.toHaveAttribute("readonly"));
+    expect(within(exercice).getByRole("button", { name: "Valider ma réponse" })).toBeInTheDocument();
   });
 
   it("transcrit la prononciation avec la reconnaissance vocale puis la note", async () => {
