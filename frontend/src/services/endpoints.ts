@@ -34,6 +34,16 @@ export const ENDPOINTS = {
     questions: `${API}/diagnostic/questions`,
     reponse: `${API}/diagnostic/reponse`,
   },
+  /** Parcours personnalisé de l'apprenant connecté (contrat frontend, routes à exposer par le backend). */
+  parcours: {
+    enCours: `${API}/parcours/en-cours`,
+    exercices: (idParcours: number) => `${API}/parcours/${idParcours}/exercices`,
+    lecon: (idParcours: number, numeroLecon: number) => `${API}/parcours/${idParcours}/lecons/${numeroLecon}`,
+    reponse: (idParcours: number, idParcoursExercice: number) =>
+      `${API}/parcours/${idParcours}/exercices/${idParcoursExercice}/reponse`,
+  },
+  /** Professeur IA : relais backend authentifié de POST /chatbot/message du service IA (tâche B-10, à créer). */
+  chatbotMessage: `${API}/chatbot/message`,
   formateurs: `${API}/formateurs`,
   formateur: (idUser: number) => `${API}/formateurs/${idUser}`,
   /** Tableau de bord de l'administrateur */
