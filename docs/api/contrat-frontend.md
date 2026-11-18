@@ -1,0 +1,937 @@
+# Contrat d'API attendu par le frontend
+
+Ce document liste les routes que le frontend appelle déjà, avec le format exact des requêtes et des réponses.
+Tant qu'une route n'existe pas côté backend, le frontend utilise des données simulées (`NEXT_PUBLIC_API_MOCK=true`).
+
+- Côté frontend, les routes sont déclarées dans [`frontend/src/services/endpoints.ts`](../../frontend/src/services/endpoints.ts)
+  et les conversions de format dans `frontend/src/services/*.service.ts`.
+- Ces conversions sont vérifiées par les tests unitaires [`services.test.ts`](../../frontend/src/services/__tests__/services.test.ts).
+- **Si une route ou un champ change, mettez à jour ce document, `endpoints.ts` et le service concerné dans la même PR.**
+
+## Règles générales
+
+| Sujet | Règle |
+| --- | --- |
+| Préfixe | Toutes les routes commencent par `/api/v1` |
+| Format | JSON, champs en `snake_case` ; dates en ISO 8601 (`2025-01-12T10:00:00Z`, ou `AAAA-MM-JJ` pour une date seule) |
+| Authentification | En-tête `Authorization: Bearer <access_token>` sur toutes les routes, sauf celles marquées **publique** |
+| JWT | Le frontend lit seulement le champ `exp` (date d'expiration) ; il ne vérifie pas la signature |
+| CORS | Autoriser l'origine du frontend (`http://localhost:3000` en développement), les en-têtes `Content-Type` et `Authorization`, et les méthodes `GET, POST, PUT, PATCH, DELETE, OPTIONS` |
+| Erreurs | Format FastAPI : `{ "detail": "message" }`, ou la liste de validation par défaut (422) |
+
+### Codes d'erreur interprétés par le frontend
+
+| Code | Signification attendue | Réaction du frontend |
+| --- | --- | --- |
+| 401 | Route publique : identifiants incorrects. Route protégée : JWT absent, expiré ou révoqué | Message d'erreur. Sur une route protégée : session effacée et retour à la connexion |
+| 403 | Compte inactif/suspendu (connexion) ou droits insuffisants | Message dédié |
+| 409 | Ressource déjà existante (e-mail déjà utilisé) | Message dédié sur le champ e-mail |
+| 422 | Données refusées | Affiche `detail` (premier message s'il s'agit d'une liste) |
+| 5xx | Panne | « Le serveur rencontre un problème », une seule nouvelle tentative pour les lectures |
+
+## Objet `Utilisateur`
+
+Renvoyé par la connexion, le profil et la liste d'administration. Il reprend les colonnes de la table `Utilisateur`.
+
+```json
+{
+  "id_user": 7,
+  "nom": "RAKOTO",
+  "prenom": "Rova",
+  "email": "rova@exemple.com",
+  "telephone": "034 12 345 67",
+  "role": "APPRENANT",
+  "statut": "ACTIF",
+  "date_inscription": "2025-01-12T10:00:00Z",
+  "photo_url": "/media/photos/7.jpg"
+}
+```
+
+- `id_user` : colonne `Utilisateur.Id_user`.
+- `role` : `APPRENANT` | `FORMATEUR` | `ADMINISTRATEUR`, et `statut` : `ACTIF` | `INACTIF` | `SUSPENDU`.
+  Ces colonnes sont des entiers en base : l'API les renvoie et les reçoit **en texte**.
+- `telephone` peut être `null`. Le frontend l'envoie au **format malgache local** `034 12 345 67`
+  (10 chiffres commençant par 0, groupés 3-2-3-2). Un numéro reçu au format international (`+261 34 12 345 67`)
+  est affiché au format local.
+- `photo_url` : nouvelle colonne `Utilisateur.photo_url` (texte, `null` sans photo). Elle contient le **chemin** du
+  fichier, servi par le backend (le frontend le préfixe par `NEXT_PUBLIC_API_URL`), ou une URL complète
+  (stockage externe). L'image elle-même n'est **pas** stockée en base.
+- `mot_de_passe` ne doit jamais figurer dans une réponse.
+
+## Authentification
+
+### `POST /auth/login` — publique
+
+```json
+{ "email": "rova@exemple.com", "mot_de_passe": "Langue2026" }
+```
+
+**200** :
+
+```json
+{ "access_token": "<jwt>", "token_type": "bearer", "utilisateur": { /* Utilisateur */ } }
+```
+
+Erreurs : **401** identifiants incorrects, **403** compte `INACTIF` ou `SUSPENDU`.
+
+### `POST /auth/register` — publique
+
+Crée un apprenant et son abonnement à la formule choisie. L'apprenant doit ensuite se connecter.
+
+```json
+{
+  "prenom": "Rova",
+  "nom": "RAKOTO",
+  "email": "rova@exemple.com",
+  "mot_de_passe": "Langue2026",
+  "date_naissance": "2000-05-01",
+  "langues": ["en", "zh"],
+  "id_formule": 2
+}
+```
+
+**201** : `Utilisateur` + `date_naissance`, `pays`, `ville`, `objectif` (nullables).
+Erreur : **409** e-mail déjà utilisé.
+Codes de langue : `fr`, `en`, `zh`, `it`, `de`.
+
+## Rôles et permissions
+
+Ces routes sont réservées aux utilisateurs dont le rôle possède la permission `roles:manage`.
+
+### `GET /roles`
+
+**200** : liste des trois rôles configurés avec leurs permissions effectives.
+
+```json
+[
+  {
+    "id_role": 1,
+    "code": "APPRENANT",
+    "libelle": "Apprenant",
+    "permissions": ["profile:read", "profile:write"]
+  }
+]
+```
+
+### `GET /roles/permissions`
+
+**200** : catalogue des permissions que le backend applique aux routes. Chaque élément contient `code` et
+`description`.
+
+### `PUT /roles/{id_role}/permissions`
+
+Remplace la liste complète des permissions d'un rôle. Exemple :
+
+```json
+{ "permissions": ["profile:read", "profile:write", "users:read"] }
+```
+
+**200** : rôle mis à jour, avec sa liste de permissions. Erreurs : **404** rôle inconnu, **409** si la modification
+retire la dernière permission `roles:manage`, **422** si une permission est inconnue ou répétée. Au moins un rôle
+doit conserver `roles:manage`.
+
+Les rôles existants et leurs codes (`APPRENANT`, `FORMATEUR`, `ADMINISTRATEUR`) restent stables. Les permissions
+effectivement contrôlées sont `profile:read`, `profile:write`, `users:read`, `users:manage`, `trainers:read`,
+`trainers:manage`, `pedagogy:manage`, `stats:read` et `roles:manage`.
+
+### `POST /auth/forgot-password` — publique
+
+```json
+{ "email": "rova@exemple.com" }
+```
+
+**204** (ou 200), même si l'adresse est inconnue : la réponse ne doit pas révéler si un compte existe.
+
+### `POST /auth/reset-password` — publique
+
+```json
+{ "token": "<jeton reçu par e-mail>", "nouveau_mot_de_passe": "Nouveau2026" }
+```
+
+**204** (ou 200). Le lien envoyé par e-mail doit pointer vers `<frontend>/reset-password?token=<jeton>`.
+
+## Formules
+
+### `GET /formules` — publique
+
+**200** :
+
+```json
+[
+  {
+    "id_formule": 1,
+    "libelle": "Simple",
+    "prix_mensuel": 60000,
+    "duree_mois": 1,
+    "quota_heures": 6,
+    "quota_ateliers": 1,
+    "langues": [{ "code": "en", "libelle": "Anglais" }]
+  }
+]
+```
+
+Une liste `langues` vide signifie que la formule couvre toutes les langues.
+
+## Profil de l'utilisateur connecté
+
+### `GET /users/me`
+
+**200** : `Utilisateur`.
+
+### `PATCH /users/me`
+
+```json
+{
+  "prenom": "Rova",
+  "nom": "RAKOTO",
+  "email": "rova@exemple.com",
+  "telephone": "034 12 345 67",
+  "mot_de_passe": "Nouveau2026",
+  "mot_de_passe_actuel": "Actuel2026"
+}
+```
+
+- `mot_de_passe` et `mot_de_passe_actuel` ne sont envoyés que si l'utilisateur change de mot de passe.
+  Le backend **vérifie `mot_de_passe_actuel`** avant d'accepter le changement : une session restée ouverte
+  ne doit pas suffire à s'approprier le compte.
+- `telephone` est facultatif : `null` si l'utilisateur l'a vidé (le numéro est alors retiré).
+- Le rôle et le statut ne sont jamais envoyés et ne doivent pas être modifiables par cette route.
+
+**200** : `Utilisateur` à jour. Erreurs :
+- **400** mot de passe actuel incorrect (surtout **pas 401**, qui signifie « session expirée » et déconnecterait l'utilisateur) ;
+- **409** e-mail déjà utilisé par un autre compte.
+
+Aucune modification n'est enregistrée si une vérification échoue.
+
+### `POST /users/me/photo`
+
+Envoi de la photo de profil en `multipart/form-data`, champ **`photo`**.
+
+- Le frontend accepte JPEG, PNG ou WebP de 2 Mo au plus, puis **réduit l'image à 512 px** (côté le plus long) et
+  l'envoie en **JPEG** (`photo.jpg`, quelques dizaines de Ko).
+- Le backend revérifie le type et la taille, enregistre le fichier (ex. `media/photos/<id_user>.jpg`, en remplaçant
+  l'ancienne photo), met à jour `photo_url` et sert le fichier en lecture publique (ex. `GET /media/photos/7.jpg`).
+- Conseil : ajouter un suffixe de version au nom (`7-<horodatage>.jpg`) pour que le navigateur ne garde pas
+  l'ancienne image en cache.
+
+**200** : `Utilisateur` à jour, avec `photo_url`. Erreurs : **413** fichier trop lourd, **415** format refusé.
+
+### `DELETE /users/me/photo`
+
+Supprime le fichier et remet `photo_url` à `null` : les initiales sont de nouveau affichées.
+
+**200** : `Utilisateur` à jour.
+
+## Administration — rôle `ADMINISTRATEUR`
+
+### `GET /users`
+
+| Paramètre | Type | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `page` | entier ≥ 1 | 1 | Numéro de page |
+| `page_size` | 10, 20 ou 50 | 10 | Taille de page |
+| `search` | texte | — | Recherche dans le nom, le prénom et l'e-mail (insensible à la casse et, si possible, aux accents) |
+| `role` | `APPRENANT` \| `FORMATEUR` \| `ADMINISTRATEUR` | — | Filtre par rôle |
+
+Les paramètres vides ne sont pas envoyés.
+
+**200** :
+
+```json
+{ "items": [ /* Utilisateur */ ], "total": 47, "page": 2, "page_size": 10 }
+```
+
+`total` est le nombre de résultats correspondant au filtre, toutes pages confondues.
+Erreur : **403** si l'utilisateur connecté n'est pas administrateur.
+
+### `PATCH /users/{id_user}`
+
+Modification partielle d'un utilisateur par un administrateur : seuls les champs envoyés sont modifiés.
+
+Modifier les informations (bouton Modifier) :
+
+```json
+{ "prenom": "Jean", "nom": "RAKOTO", "email": "jean@exemple.com", "telephone": null, "role": "FORMATEUR" }
+```
+
+Désactiver ou réactiver un compte (boutons Désactiver / Réactiver, après confirmation) :
+
+```json
+{ "statut": "INACTIF" }
+```
+
+**200** : `Utilisateur` à jour.
+
+Erreurs :
+- **409** : e-mail déjà utilisé par un autre compte ;
+- **404** : utilisateur inconnu ;
+- **403** : l'utilisateur connecté n'est pas administrateur.
+
+Règles à appliquer aussi côté backend (le frontend les impose déjà dans l'interface) :
+- un administrateur ne peut ni désactiver son propre compte, ni changer son propre rôle ;
+- un compte `INACTIF` est refusé à la connexion (**403**).
+
+### `GET /admin/statistiques`
+
+`Administrateur.consulterStatistiques()` : vue calculée, sans table propre. Elle ne contient **que des objets du
+diagramme de classes, au même format que les autres routes** (`Utilisateur`/Apprenant, `Langue`, Abonnement, `Formule`) :
+quand une classe évolue, on la change une seule fois pour toutes les routes.
+
+**200** :
+
+```json
+{
+  "totaux": { "utilisateurs": 248, "apprenants": 186, "formateurs": 42, "ateliers_programmes": 18 },
+  "apprenants_par_langue": [
+    { "langue": { /* Langue */ }, "apprenants": 71 }
+  ],
+  "dernieres_inscriptions": [
+    {
+      "apprenant": { /* Utilisateur + date_naissance, pays, ville, objectif */ },
+      "langues": [ /* Langue */ ],
+      "abonnement": {
+        "id_abonnement": 12,
+        "date_debut": "2026-10-01",
+        "date_fin": "2027-01-01",
+        "statut": "ACTIF",
+        "quota_heures": 12,
+        "quota_ateliers": 3,
+        "formule": { /* Formule, comme GET /formules */ }
+      }
+    }
+  ]
+}
+```
+
+- `totaux.utilisateurs` : toutes les lignes `Utilisateur`, quel que soit le statut ; `apprenants` / `formateurs` :
+  par `role` ; `ateliers_programmes` : `Atelier` dont `date_heure` est à venir et `statut` ≠ `ANNULE` (`StatutAtelier`).
+- `apprenants_par_langue` : nombre d'apprenants **distincts** par `Langue` suivie.
+  Un apprenant peut suivre plusieurs langues : la somme peut dépasser `totaux.apprenants`.
+  Le frontend calcule la part de chaque langue sur `totaux.apprenants` et trie par nombre décroissant.
+- `dernieres_inscriptions` : les **5** derniers **apprenants** (`date_inscription` décroissante), avec les `langues`
+  choisies à l'inscription (`langues` de `POST /auth/register`) et leur `Abonnement` (`statut` : `StatutAbonnement`
+  `ACTIF` | `EXPIRE` | `SUSPENDU`) avec sa `Formule`. `abonnement` vaut `null` si aucun abonnement n'existe.
+
+Erreur : **403** si l'utilisateur connecté n'est pas administrateur.
+
+### `GET /admin/statistiques/inscriptions`
+
+| Paramètre | Type | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `jours` | 7, 30 ou 90 | 30 | Période, aujourd'hui compris |
+
+**200** : un élément **par jour** de la période, du plus ancien au plus récent, y compris les jours sans inscription
+(`nombre: 0`) :
+
+```json
+[{ "date": "2026-10-13", "nombre": 6 }, { "date": "2026-10-14", "nombre": 4 }]
+```
+
+## Langues — rôle `ADMINISTRATEUR`
+
+### Objet `Langue`
+
+Colonnes de la table `Langue`, et ses niveaux ouverts : association **`Langue 0..* — 0..* Niveau`**, table
+`LangueNiveau(id_langue, id_niveau)` (voir [`docs/uml/evolutions.md`](../uml/evolutions.md)). Tous les niveaux ne
+sont pas ouverts pour toutes les langues (ex. HSK pour le mandarin, A1–C2 pour l'anglais).
+
+```json
+{
+  "id_langue": 3,
+  "code": "zh",
+  "libelle": "Mandarin",
+  "niveaux": [{ "id_niveau": 7, "code": "HSK 1", "libelle": "Mandarin – débutant" }]
+}
+```
+
+- `code` : code ISO 639 en minuscules (2 ou 3 lettres), unique. Le frontend l'affiche en majuscules.
+- `niveaux` : objets `Niveau` (dans n'importe quel ordre : le frontend les trie par code). Renvoyé par les routes
+  `/langues` ci-dessous ; les autres routes qui contiennent une langue (formules, tableau de bord) peuvent l'omettre.
+
+### `GET /langues`
+
+Mêmes paramètres de pagination que `GET /users` (`page`, `page_size`, `search`).
+`search` porte sur la désignation et le code.
+
+**200** :
+
+```json
+{ "items": [ /* Langue, avec niveaux */ ], "total": 12, "page": 1, "page_size": 10 }
+```
+
+### `POST /langues`
+
+```json
+{ "libelle": "Swahili", "code": "sw", "id_niveaux": [1, 2, 3] }
+```
+
+`id_niveaux` : niveaux ouverts, **au moins un** (le frontend l'impose). Le backend crée les lignes `LangueNiveau`.
+
+**201** : `Langue` avec `niveaux`. Erreurs : **409** code déjà utilisé, **422** niveau inconnu ou liste vide.
+
+### `PATCH /langues/{id_langue}`
+
+Modification partielle : seuls les champs envoyés (`libelle`, `code`, `id_niveaux`) sont changés.
+`id_niveaux` **remplace** entièrement la liste des niveaux ouverts (lignes `LangueNiveau` ajoutées ou supprimées).
+
+**200** : `Langue` à jour, avec `niveaux`. Erreurs : **409** code déjà utilisé, **404** langue inconnue,
+**422** niveau inconnu ou liste vide.
+
+À vérifier côté backend : retirer un niveau d'une langue ne doit pas rendre incohérents les `Parcours`, `Exercice`
+ou `TestDiagnostic` existants de cette langue à ce niveau (refuser avec **409**, ou les conserver : à décider).
+
+### `DELETE /langues/{id_langue}`
+
+**204** (les lignes `LangueNiveau` de la langue sont supprimées avec elle).
+Erreur : **409** si la langue est utilisée (`FormuleLangue`, `Parcours`).
+
+## Niveaux — rôle `ADMINISTRATEUR`
+
+### Objet `Niveau`
+
+Colonnes de la table `Niveau`. Un niveau est créé une fois, puis ouvert pour une ou plusieurs langues
+(`LangueNiveau`, depuis l'écran des langues).
+
+```json
+{ "id_niveau": 1, "code": "A1", "libelle": "Débutant" }
+```
+
+- `code` : 20 caractères au maximum, unique (« A1 », « HSK 3 »). Le frontend le met en majuscules.
+- `libelle` : obligatoire.
+
+### `GET /niveaux`
+
+**200** : liste complète, sans pagination : `[ /* Niveau */ ]`. Le frontend la trie par code.
+
+### `POST /niveaux`
+
+```json
+{ "code": "HSK 3", "libelle": "Mandarin – intermédiaire" }
+```
+
+**201** : `Niveau`. Erreur : **409** code déjà utilisé.
+
+### `PATCH /niveaux/{id_niveau}`
+
+Même corps que `POST` (code et libellé).
+
+**200** : `Niveau` à jour. Erreurs : **409** code déjà utilisé, **404** niveau inconnu.
+
+### `DELETE /niveaux/{id_niveau}`
+
+**204** : les lignes `LangueNiveau` du niveau sont supprimées avec lui (il disparaît des langues où il était ouvert).
+Erreur : **409** si le niveau est utilisé (`TestDiagnostic`, `Parcours`, `Exercice`).
+
+## Test de positionnement adaptatif
+
+Le backend permet de créer une tentative persistée, de charger les questions de son niveau initial, d'enregistrer
+les réponses et de calculer un score déterministe à la clôture. Les questions à choix utilisées par le scoring
+doivent avoir une `reponse_correcte` configurée en base ; cette clé reste privée et n'est jamais renvoyée par l'API
+apprenant. Les questions sans réponse comptent comme incorrectes. Si une clé manque ou ne correspond pas à une
+option, la clôture est refusée. Le futur service IA pourra enrichir ou compléter cette première évaluation, sans
+remplacer le contrat de persistance des réponses. Aucune suppression automatique n'est configurée.
+
+### `GET /diagnostic/langues` — rôle `APPRENANT`
+
+Langues proposées sur l'écran d'accueil du test, triées par libellé.
+
+**200** :
+
+```json
+[
+  {
+    "code": "en",
+    "libelle": "Anglais",
+    "cadre": "CECRL",
+    "niveaux": ["A1", "A2", "B1", "B2", "C1", "C2"],
+    "nombre_questions": 10,
+    "disponible": true
+  },
+  {
+    "code": "zh",
+    "libelle": "Chinois",
+    "cadre": "HSK",
+    "niveaux": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"],
+    "nombre_questions": 0,
+    "disponible": false
+  }
+]
+```
+
+- `cadre` vaut `HSK` pour le chinois (`zh`) et `CECRL` pour les autres langues : c'est aussi le référentiel du score
+  final.
+- `niveaux` liste les niveaux ouverts pour la langue, du plus bas au plus haut.
+- `nombre_questions` compte les questions à choix ou à réponse textuelle du niveau de départ, c'est-à-dire le niveau
+  que `POST /diagnostic/tentatives` choisira. C'est le nombre de questions du test.
+- `disponible` vaut `false` tant que la langue n'a aucune question de ce type. Le frontend l'affiche alors
+  « Bientôt disponible » et ne permet pas de la choisir.
+
+Erreurs : **401** session absente ou invalide, **403** rôle autre qu'`APPRENANT`.
+
+### `POST /diagnostic/tentatives` — rôle `APPRENANT`
+
+Crée une tentative pour la langue demandée. Le backend choisit le premier niveau ouvert qui possède au moins une
+question à choix ou à réponse textuelle.
+
+```json
+{ "code_langue": "en" }
+```
+
+**201** :
+
+```json
+{ "id_tentative": 42, "code_langue": "en", "code_niveau": "A1" }
+```
+
+Erreurs : **401** session absente ou invalide, **403** rôle autre qu'`APPRENANT`, **404** langue inconnue ou aucune
+question enregistrable n'est disponible.
+
+### `GET /diagnostic/questions` — rôle `APPRENANT`
+
+Les paramètres de requête sont obligatoires :
+
+```text
+GET /api/v1/diagnostic/questions?code_langue=en&code_niveau=A1
+```
+
+**200** : liste des questions correspondant exactement à la langue et au niveau demandés. La liste est vide si aucune
+question n'a encore été enregistrée pour cette combinaison.
+
+```json
+[
+  {
+    "id_question": "12",
+    "niveau": "A1",
+    "competence": "grammaire",
+    "type_reponse": "choix",
+    "enonce": "She ___ a student.",
+    "choix": ["is", "are", "am", "be"]
+  }
+]
+```
+
+Une question peut également contenir `support`, `audio_url` ou `audio_texte`. Les champs sans valeur sont omis.
+
+Le frontend range les questions en quatre étapes d'après leur `competence`, dans cet ordre :
+
+| Étape | Compétences | Réponse |
+|---|---|---|
+| QCM : grammaire et lexique | `grammaire`, `lecture` | `choix` |
+| Compréhension orale | `ecoute` | `choix`, après écoute de `audio_url` (deux écoutes au plus) |
+| Expression orale | `oral` | `audio` |
+| Expression écrite | `ecrit` | `texte` |
+
+Le test dure 15 minutes au total. À la fin du temps, le frontend appelle
+`POST /diagnostic/tentatives/{id_tentative}/terminer`, même si des questions restent sans réponse.
+
+Deux champs facultatifs, prévus pour le backend, précisent ce qui est attendu :
+
+- `duree_minimale_secondes` : durée de parole minimale d'une question `oral` (30 secondes par défaut) ;
+- `mots_minimum` : nombre de mots minimal d'une question `ecrit` (30 par défaut).
+La route ne renvoie aucune correction ni bonne réponse. Erreurs : **401** session absente ou invalide, **403** rôle
+autre qu'`APPRENANT`, **404** langue ou niveau inconnu, **422** niveau connu mais non ouvert pour cette langue.
+
+### `POST /diagnostic/reponse` — rôle `APPRENANT`
+
+Enregistre une réponse dans une tentative appartenant à l'apprenant et encore en cours. Pour une question à choix,
+`reponse_fournie` contient le texte de l'option sélectionnée ; pour une question textuelle, il contient le texte saisi.
+Cette route ne corrige pas la réponse.
+
+```json
+{
+  "id_tentative": 42,
+  "id_question": "12",
+  "reponse_fournie": "is"
+}
+```
+
+La question doit appartenir à la même langue et au même niveau initial que la tentative. Pour une question à choix, la
+valeur fournie doit correspondre à l'une des options. Une même réponse renvoyée après une erreur réseau est idempotente ;
+une réponse différente pour la même question est refusée.
+
+**201** :
+
+```json
+{
+  "id_reponse": 81,
+  "id_tentative": 42,
+  "id_question": "12",
+  "reponse_fournie": "is"
+}
+```
+
+Erreurs : **401** session absente ou invalide, **403** rôle autre qu'`APPRENANT`, **404** tentative non accessible ou
+question inconnue, **409** tentative terminée/annulée ou réponse différente déjà enregistrée, **422** réponse vide,
+identifiant invalide ou question ne correspondant pas à la tentative. La colonne d'évaluation reste `null` en attente
+de l'intégration IA. Les réponses audio ne sont pas acceptées tant qu'un stockage de médias n'est pas disponible.
+
+### `POST /diagnostic/tentatives/{id_tentative}/terminer` — rôle `APPRENANT`
+
+Corrige de manière déterministe les questions à choix de la tentative, enregistre le score et le niveau de référence,
+puis passe la tentative au statut terminé. Le score est le pourcentage de bonnes réponses parmi les questions à choix,
+arrondi à deux décimales. Une nouvelle requête sur une tentative terminée renvoie le résultat déjà enregistré.
+
+**200** :
+
+```json
+{
+  "id_tentative": 42,
+  "score": 72.0,
+  "max_score": 100,
+  "percentage": 72.0,
+  "level": "B2",
+  "framework": "CECRL"
+}
+```
+
+`score` et `percentage` sont identiques, sur 100. La grille de référence utilisée par le backend est :
+
+| Pourcentage | CECRL | HSK |
+| --- | --- | --- |
+| 0 à moins de 20 % | A1 | HSK 1 |
+| 20 à moins de 40 % | A2 | HSK 2 |
+| 40 à moins de 60 % | B1 | HSK 3 |
+| 60 à moins de 75 % | B2 | HSK 4 |
+| 75 à moins de 90 % | C1 | HSK 5 |
+| 90 à 100 % | C2 | HSK 6 |
+
+Le mandarin (`zh`) utilise HSK ; les autres langues utilisent CECRL. Erreurs : **401** session absente ou invalide,
+**403** rôle autre qu'`APPRENANT`, **404** tentative inconnue ou appartenant à un autre apprenant, **409** tentative
+annulée ou questions/clés de correction non configurées.
+
+Après l'enregistrement de la dernière réponse, le frontend appelle cette route et affiche le score, le niveau et le
+cadre de référence retournés par le backend. Les réponses détaillées (`evaluation`) restent réservées à une future
+évaluation par réponse ; l'analyse globale du test est stockée sur la tentative. La progression fixe et les champs de
+personnalisation `objectif` et `creneaux` ne sont pas encore pilotés ou persistés par le backend.
+
+#### Analyse détaillée : points faibles, phase Assimil, justification (RAG)
+
+Champs **facultatifs** ajoutés à la réponse **200** quand l'analyse (LLM + RAG) est disponible. Chacun peut être
+absent ou `null` : l'écran de résultats affiche alors le niveau et le score, et signale « Résultat partiel » avec la
+liste des parties encore à venir. Le backend n'a donc pas besoin de tout fournir en même temps.
+
+**P0 (actuel)** — l'analyse est **synchrone** : le backend clôt le score, appelle le service IA puis renvoie un
+**200** unique. `competences` est calculé par le backend sur les seules questions à choix (une compétence sans
+question corrigeable est absente), `points_faibles` et `phase_assimil` viennent du service IA. `justification` et ses
+`sources` restent en P1. Si le service IA est indisponible, si la langue n'est pas couverte par l'IA ou si aucune
+réponse n'est exploitable, la route renvoie quand même **200** avec le score déterministe et sans ces champs. La
+réponse **202** décrite plus bas reste un contrat futur : le backend ne l'émet pas encore.
+
+
+```json
+{
+  "id_tentative": 42,
+  "score": 40.0,
+  "max_score": 100,
+  "percentage": 40.0,
+  "level": "A2",
+  "framework": "CECRL",
+  "competences": [
+    { "competence": "grammaire", "score": 4, "total": 5 },
+    { "competence": "oral", "score": 0, "total": 1 }
+  ],
+  "points_faibles": [
+    { "domaine": "vocabulaire", "detail": "Le vocabulaire reste limité aux situations du quotidien." },
+    { "domaine": "expression_orale", "detail": null }
+  ],
+  "phase_assimil": "impregnation",
+  "justification": {
+    "resume": "Vos réponses correspondent aux descripteurs du niveau A2, avec un vocabulaire à enrichir.",
+    "sources": [
+      {
+        "id": 12,
+        "referentiel": "CECRL",
+        "niveau": "A2",
+        "competence": null,
+        "titre": "Échelle globale — niveau A2",
+        "extrait": "Comprend des phrases isolées liées à des domaines familiers.",
+        "url": "https://www.coe.int/fr/web/common-european-framework-reference-languages"
+      }
+    ]
+  }
+}
+```
+
+| Champ | Valeurs | Traitement côté frontend |
+| --- | --- | --- |
+| `competences[].competence` | `grammaire`, `lecture`, `ecoute`, `ecrit`, `oral` | Score par compétence ; une compétence sous 50 % est une lacune. Entrée ignorée si la compétence est inconnue ou si `score` n'est pas entre 0 et `total` (> 0). |
+| `points_faibles[].domaine` | `grammaire`, `vocabulaire`, `comprehension_ecrite`, `comprehension_orale`, `expression_ecrite`, `expression_orale` | Domaine inconnu ou en double ignoré. `detail` (texte du LLM) est facultatif. Une liste vide signifie « aucun point faible » ; un champ absent signifie « pas encore connu » (le frontend se rabat alors sur les compétences en lacune). |
+| `phase_assimil` | `impregnation` (phase passive) ou `activation` (phase active) | Toute autre valeur est ignorée : la phase s'affiche « Non déterminée ». |
+| `justification.resume` | Synthèse du LLM | Sans résumé non vide, la justification entière est ignorée. |
+| `justification.sources[]` | Descripteurs du référentiel retrouvés par le RAG | `id` (entier ou chaîne), `referentiel` (`CECRL` ou `HSK`), `niveau`, `titre` et `extrait` sont obligatoires, sinon la source est écartée ; `id` en double écarté. `url` n'est rendue cliquable que si elle est en `http(s)`. |
+
+Les textes (`detail`, `resume`, `titre`, `extrait`) sont affichés tels quels, sans interprétation HTML.
+
+#### Analyse par le LLM : lenteur, indisponibilité, résultat en attente
+
+Quand l'évaluation des réponses écrites et orales sera confiée au service IA, cette route pourra répondre avant la fin
+de l'analyse :
+
+**202** :
+
+```json
+{ "id_tentative": 42, "statut": "en_attente" }
+```
+
+Le frontend affiche alors « Résultat en attente » et rappelle la même route toutes les 10 secondes, ou quand
+l'apprenant clique sur « Vérifier mon résultat », jusqu'à recevoir le **200** ci-dessus. La route doit donc rester
+idempotente : une tentative déjà terminée renvoie son résultat.
+
+Délais côté frontend :
+
+- **60 secondes** pour cette route et pour `POST /diagnostic/reponse` d'une réponse `texte`, qui peut être évaluée
+  par le LLM ;
+- **15 secondes** pour les autres appels.
+
+Au-delà, la requête est abandonnée et l'apprenant voit un message clair et un bouton « Réessayer ». Ses réponses
+déjà saisies restent affichées.
+
+Les messages d'erreur du test ne reprennent jamais le champ `detail`, un code HTTP ni un message technique : le
+backend peut y mettre des informations de diagnostic sans risque qu'elles soient montrées à l'apprenant.
+
+### `GET /diagnostic/tentatives/en-cours` — rôle `APPRENANT` — contrat frontend à implémenter côté backend
+
+Reprise d'un test interrompu (onglet fermé, autre appareil) : dernière tentative de l'apprenant connecté au statut
+`EN_COURS`, avec les réponses déjà enregistrées. Le frontend l'appelle à l'ouverture de l'écran de démarrage quand
+aucun test n'est en cours dans l'onglet.
+
+**200** :
+
+```json
+{
+  "id_tentative": 42,
+  "code_langue": "en",
+  "code_niveau": "A1",
+  "date_debut": "2026-11-03T08:12:00Z",
+  "reponses": [
+    { "id_question": "12", "reponse_fournie": "is" }
+  ]
+}
+```
+
+**204** (sans corps) : aucune tentative en cours. Erreurs : **401** session absente ou invalide, **403** rôle autre
+qu'`APPRENANT`.
+
+Le frontend recharge les questions du niveau (`GET /diagnostic/questions`), ne repose pas celles qui ont une réponse
+et reprend à la première sans réponse. `date_debut` (ISO 8601 avec fuseau) sert au compte à rebours : les 15 minutes
+courent depuis le début de la tentative, pas depuis la reprise ; une fois écoulées, la reprise calcule directement le
+résultat avec les réponses enregistrées. `id_question` peut être un entier ou une chaîne.
+
+L'écran de démarrage affiche alors « Test interrompu » (langue, date de début, réponses enregistrées, temps restant)
+avec deux choix : **Reprendre le test** ou **Commencer un nouveau test** (après confirmation, voir ci-dessous).
+
+### `POST /diagnostic/tentatives/{id_tentative}/abandonner` — rôle `APPRENANT` — contrat frontend à implémenter côté backend
+
+Passe la tentative au statut `ANNULE` : elle n'est plus renvoyée par `GET /diagnostic/tentatives/en-cours`. Appelée
+quand l'apprenant choisit « Commencer un nouveau test » sur un test interrompu, ou « Quitter le test » pendant le test.
+
+**204** (sans corps). Erreurs : **401**, **403**, **404** tentative inconnue ou appartenant à un autre apprenant,
+**409** tentative déjà terminée ou annulée.
+
+Quitter la page **sans** passer par « Quitter le test » (lien du menu, fermeture de l'onglet) n'abandonne rien : le
+frontend demande confirmation, et la tentative reste `EN_COURS` pour être reprise.
+
+## Formateurs — rôle `ADMINISTRATEUR`
+
+> Routes implémentées dans `backend/app/api/routes/formateurs.py`.
+
+### Objet `Formateur`
+
+Un `Utilisateur` de rôle `FORMATEUR` (mêmes champs, voir plus haut), avec les colonnes de la table `Formateur` et
+ses langues enseignées (table `formateur_langue`) :
+
+```json
+{
+  "id_user": 2,
+  "prenom": "Hery",
+  "nom": "RANDRIA",
+  "email": "formateur@digitheque.mg",
+  "telephone": "034 12 345 67",
+  "role": "FORMATEUR",
+  "statut": "ACTIF",
+  "date_inscription": "2025-01-12T10:00:00Z",
+  "photo_url": null,
+  "type_contrat": "CDI",
+  "certifications": "DALF C2, habilitation examinateur DELF",
+  "langues_enseignees": [{ "id_langue": 1, "code": "fr", "libelle": "Français" }]
+}
+```
+
+- `type_contrat` : `CDI` | `CDD` | `VACATAIRE` | `PRESTATAIRE`, ou `null`. La colonne est un texte libre (50
+  caractères) : le frontend affiche « Non renseigné » pour toute autre valeur. À valider par l'équipe.
+- `certifications` : texte libre, 500 caractères au plus, ou `null`.
+- `langues_enseignees` : objets `Langue` **sans** `niveaux`, dans n'importe quel ordre (le frontend les trie).
+
+### `GET /formateurs`
+
+Mêmes paramètres que `GET /users` (`page`, `page_size`, `search`), plus :
+
+| Paramètre | Type | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `statut` | `ACTIF` \| `INACTIF` \| `SUSPENDU` | — | Filtre par statut |
+
+Seuls les utilisateurs de rôle `FORMATEUR` sont renvoyés, triés par nom puis prénom.
+
+**200** :
+
+```json
+{ "items": [ /* Formateur */ ], "total": 12, "page": 1, "page_size": 10 }
+```
+
+### `POST /formateurs`
+
+```json
+{
+  "prenom": "Lova",
+  "nom": "RABE",
+  "email": "lova.rabe@digitheque.mg",
+  "telephone": null,
+  "type_contrat": "CDD",
+  "certifications": null,
+  "id_langues": [3]
+}
+```
+
+Le backend crée l'`Utilisateur` (rôle `FORMATEUR`, statut `ACTIF`, **sans mot de passe utilisable**), la ligne
+`Formateur` et les lignes `formateur_langue`, puis envoie au formateur un e-mail avec un lien pour choisir son mot
+de passe (même jeton que `POST /auth/forgot-password`, page `/reset-password`), valable 3 jours
+(`INVITATION_TOKEN_EXPIRE_MINUTES`, 4320 par défaut). Le lien ne sert qu'une fois.
+
+`id_langues` : **au moins une** langue (le frontend l'impose) ; `type_contrat` obligatoire.
+
+**201** : `Formateur`. Erreurs : **409** e-mail déjà utilisé, **422** langue inconnue ou liste vide.
+
+### `PATCH /formateurs/{id_user}`
+
+Modification partielle : seuls les champs envoyés sont changés (mêmes champs que `POST`).
+`id_langues` **remplace** entièrement la liste des langues enseignées.
+
+Désactiver ou réactiver le formateur (après confirmation) :
+
+```json
+{ "statut": "INACTIF" }
+```
+
+**200** : `Formateur` à jour. Erreurs : **409** e-mail déjà utilisé, **404** formateur inconnu (ou utilisateur
+d'un autre rôle), **422** langue inconnue ou liste vide.
+
+Pas de `DELETE` : un formateur est lié à ses ateliers (`Atelier.id_formateur`, `ON DELETE RESTRICT`), il est donc
+désactivé plutôt que supprimé. Un compte `INACTIF` est refusé à la connexion (**403**), comme pour tout utilisateur.
+
+## Parcours personnalisé (US41 à US44) — rôle `APPRENANT` — contrat frontend, routes à créer côté backend
+
+Le frontend fonctionne aujourd'hui **sans backend** (`NEXT_PUBLIC_API_MOCK=true`, données de
+`frontend/src/mocks/parcours-personnalise.mock.ts`). Ce contrat décrit ce que le backend devra exposer pour le
+brancher ; aucune route n'existe encore. Conversion côté frontend : `frontend/src/services/parcours-personnalise.mapper.ts`.
+
+Écrans : « Mon parcours » (`/espace/apprenant/parcours`), un module (`/parcours/modules/{numero}`) et une leçon
+(`/parcours/lecons/{numero}`) ; la barre latérale liste les modules sous « Mon parcours ».
+
+**Tables concernées** (`backend/app/models/parcours.py`) :
+
+| Table | Utilisée pour |
+|---|---|
+| `parcours` | statut, `lecon_atteinte`, langue, niveau visé ; propriétés `phase` et `est_lecon_de_revision` (`services/phase_parcours.py`) |
+| `parcours_exercice` | exercices d'une leçon (`numero_lecon`), `score_obtenu` (le statut en est déduit) |
+| `exercice` | `type` (`GRAMMAIRE`, `VOCABULAIRE`, `COMPREHENSION`, `ECOUTE`, `ORAL`), `difficulte`, `contenu` (JSON décrit plus bas) |
+| `test_diagnostic` | niveau de départ (facultatif) |
+| *aucune* | **modules** : regroupement de leçons consécutives sous un thème — à décider (table `module` ou configuration) |
+
+Le frontend **affiche** la phase et les statuts reçus, il ne les recalcule pas. Une valeur d'énumération inconnue
+est refusée (message d'erreur) plutôt qu'interprétée ; la casse n'a pas d'importance.
+
+### `GET /parcours/en-cours`
+
+**200** :
+
+```json
+{
+  "id_parcours": 7, "statut": "EN_COURS", "date_creation": "2026-10-02T09:30:00Z",
+  "code_langue": "fr", "libelle_langue": "Français",
+  "cadre": "CECRL", "niveaux_cadre": ["A1", "A2", "B1", "B2", "C1", "C2"],
+  "niveau_depart": "A2", "niveau_vise": "B1",
+  "lecon_atteinte": 23, "phase": "PASSIVE", "est_lecon_de_revision": false,
+  "modules": [{ "numero": 1, "titre": "Premiers contacts", "description": "…", "premiere_lecon": 1, "derniere_lecon": 7 }]
+}
+```
+
+Statut d'un module ou d'une leçon, déduit côté frontend de `lecon_atteinte` : terminé avant, en cours, à venir après.
+**404** : aucun parcours (le frontend invite à passer le test de positionnement).
+
+### `GET /parcours/{id_parcours}/exercices`
+
+Une ligne par `parcours_exercice` jusqu'à la leçon atteinte (le backend ne crée pas les leçons futures) :
+
+```json
+[{ "id_parcours_exercice": 231, "id_exercice": 1231, "numero_lecon": 23, "type": "GRAMMAIRE",
+   "difficulte": 2, "intitule": "Le passé composé", "statut": "REUSSI", "score_obtenu": 85 }]
+```
+
+`statut` : `A_FAIRE` si `score_obtenu` est `null`, `REUSSI` si ≥ 50, `A_REVOIR` sinon (seuil à confirmer).
+
+### `GET /parcours/{id_parcours}/lecons/{numero_lecon}`
+
+Mêmes lignes que ci-dessus pour une leçon, plus le `contenu` de chaque exercice (texte JSON de `exercice.contenu`) :
+
+```json
+{ "numero_lecon": 23, "est_lecon_de_revision": false, "code_langue": "fr",
+  "exercices": [{ "id_parcours_exercice": 233, "type": "ECOUTE", "…": "…",
+                  "contenu": "{\"format\":\"ecoute\",\"consigne\":\"…\",\"question\":\"…\",\"choix\":[\"…\"],\"audio_url\":null,\"texte_audio\":\"…\"}" }] }
+```
+
+Formats de `contenu` : `choix` (`enonce`, `choix`), `texte` (`enonce`, `___` marque un trou), `redaction` (`enonce`,
+`mots_minimum`, 30 par défaut ; réponse libre corrigée par l'IA), `ecoute` (`question`, `choix`, `audio_url` ou
+`texte_audio` lu par le navigateur), `prononciation` (`phrase` à lire à voix haute, transcrite par la reconnaissance
+vocale du navigateur), `conversation` (`sujet`, `message_initial`, `echanges_minimum`).
+**403** leçon pas encore atteinte (le `detail` est affiché).
+
+> **US43-BE — la bonne réponse ne quitte jamais le backend avant la réponse.** `exercice.contenu` peut stocker la ou
+> les réponses acceptées et l'explication (par exemple `reponses`, `explication`), mais le backend les **retire** du
+> `contenu` renvoyé ici. Elles ne sont communiquées que dans la correction.
+
+La rédaction n'a pas encore de type dans l'enum `TypeExercice` : en attendant un type `EXPRESSION_ECRITE`, les données
+simulées la rangent en `GRAMMAIRE`.
+
+### `POST /parcours/{id_parcours}/exercices/{id_parcours_exercice}/reponse`
+
+Corps : `{ "format": "choix" | "texte" | "redaction" | "ecoute" | "prononciation", "reponse": "…" }` (pour la
+prononciation, la transcription), ou `{ "format": "conversation", "messages": [{ "role": "apprenant", "contenu": "…" }] }`.
+Délai côté frontend : 45 s (correction possible par l'IA).
+
+Deux modes de correction (US43, US44) :
+
+| `mode_correction` | Formats | Qui corrige |
+|---|---|---|
+| `AUTOMATIQUE` | `choix`, `ecoute`, `texte`, `prononciation` | le backend, de façon **déterministe** (US43-BE) : réponse comparée aux réponses acceptées, sans tenir compte de la casse, des accents ni de la ponctuation ; même réponse, même résultat |
+| `IA` | `redaction`, `conversation` | le service IA, via le backend (prompt de correction à créer) |
+
+**200** :
+
+```json
+{
+  "statut": "A_REVOIR",
+  "score_obtenu": 40,
+  "mode_correction": "IA",
+  "commentaire": "Votre texte doit être complété et corrigé.",
+  "reponse_attendue": null,
+  "explication": null,
+  "points_forts": ["Vous reliez vos idées avec des connecteurs (mais, parce que, ensuite…)."],
+  "erreurs": [{ "extrait": "j'ai allé", "correction": "je suis allé(e)", "explication": "« Aller » se conjugue avec l'auxiliaire être au passé composé." }],
+  "conseil": "Développez davantage : écrivez au moins 25 mots."
+}
+```
+
+- `reponse_attendue` : la bonne réponse, renvoyée seulement quand la réponse est fausse (correction automatique).
+- `explication` : la règle ou la raison de la bonne réponse (correction automatique), renvoyée dans les deux cas.
+- `points_forts`, `erreurs`, `conseil` : retour détaillé de l'IA (facultatifs, listes vides par défaut).
+- `mode_correction` inconnu : refusé par le frontend, comme les autres énumérations.
+
+Le backend enregistre la réponse et `score_obtenu` (`parcours_exercice`), puis avance `lecon_atteinte` quand tous les
+exercices de la leçon atteinte ont une réponse. L'apprenant peut refaire un exercice : la dernière correction remplace
+la précédente. **502/503/504** (IA indisponible ou trop lente) : le frontend garde la réponse et propose de la renvoyer.
+
+### `POST /chatbot/message` — relais du service IA (tâche B-10)
+
+Mêmes champs que `ia-service` (`app/schemas/chatbot.py`) : `{ "message": "…", "historique": [{ "role": "assistant",
+"contenu": "…" }] }` (20 derniers tours au plus) → `{ "reponse": "…" }`. Le frontend ne garde la conversation que
+dans l'écran (aucun historique conservé, voir F-08) ; sans backend, le professeur IA est simulé et l'écran l'indique.

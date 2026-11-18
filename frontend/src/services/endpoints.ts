@@ -1,0 +1,57 @@
+/*
+ * Toutes les routes du backend appelées par le frontend, en un seul endroit.
+ * Le format des requêtes et réponses est décrit dans docs/api/contrat-frontend.md :
+ * si le backend change une route, on adapte ici et dans ce document.
+ */
+
+const API = "/api/v1";
+
+export const ENDPOINTS = {
+  auth: {
+    login: `${API}/auth/login`,
+    register: `${API}/auth/register`,
+    forgotPassword: `${API}/auth/forgot-password`,
+    resetPassword: `${API}/auth/reset-password`,
+  },
+  /** Profil de l'utilisateur connecté */
+  me: `${API}/users/me`,
+  /** Photo de profil de l'utilisateur connecté (envoi et suppression) */
+  mePhoto: `${API}/users/me/photo`,
+  /** Administration (rôle ADMINISTRATEUR) */
+  users: `${API}/users`,
+  user: (idUser: number) => `${API}/users/${idUser}`,
+  langues: `${API}/langues`,
+  langue: (idLangue: number) => `${API}/langues/${idLangue}`,
+  niveaux: `${API}/niveaux`,
+  niveau: (idNiveau: number) => `${API}/niveaux/${idNiveau}`,
+  diagnostic: {
+    langues: `${API}/diagnostic/langues`,
+    tentatives: `${API}/diagnostic/tentatives`,
+    terminerTentative: (idTentative: number) => `${API}/diagnostic/tentatives/${idTentative}/terminer`,
+    /**
+     * Routes prévues par le contrat mais absentes du backend : elles répondent 404 hors mode mock.
+     * Vérifier backend/app/api/routes/diagnostic.py avant de les considérer comme opérationnelles.
+     */
+    tentativeEnCours: `${API}/diagnostic/tentatives/en-cours`,
+    abandonnerTentative: (idTentative: number) => `${API}/diagnostic/tentatives/${idTentative}/abandonner`,
+    questions: `${API}/diagnostic/questions`,
+    reponse: `${API}/diagnostic/reponse`,
+  },
+  /** Parcours personnalisé de l'apprenant connecté (contrat frontend, routes à exposer par le backend). */
+  parcours: {
+    enCours: `${API}/parcours/en-cours`,
+    exercices: (idParcours: number) => `${API}/parcours/${idParcours}/exercices`,
+    lecon: (idParcours: number, numeroLecon: number) => `${API}/parcours/${idParcours}/lecons/${numeroLecon}`,
+    reponse: (idParcours: number, idParcoursExercice: number) =>
+      `${API}/parcours/${idParcours}/exercices/${idParcoursExercice}/reponse`,
+  },
+  /** Professeur IA : relais backend authentifié de POST /chatbot/message du service IA (tâche B-10, à créer). */
+  chatbotMessage: `${API}/chatbot/message`,
+  formateurs: `${API}/formateurs`,
+  formateur: (idUser: number) => `${API}/formateurs/${idUser}`,
+  /** Tableau de bord de l'administrateur */
+  admin: {
+    statistiques: `${API}/admin/statistiques`,
+    inscriptions: `${API}/admin/statistiques/inscriptions`,
+  },
+} as const;

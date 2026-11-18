@@ -1,0 +1,31 @@
+import type { FormateursFiltres } from "@/types/formateur";
+import type { LanguesFiltres } from "@/types/langue";
+import type { PeriodeInscriptions } from "@/types/tableau-de-bord";
+import type { UtilisateursFiltres } from "@/types/utilisateur";
+
+/** Clés du cache React Query, en un seul endroit pour les lire et les invalider sans faute de frappe. */
+export const queryKeys = {
+  profil: ["profil"] as const,
+  /** Préfixe commun à toutes les pages de la liste (pour les recharger toutes après une modification). */
+  utilisateursTous: ["utilisateurs"] as const,
+  utilisateurs: (filtres: UtilisateursFiltres) => ["utilisateurs", filtres] as const,
+  languesToutes: ["langues"] as const,
+  langues: (filtres: LanguesFiltres) => ["langues", filtres] as const,
+  niveaux: ["niveaux"] as const,
+  formateursTous: ["formateurs"] as const,
+  formateurs: (filtres: FormateursFiltres) => ["formateurs", filtres] as const,
+  /** Toutes les langues, pour les choisir dans un formulaire. */
+  languesChoix: ["langues", "choix"] as const,
+  /** Langues proposées sur l'écran d'accueil du test de positionnement. */
+  languesDiagnostic: ["diagnostic", "langues"] as const,
+  /** Tentative interrompue de l'apprenant connecté, à reprendre ou abandonner. */
+  testInterrompu: ["diagnostic", "test-interrompu"] as const,
+  /** Parcours en cours de l'apprenant connecté et exercices de ce parcours. */
+  parcours: ["parcours", "en-cours"] as const,
+  exercicesParcours: (idParcours: number) => ["parcours", idParcours, "exercices"] as const,
+  leconParcours: (idParcours: number, numeroLecon: number) => ["parcours", idParcours, "lecon", numeroLecon] as const,
+  /** Préfixe commun : tout le parcours est relu après une réponse (statuts, leçon atteinte, phase). */
+  parcoursTout: ["parcours"] as const,
+  statistiquesAdmin: ["statistiques-admin"] as const,
+  inscriptions: (jours: PeriodeInscriptions) => ["inscriptions", jours] as const,
+};

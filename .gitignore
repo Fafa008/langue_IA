@@ -24,6 +24,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 .next/
+.next*/
 out/
 dist/
 build/
@@ -49,6 +50,8 @@ desktop.ini
 .env.local
 .env.*.local
 .env.development
+# Valeurs par défaut du frontend en développement (aucun secret) : versionnées
+!frontend/.env.development
 .env.production
 secrets/
 *.pem
@@ -82,6 +85,51 @@ data/raw/
 data/private/
 *.csv
 !ia-service/tests/data/*.csv
+# Modèles et livraisons de questions pédagogiques : versionnés (aucune donnée personnelle)
+!docs/donnees/*.csv
+!docs/donnees/livraisons/*.csv
+
+# Corpus documentaire CECRL (PRE-08) : le manifeste et le README sont versionnés, jamais les descripteurs
+# officiels. Ils sont générés hors dépôt par scripts/ingestion_cecrl.py puis montés en lecture seule.
+ia-service/corpus/**/descripteurs.jsonl
+ia-service/corpus/**/*.xlsx
+ia-service/corpus/**/*.zip
+
+# ===== Corpus pédagogiques volumineux (PRE-12) =====
+# Sources PDF/audio et dérivés générés : stockage hors dépôt. Les scripts, README,
+# manifestes légers et la documentation restent versionnés.
+ia-service/corpus/**/*.pdf
+ia-service/corpus/**/*.mp3
+ia-service/corpus/**/*.wav
+ia-service/corpus/**/*.m4a
+ia-service/corpus/**/*.aac
+ia-service/corpus/**/*.ogg
+ia-service/corpus/**/*.flac
+ia-service/corpus/**/*.wma
+ia-service/corpus/**/*.7z
+ia-service/corpus/**/*.rar
+ia-service/corpus/**/*.tar
+ia-service/corpus/**/*.tgz
+ia-service/corpus/**/*.gz
+ia-service/corpus/**/*.bz2
+ia-service/corpus/**/*.xz
+ia-service/corpus/**/normalise/**
+ia-service/corpus/**/temp/**
+ia-service/corpus/**/tmp/**
+ia-service/corpus/**/extraction/**
+!ia-service/corpus/**/normalise/
+!ia-service/corpus/**/normalise/**/
+!ia-service/corpus/**/temp/
+!ia-service/corpus/**/temp/**/
+!ia-service/corpus/**/tmp/
+!ia-service/corpus/**/tmp/**/
+!ia-service/corpus/**/extraction/
+!ia-service/corpus/**/extraction/**/
+!ia-service/corpus/**/normalise/**/README.md
+!ia-service/corpus/**/normalise/**/manifeste.json
+!ia-service/corpus/**/temp/**/README.md
+!ia-service/corpus/**/tmp/**/README.md
+!ia-service/corpus/**/extraction/**/README.md
 
 # ===== Python cache =====
 *.pyc

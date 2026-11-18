@@ -107,29 +107,57 @@ Ce projet vise à concevoir et développer un **système d'information intellige
 - Node.js 20+
 - Python 3.11+
 
-### Étapes
+### Étapes (Docker)
+
+Tout le monorepo démarre avec une seule commande : PostgreSQL, Redis, backend, service IA et frontend.
 
 ```bash
 # 1. Cloner le dépôt
 git clone https://github.com/Fafa008/langue_IA.git
 cd langue_IA
 
-# 2. Copier les variables d'environnement
+# 2. Copier les variables d'environnement (puis changer les mots de passe et secrets)
 cp .env.example .env
 
-# 3. Éditer le .env avec vos valeurs
-nano .env
+# 3. Lancer la stack (images de production, en arrière-plan)
+docker compose up --build -d --wait      # ou : make up
 
-# 4. Lancer les conteneurs
-docker-compose up --build
-
-# 5. Accéder aux services
+# 4. Accéder aux services
 # Frontend   : http://localhost:3000
-# Backend    : http://localhost:8000
-# IA Service : http://localhost:8001
+# Backend    : http://localhost:8000      (santé : /health)
 # Swagger    : http://localhost:8000/docs
-# PostgreSQL : localhost:5432
+# IA Service : http://localhost:8001      (santé : /health)
+# PostgreSQL et Redis : internes à Docker (en mode dev : localhost:55432 et localhost:56379)
 ```
+
+| Besoin                            | Commande                                                                    | Raccourci               |
+| --------------------------------- | --------------------------------------------------------------------------- | ----------------------- |
+| Développer (rechargement à chaud) | `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build` | `make dev`              |
+| Voir l'état / les journaux        | `docker compose ps` / `docker compose logs -f`                              | `make ps` / `make logs` |
+| Arrêter (données conservées)      | `docker compose down`                                                       | `make down`             |
+| Repartir d'une base vide          | `docker compose down --volumes`                                             | `make reset`            |
+| Recharger les données de départ   | `docker compose exec backend python -m app.seed`                            | `make seed`             |
+| Contrôles de la CI, avant une PR  | ruff, pytest + couverture (backend, IA), typage, lint, Jest (frontend)      | `make check`            |
+
+Bon à savoir :
+
+- **Ports déjà utilisés** (un `npm run dev` ou un autre projet) : changer `FRONTEND_PORT`, `BACKEND_PORT` ou
+  `IA_PORT` dans `.env`. PostgreSQL et Redis ne sont pas ouverts sur la machine (pas de conflit possible avec un
+  PostgreSQL déjà installé) : les services les joignent par leur nom (`db`, `redis`). En mode `dev`, ils sont
+  accessibles sur `localhost:55432` et `localhost:56379` (`POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`).
+- **Données simulées** : `NEXT_PUBLIC_API_MOCK=true` (par défaut) tant que le backend n'implémente pas
+  [`docs/api/contrat-frontend.md`](docs/api/contrat-frontend.md). Cette valeur est intégrée au build du frontend :
+  relancer `docker compose up --build` après un changement (en mode `dev`, un simple redémarrage suffit).
+- **Backend** : implémente le contrat du frontend (voir [`backend/README.md`](backend/README.md)). Au démarrage, il
+  applique les migrations puis le seed (`backend/app/seed.py`, sans doublon) : référentiel toujours ; comptes de
+  démonstration (`apprenant@`, `formateur@`, `admin@digitheque.mg`, mot de passe `Demo2026`) et banque de questions
+  du diagnostic (anglais, français) si `SEED_DEMO=true`. Tests : `make test` (backend), `make test-ia` (service IA). Le service IA expose `/health` et contient le Harness partagé ainsi que
+  les contrats et prompts versionnés ; l'agent diagnostic et son endpoint d'inférence restent à intégrer.
+- **« No module named … » après un `git pull`** : une dépendance a changé et l'image dev est périmée. `make dev`
+  reconstruit les images ; en mode dev, les conteneurs ne redémarrent plus seuls au démarrage de la machine.
+- **Windows** : `.gitattributes` impose des fins de ligne LF (un `docker-entrypoint.sh` en CRLF bloque le backend).
+  Clone fait avant ce fichier : supprimer `backend/docker-entrypoint.sh` puis `git checkout -- backend/docker-entrypoint.sh`.
+- **Modèles IA** : déposer les fichiers entraînés dans `ia-service/models/` (non versionnés), montés en lecture seule.
 
 ### Installation manuelle
 
@@ -141,7 +169,7 @@ source venv/bin/activate  # Windows : venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
-# Frontend
+# Frontend (fonctionne sans backend grâce aux données simulées : voir frontend/README.md)
 cd frontend
 npm install
 npm run dev
@@ -420,7 +448,9 @@ langue_IA/
 │   ├── api/
 │   └── memoires/
 │
-├── docker-compose.yml
+├── docker-compose.yml          # Stack complète (images de production)
+├── docker-compose.dev.yml      # Surcharge de développement (sources montées)
+├── Makefile                    # Raccourcis : make up, make dev, make down…
 ├── .env.example
 ├── .gitignore
 ├── README.md
@@ -446,6 +476,8 @@ langue_IA/
 | Document     | Lien                                     |
 | ------------ | ---------------------------------------- |
 | Architecture | [docs/architecture/](docs/architecture/) |
+| Fonctionnalités et démarrage | [docs/fonctionnalites/](docs/fonctionnalites/) |
+| Données      | [docs/donnees/](docs/donnees/)           |
 | UML          | [docs/uml/](docs/uml/)                   |
 | API          | [docs/api/](docs/api/)                   |
 | Mémoires     | [docs/memoires/](docs/memoires/)         |
