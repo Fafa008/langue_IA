@@ -204,6 +204,7 @@ Copy-Item .env.example .env
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | URL du backend vue par le navigateur |
 | `ENVIRONNEMENT` | `dev` | `dev`, `test` ou `prod` pour le service IA |
 | `LLM_FOURNISSEUR` | `factice` | `factice`, `compatible-openai` ou `gemini` |
+| `LLM_FACTICE_SCENARIO` | `demonstration` | sans clé : analyse de démonstration (`demonstration`) ou erreur (`aucun`), voir 5.5 |
 | `IA_SERVICE_URL` | `http://ia-service:8001` | URL interne du service IA |
 | `IA_SERVICE_TIMEOUT_S` | `55` | attente maximale du backend |
 | `RAG_CORPUS_ACTIF` | `false` | active le corpus CECRL |
@@ -241,6 +242,25 @@ LLM_API_KEY=...
 
 Compose transmet ces variables **uniquement au service IA**. Le backend reçoit `LLM_API_KEY=""` et
 `GEMINI_API_KEY=""` : il n'a pas besoin de les connaître.
+
+### 5.5 Démonstration sans clé LLM (stratégie retenue pour D-01)
+
+Sans clé, Compose lance le service IA en `LLM_FOURNISSEUR=factice` avec `LLM_FACTICE_SCENARIO=demonstration`
+(tâche I-01). Le diagnostic va alors **réellement** du frontend au backend, au service IA, puis à la base
+(`test_diagnostic.analyse_ia`) ; seule la réponse du modèle est remplacée par une **analyse de démonstration** :
+
+- valide au sens du schéma `ResultatDiagnostic` et cohérente avec la tentative (langue, niveau préliminaire,
+  preuves citées) ;
+- déterministe : mêmes réponses, même analyse ; aucun appel réseau, coût nul, reproductible en CI ;
+- honnête : chaque point faible indique qu'il vient d'une démonstration sans modèle de langue, à confirmer avec
+  un vrai fournisseur. Le niveau estimé suit le score (un niveau de plus au-dessus de 85 %, un de moins sous 30 %),
+  la phase est `activation` seulement avec une production libre et un score d'au moins 60 %.
+
+Phrase à dire en démonstration : « l'analyse affichée est simulée ; avec une clé Groq ou Gemini dans `.env`, le
+même parcours appelle le vrai modèle, sans changer de code ».
+
+Pour retrouver l'ancien comportement (erreur de configuration, donc « Résultat partiel »), mettre
+`LLM_FACTICE_SCENARIO=aucun`. En production (`ENVIRONNEMENT=prod`), le fournisseur `factice` reste refusé.
 
 ---
 
@@ -372,7 +392,7 @@ npm run test:e2e   # Playwright, serveur dédié port 3100, HTTP simulé
 | `No module named 'pydantic_settings'` en dev | image aux dépendances périmées après un reboot | relancer `make dev` (reconstruit) |
 | Les données ne changent pas | `NEXT_PUBLIC_API_MOCK=true` ou build non reconstruit | vérifier `.env`, puis `docker compose up --build` |
 | Les modifications frontend ne s'affichent pas | build prod figé | passer en mode dev ou reconstruire |
-| Le test de diagnostic renvoie « Résultat partiel » | service IA en `LLM_FOURNISSEUR=factice` sans scénario | configurer un vrai fournisseur LLM |
+| Le test de diagnostic renvoie « Résultat partiel » | service IA arrêté, ou `LLM_FACTICE_SCENARIO=aucun` | `docker compose logs backend` (« Analyse IA indisponible ») ; voir 5.5 |
 | Aucune question pour le mandarin | aucune question `zh` dans le seed | comportement attendu : `disponible: false` |
 | La base est vide après `make reset` | volumes supprimés | redémarrer : le seed se recharge |
 | `--user "$(id -u):$(id -g)"` échoue | syntaxe POSIX sous PowerShell | retirer l'option |

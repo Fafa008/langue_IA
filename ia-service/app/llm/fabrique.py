@@ -12,6 +12,7 @@ from app.core.erreurs import ErreurConfiguration
 from app.llm.adaptateurs.compatible_openai import CompatibleOpenAI
 from app.llm.adaptateurs.factice import FakeLLMClient
 from app.llm.base import FournisseurLLM
+from app.llm.demonstration import repondre_demonstration
 
 _verrou = threading.Lock()
 _client: FournisseurLLM | None = None
@@ -23,7 +24,9 @@ def creer_client(config: ConfigLLM) -> FournisseurLLM:
     Aucun appel réseau n'est effectué ici. Un fournisseur inconnu lève ``ErreurConfiguration`` immédiatement.
     """
     if config.fournisseur == "factice":
-        return FakeLLMClient(modele=config.modele or "factice-1")
+        # LLM_FACTICE_SCENARIO=demonstration : réponses déterministes et valides, pour une démonstration sans clé
+        repondeur = repondre_demonstration if config.factice_scenario == "demonstration" else None
+        return FakeLLMClient(modele=config.modele or "factice-1", repondeur=repondeur)
     if config.fournisseur == "compatible-openai":
         return CompatibleOpenAI(config)
     if config.fournisseur == "gemini":
