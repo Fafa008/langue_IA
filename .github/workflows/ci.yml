@@ -184,7 +184,9 @@ jobs:
       - name: Les services répondent
         run: |
           curl --fail --silent http://localhost:8000/health
-          curl --fail --silent http://localhost:8001/health
+          # PRE-06 : ia-service est isolé sur back-tier, joignable uniquement par le backend
+          docker compose exec -T backend python -c "import urllib.request; urllib.request.urlopen('http://ia-service:8001/health', timeout=3)"
+          ! curl --silent --connect-timeout 2 http://localhost:8001/health
           curl --fail --silent --output /dev/null http://localhost:3000/login
           # Le backend a migré la base et chargé le référentiel
           curl --fail --silent http://localhost:8000/api/v1/formules | grep -q '"libelle":"Simple"'
