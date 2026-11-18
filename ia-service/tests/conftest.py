@@ -5,6 +5,7 @@ import pytest
 VARIABLES_LLM = (
     "ENVIRONNEMENT",
     "LLM_FOURNISSEUR",
+    "LLM_FACTICE_SCENARIO",
     "LLM_MODELE",
     "LLM_BASE_URL",
     "LLM_API_KEY",

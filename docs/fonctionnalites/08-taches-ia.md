@@ -728,7 +728,7 @@ l'analyse IA échoue systématiquement.
 
 ### D-01 — Analyse complète dès `docker compose up`
 
-**Priorité** **P0** · **État** 🔌 (échec systématique) · **Effort** M · **Dépend de** `I-01` —
+**Priorité** **P0** · **État** ✅ (stratégie 1, US153/US154) · **Effort** M · **Dépend de** `I-01` —
 
 **Objectif.** Qu'une stack fraîchement démarrée produise une analyse, ou que l'absence soit **annoncée**.
 
@@ -754,10 +754,10 @@ démonstration : personne ne voit jamais `points_faibles` ni `phase_assimil` san
 
 **Critères d'acceptation.**
 
-- [ ] `docker compose up --build -d --wait` puis un test terminé → soit `points_faibles` non vide, soit un
+- [x] `docker compose up --build -d --wait` puis un test terminé → soit `points_faibles` non vide, soit un
       message d'attente **explicite** (pas une erreur) ;
-- [ ] `docker compose logs ia-service` ne montre pas de trace Python ;
-- [ ] la stratégie retenue est écrite dans `docs/fonctionnalites/01-demarrage-docker.md`.
+- [x] `docker compose logs ia-service` ne montre pas de trace Python ;
+- [x] la stratégie retenue est écrite dans `docs/fonctionnalites/01-demarrage-docker.md`.
 
 ### D-02 — Ne pas exposer le service IA
 
@@ -958,7 +958,7 @@ dépendent directement**. Le détail du Harness, des prompts et du RAG est dans 
 
 ### I-01 — Scénario `factice` pour le diagnostic
 
-**Priorité** **P0** · **État** 🔌 · **Effort** S · **Dépend de** — 
+**Priorité** **P0** · **État** ✅ (`LLM_FACTICE_SCENARIO=demonstration`, `app/llm/demonstration.py`) · **Effort** S · **Dépend de** —
 
 **Objectif.** Rendre `LLM_FOURNISSEUR=factice` **utile** pour le diagnostic, au lieu d'échouer.
 
@@ -972,9 +972,9 @@ sélectionner par variable d'environnement. La réponse doit rester **détermini
 
 **Critères d'acceptation.**
 
-- [ ] `POST /diagnostic/evaluer` avec le client factice renvoie `200` et une enveloppe valide ;
-- [ ] les tests existants (`test_llm_factice.py`, `test_diagnostic.py`) passent sans clé ;
-- [ ] aucun appel réseau.
+- [x] `POST /diagnostic/evaluer` avec le client factice renvoie `200` et une enveloppe valide ;
+- [x] les tests existants (`test_llm_factice.py`, `test_diagnostic.py`) passent sans clé ;
+- [x] aucun appel réseau.
 
 ### I-02 — Ajouter `justification` et `sources` au résultat
 

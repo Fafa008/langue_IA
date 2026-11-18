@@ -20,6 +20,10 @@ from app.llm.base import MessageLLM, MorceauFlux, ReponseLLM
 
 T = TypeVar("T", bound=BaseModel)
 
+# Réponse de secours quand aucun scénario n'est préparé : reçoit les messages et le schéma demandé, renvoie une
+# réponse (validée ensuite contre le schéma) ou ``None`` si elle ne sait pas répondre (voir app/llm/demonstration.py).
+Repondeur = Callable[[Sequence[MessageLLM], type[BaseModel]], BaseModel | Mapping[str, object] | None]
+
 
 @dataclass(frozen=True, slots=True)
 class ScenarioLLM:
@@ -47,9 +51,11 @@ class FakeLLMClient:
         *,
         modele: str = "factice-1",
         horloge: Callable[[], float] = time.monotonic,
+        repondeur: Repondeur | None = None,
     ) -> None:
         self.modele = modele
         self._scenarios = deque(scenarios)
+        self._repondeur = repondeur
         self._horloge = horloge
         self._ferme = False
         # Journaux d'observation : les tests vérifient que le Harness transmet bien les messages et l'ordre des appels.
@@ -65,6 +71,14 @@ class FakeLLMClient:
         if not self._scenarios:
             raise ErreurConfiguration("Aucun scénario factice n'est disponible pour cet appel.")
         return self._scenarios.popleft()
+
+    def _scenario_ou_repondeur(self, messages: Sequence[MessageLLM], schema: type[BaseModel]) -> ScenarioLLM:
+        """Les scénarios préparés (tests) passent toujours avant le répondeur de démonstration."""
+        if not self._scenarios and self._repondeur is not None:
+            reponse = self._repondeur(messages, schema)
+            if reponse is not None:
+                return ScenarioLLM(reponse=reponse)
+        return self._prochain_scenario()
 
     async def generer_texte(
         self,
@@ -108,9 +122,13 @@ class FakeLLMClient:
         max_tokens: int | None = None,
         delai_s: float | None = None,
     ) -> tuple[T, ReponseLLM]:
-        """Valider le scénario courant avec ``schema`` et retourner la réponse normalisée."""
+        """Valider le scénario courant avec ``schema`` et retourner la réponse normalisée.
+
+        Sans scénario préparé, le répondeur (s'il existe) fournit une réponse déterministe ; sinon, erreur de
+        configuration comme avant.
+        """
         self.appels.append(list(messages))
-        scenario = self._prochain_scenario()
+        scenario = self._scenario_ou_repondeur(messages, schema)
 
         debut = self._horloge()
         if scenario.delai_s > 0:
