@@ -8,6 +8,7 @@ Variables reconnues (préfixe ``LLM_``, sauf ``ENVIRONNEMENT``) :
 ===================  ===========================================================
 ``ENVIRONNEMENT``    ``dev`` (défaut), ``test`` ou ``prod``
 ``LLM_FOURNISSEUR``  ``factice`` (défaut hors production), ``compatible-openai`` ou ``gemini``
+``LLM_FACTICE_SCENARIO``  ``aucun`` (défaut) ou ``demonstration`` : réponses du factice sans scénario (I-01)
 ``LLM_MODELE``       nom du modèle chez le fournisseur
 ``LLM_BASE_URL``     racine de l'API, par exemple ``https://api.openai.com/v1``
 ``LLM_API_KEY``      clé d'API, jamais journalisée
@@ -33,6 +34,8 @@ from app.core.reprise import PolitiqueReprise
 
 Environnement = Literal["dev", "test", "prod"]
 Fournisseur = Literal["factice", "compatible-openai", "gemini"]
+# Réponses du fournisseur factice sans scénario : « aucun » (erreur de configuration) ou « demonstration » (I-01).
+ScenarioFactice = Literal["aucun", "demonstration"]
 
 
 class ConfigLLM(BaseSettings):
@@ -51,6 +54,7 @@ class ConfigLLM(BaseSettings):
 
     environnement: Environnement = Field(default="dev", validation_alias="ENVIRONNEMENT")
     fournisseur: Fournisseur = "factice"
+    factice_scenario: ScenarioFactice = "aucun"
     modele: str | None = Field(default=None, min_length=1, max_length=128)
     base_url: HttpUrl | None = None
     api_key: SecretStr | None = None
