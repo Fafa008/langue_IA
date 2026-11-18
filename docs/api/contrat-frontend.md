@@ -818,7 +818,7 @@ d'un autre rôle), **422** langue inconnue ou liste vide.
 Pas de `DELETE` : un formateur est lié à ses ateliers (`Atelier.id_formateur`, `ON DELETE RESTRICT`), il est donc
 désactivé plutôt que supprimé. Un compte `INACTIF` est refusé à la connexion (**403**), comme pour tout utilisateur.
 
-## Parcours personnalisé (US41/US42) — rôle `APPRENANT` — contrat frontend, routes à créer côté backend
+## Parcours personnalisé (US41 à US44) — rôle `APPRENANT` — contrat frontend, routes à créer côté backend
 
 Le frontend fonctionne aujourd'hui **sans backend** (`NEXT_PUBLIC_API_MOCK=true`, données de
 `frontend/src/mocks/parcours-personnalise.mock.ts`). Ce contrat décrit ce que le backend devra exposer pour le
@@ -879,19 +879,56 @@ Mêmes lignes que ci-dessus pour une leçon, plus le `contenu` de chaque exercic
                   "contenu": "{\"format\":\"ecoute\",\"consigne\":\"…\",\"question\":\"…\",\"choix\":[\"…\"],\"audio_url\":null,\"texte_audio\":\"…\"}" }] }
 ```
 
-Formats de `contenu` : `choix` (`enonce`, `choix`), `texte` (`enonce`, `___` marque un trou), `ecoute` (`question`,
-`choix`, `audio_url` ou `texte_audio` lu par le navigateur), `prononciation` (`phrase` à lire à voix haute, transcrite
-par la reconnaissance vocale du navigateur), `conversation` (`sujet`, `message_initial`, `echanges_minimum`).
+Formats de `contenu` : `choix` (`enonce`, `choix`), `texte` (`enonce`, `___` marque un trou), `redaction` (`enonce`,
+`mots_minimum`, 30 par défaut ; réponse libre corrigée par l'IA), `ecoute` (`question`, `choix`, `audio_url` ou
+`texte_audio` lu par le navigateur), `prononciation` (`phrase` à lire à voix haute, transcrite par la reconnaissance
+vocale du navigateur), `conversation` (`sujet`, `message_initial`, `echanges_minimum`).
 **403** leçon pas encore atteinte (le `detail` est affiché).
+
+> **US43-BE — la bonne réponse ne quitte jamais le backend avant la réponse.** `exercice.contenu` peut stocker la ou
+> les réponses acceptées et l'explication (par exemple `reponses`, `explication`), mais le backend les **retire** du
+> `contenu` renvoyé ici. Elles ne sont communiquées que dans la correction.
+
+La rédaction n'a pas encore de type dans l'enum `TypeExercice` : en attendant un type `EXPRESSION_ECRITE`, les données
+simulées la rangent en `GRAMMAIRE`.
 
 ### `POST /parcours/{id_parcours}/exercices/{id_parcours_exercice}/reponse`
 
-Corps : `{ "format": "choix" | "texte" | "ecoute" | "prononciation", "reponse": "…" }` (pour la prononciation, la
-transcription), ou `{ "format": "conversation", "messages": [{ "role": "apprenant", "contenu": "…" }] }`.
+Corps : `{ "format": "choix" | "texte" | "redaction" | "ecoute" | "prononciation", "reponse": "…" }` (pour la
+prononciation, la transcription), ou `{ "format": "conversation", "messages": [{ "role": "apprenant", "contenu": "…" }] }`.
 Délai côté frontend : 45 s (correction possible par l'IA).
 
-**200** : `{ "statut": "REUSSI", "score_obtenu": 85, "commentaire": "…", "reponse_attendue": null }`. Le backend
-enregistre `score_obtenu` et avance `lecon_atteinte` quand tous les exercices de la leçon atteinte ont une réponse.
+Deux modes de correction (US43, US44) :
+
+| `mode_correction` | Formats | Qui corrige |
+|---|---|---|
+| `AUTOMATIQUE` | `choix`, `ecoute`, `texte`, `prononciation` | le backend, de façon **déterministe** (US43-BE) : réponse comparée aux réponses acceptées, sans tenir compte de la casse, des accents ni de la ponctuation ; même réponse, même résultat |
+| `IA` | `redaction`, `conversation` | le service IA, via le backend (prompt de correction à créer) |
+
+**200** :
+
+```json
+{
+  "statut": "A_REVOIR",
+  "score_obtenu": 40,
+  "mode_correction": "IA",
+  "commentaire": "Votre texte doit être complété et corrigé.",
+  "reponse_attendue": null,
+  "explication": null,
+  "points_forts": ["Vous reliez vos idées avec des connecteurs (mais, parce que, ensuite…)."],
+  "erreurs": [{ "extrait": "j'ai allé", "correction": "je suis allé(e)", "explication": "« Aller » se conjugue avec l'auxiliaire être au passé composé." }],
+  "conseil": "Développez davantage : écrivez au moins 25 mots."
+}
+```
+
+- `reponse_attendue` : la bonne réponse, renvoyée seulement quand la réponse est fausse (correction automatique).
+- `explication` : la règle ou la raison de la bonne réponse (correction automatique), renvoyée dans les deux cas.
+- `points_forts`, `erreurs`, `conseil` : retour détaillé de l'IA (facultatifs, listes vides par défaut).
+- `mode_correction` inconnu : refusé par le frontend, comme les autres énumérations.
+
+Le backend enregistre la réponse et `score_obtenu` (`parcours_exercice`), puis avance `lecon_atteinte` quand tous les
+exercices de la leçon atteinte ont une réponse. L'apprenant peut refaire un exercice : la dernière correction remplace
+la précédente. **502/503/504** (IA indisponible ou trop lente) : le frontend garde la réponse et propose de la renvoyer.
 
 ### `POST /chatbot/message` — relais du service IA (tâche B-10)
 

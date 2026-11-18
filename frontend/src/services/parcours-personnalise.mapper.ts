@@ -9,6 +9,7 @@ import type {
   ExerciceLecon,
   ExerciceParcours,
   LeconParcours,
+  ModeCorrection,
   ParcoursPersonnalise,
   PhaseParcours,
   StatutExercice,
@@ -66,6 +67,7 @@ export interface ContenuExerciceDto {
   sujet?: string;
   message_initial?: string;
   echanges_minimum?: number;
+  mots_minimum?: number;
 }
 
 /** GET /parcours/{id_parcours}/lecons/{numero_lecon} (403 si la leçon n'est pas encore atteinte). */
@@ -80,8 +82,13 @@ export interface LeconParcoursDto {
 export interface CorrectionExerciceDto {
   statut: string;
   score_obtenu: number;
+  mode_correction: string;
   commentaire: string;
   reponse_attendue?: string | null;
+  explication?: string | null;
+  points_forts?: string[];
+  erreurs?: { extrait: string; correction: string; explication: string }[];
+  conseil?: string | null;
 }
 
 /** POST /chatbot/message (relais backend du service IA, tâche B-10) : mêmes champs que ia-service. */
@@ -97,6 +104,7 @@ const STATUTS_PARCOURS: StatutParcours[] = ["EN_COURS", "TERMINE", "ABANDONNE"];
 const PHASES: PhaseParcours[] = ["PASSIVE", "ACTIVE"];
 const TYPES: TypeExercice[] = ["GRAMMAIRE", "VOCABULAIRE", "COMPREHENSION", "ECOUTE", "ORAL"];
 const STATUTS_EXERCICE: StatutExercice[] = ["A_FAIRE", "REUSSI", "A_REVOIR"];
+const MODES_CORRECTION: ModeCorrection[] = ["AUTOMATIQUE", "IA"];
 
 /** Valeur d'énumération reconnue (sans tenir compte de la casse) ; une valeur inconnue est une erreur de contrat. */
 function valeurConnue<T extends string>(valeurs: readonly T[], valeur: string, quoi: string): T {
@@ -157,6 +165,8 @@ export function toContenuExercice(json: string): ContenuExercice {
       return { format: "choix", consigne, enonce: requis(dto.enonce, "enonce"), choix: requis(dto.choix, "choix") };
     case "texte":
       return { format: "texte", consigne, enonce: requis(dto.enonce, "enonce") };
+    case "redaction":
+      return { format: "redaction", consigne, enonce: requis(dto.enonce, "enonce"), motsMinimum: dto.mots_minimum ?? 30 };
     case "ecoute":
       if (!dto.audio_url && !dto.texte_audio) throw new Error("Contenu d'exercice incomplet : audio_url ou texte_audio");
       return {
@@ -197,7 +207,12 @@ export function toCorrectionExercice(dto: CorrectionExerciceDto): CorrectionExer
   return {
     statut: valeurConnue(STATUTS_EXERCICE, dto.statut, "Statut d'exercice"),
     scoreObtenu: dto.score_obtenu,
+    mode: valeurConnue(MODES_CORRECTION, dto.mode_correction, "Mode de correction"),
     commentaire: dto.commentaire,
     reponseAttendue: dto.reponse_attendue ?? null,
+    explication: dto.explication ?? null,
+    pointsForts: dto.points_forts ?? [],
+    erreurs: dto.erreurs ?? [],
+    conseil: dto.conseil ?? null,
   };
 }

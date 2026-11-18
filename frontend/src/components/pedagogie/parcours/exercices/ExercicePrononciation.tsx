@@ -15,11 +15,13 @@ export default function ExercicePrononciation({
   contenu,
   langue,
   enCours,
+  verrouille,
   onSoumettre,
 }: {
   contenu: Extract<ContenuExercice, { format: "prononciation" }>;
   langue: string;
   enCours: boolean;
+  verrouille: boolean;
   onSoumettre: (reponse: ReponseExercice) => void;
 }) {
   const voix = useReconnaissanceVocale(langue);
@@ -78,7 +80,7 @@ export default function ExercicePrononciation({
           />
         </label>
       )}
-      <BoutonValider desactive={!voix.transcription || voix.ecoute} enCours={enCours} />
+      {!verrouille && <BoutonValider desactive={!voix.transcription || voix.ecoute} enCours={enCours} />}
     </form>
   );
 }

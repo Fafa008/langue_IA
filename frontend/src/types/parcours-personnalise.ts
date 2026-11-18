@@ -66,7 +66,8 @@ export interface ExerciceParcours {
 /**
  * Contenu d'un exercice selon sa forme :
  * - choix : une réponse parmi plusieurs (grammaire, vocabulaire, compréhension) ;
- * - texte : réponse écrite libre ou phrase à compléter (« ___ ») ;
+ * - texte : phrase à compléter (« ___ »), corrigée automatiquement ;
+ * - redaction : réponse libre de quelques phrases, corrigée par l'IA ;
  * - ecoute : extrait audio (fichier ou texte lu par le navigateur) puis question à choix ;
  * - prononciation : phrase à dire à voix haute, reconnue par la reconnaissance vocale ;
  * - conversation : échange avec le professeur IA (chatbot), à l'écrit ou à la voix.
@@ -74,6 +75,7 @@ export interface ExerciceParcours {
 export type ContenuExercice =
   | { format: "choix"; consigne: string; enonce: string; choix: string[] }
   | { format: "texte"; consigne: string; enonce: string }
+  | { format: "redaction"; consigne: string; enonce: string; motsMinimum: number }
   | { format: "ecoute"; consigne: string; question: string; choix: string[]; audioUrl: string | null; texteAudio: string | null }
   | { format: "prononciation"; consigne: string; phrase: string }
   | { format: "conversation"; consigne: string; sujet: string; messageInitial: string; echangesMinimum: number };
@@ -91,14 +93,35 @@ export interface LeconParcours {
 
 /** Réponse envoyée pour correction : texte, choix, transcription vocale ou conversation complète. */
 export type ReponseExercice =
-  | { format: "choix" | "texte" | "ecoute" | "prononciation"; reponse: string }
+  | { format: "choix" | "texte" | "redaction" | "ecoute" | "prononciation"; reponse: string }
   | { format: "conversation"; messages: MessageChatbot[] };
+
+/**
+ * AUTOMATIQUE : correction déterministe par le backend (QCM, écoute, phrase à compléter, prononciation) ;
+ * IA : correction par le professeur IA (rédaction, conversation).
+ */
+export type ModeCorrection = "AUTOMATIQUE" | "IA";
+
+/** Erreur relevée par l'IA dans une réponse libre : le passage fautif, sa correction et pourquoi. */
+export interface ErreurRelevee {
+  extrait: string;
+  correction: string;
+  explication: string;
+}
 
 export interface CorrectionExercice {
   statut: StatutExercice;
   scoreObtenu: number;
+  mode: ModeCorrection;
   commentaire: string;
+  /** Bonne réponse, donnée quand la réponse est fausse (QCM, écoute, phrase à compléter). */
   reponseAttendue: string | null;
+  /** Règle ou raison de la bonne réponse. */
+  explication: string | null;
+  pointsForts: string[];
+  erreurs: ErreurRelevee[];
+  /** Conseil pour progresser. */
+  conseil: string | null;
 }
 
 /** Tour de parole du chatbot ; mêmes rôles que le service IA (ia-service/app/schemas/chatbot.py). */
