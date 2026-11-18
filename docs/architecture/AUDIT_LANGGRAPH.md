@@ -4,6 +4,11 @@
 **Périmètre :** `ia-service/` uniquement
 **Base auditée :** branche `feature/langgraph-audit`, créée depuis `origin/develop` (`de77fc45d81b47f8a93c6af3175489f40a10659`).
 
+> **Mise à jour du 17 novembre 2026** — audit historique conservé pour son raisonnement, mais deux constats ne
+> décrivent plus le code actuel : `POST /diagnostic/evaluer` existe et est appelé par le backend, et le RAG local est
+> implémenté (`RecuperateurLocal`, activable par `RAG_CORPUS_ACTIF`) avec `RecuperateurVide` comme repli. La
+> conclusion (ne pas introduire LangGraph sans règle métier validée) reste valable.
+
 ## Synthèse
 
 LangGraph n'est ni déclaré dans les dépendances ni utilisé dans le code du microservice. Aucun import de
@@ -12,7 +17,8 @@ correspondant n'est installé dans l'environnement Python du microservice dispon
 version LangGraph n'est donc détectée.
 
 Le service possède déjà un Agent Harness générique, un registre versionné et deux agents : Diagnostic et chatbot.
-Le workflow Diagnostic est essentiellement séquentiel et n'a pas encore de route HTTP. L'architecture actuelle
+Le workflow Diagnostic est essentiellement séquentiel et n'avait pas encore de route HTTP à la date de l'audit.
+L'architecture actuelle
 est suffisante pour l'exécuter. Une intégration LangGraph pourrait devenir pertinente à l'intérieur de cet agent
 si le Sprint 2 introduit des transitions conditionnelles réelles, notamment une règle métier déterministe pour
 décider de ne pas appeler le LLM. Cette règle n'est pas définie dans l'implémentation auditée.
@@ -43,14 +49,16 @@ prétend pas décrire d'autres environnements ou branches.
 - **Diagnostic (`diagnostic@1.0.0`)** : `DiagnosticAgent` reçoit un scénario, des réponses et le score
   préliminaire fourni par le Backend. Il interroge le port RAG, filtre et borne les descripteurs, rend le prompt
   versionné avec le few-shot approprié, appelle le client LLM partagé, puis vérifie la cohérence du résultat et
-  des preuves. Il signale les écarts importants. Il n'a pas de route HTTP d'inférence dans cette version.
+  des preuves. Il signale les écarts importants. Il n'avait pas de route HTTP d'inférence dans cette version
+(depuis : `POST /diagnostic/evaluer`).
 - **Chatbot (`chatbot@1.0.0`)** : prépare le prompt conversationnel et demande au client LLM une sortie JSON
   validée. `POST /chatbot/message` est sa route d'inférence.
 - **Supervision** : `GET /health`.
 
 Au démarrage FastAPI, le service crée le registre de prompts, le client LLM, le registre d'agents, le récupérateur
-RAG et le Harness. Les définitions Diagnostic et chatbot y sont enregistrées. Le RAG actuellement branché est
-`RecuperateurVide` ; il ne fournit pas de corpus réel.
+RAG et le Harness. Les définitions Diagnostic et chatbot y sont enregistrées. À la date de l'audit, le RAG
+branché était `RecuperateurVide` ; depuis, `RecuperateurLocal` fournit un corpus CECRL activable par
+`RAG_CORPUS_ACTIF`.
 
 ### Harness actuel
 
