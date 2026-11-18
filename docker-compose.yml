@@ -1,18 +1,9 @@
 # ============================================================
-# CENTRE DE LANGUES IA — Stack complète (monorepo)
-# ============================================================
-#   docker compose up --build -d                                           # images de production
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up      # développement (rechargement à chaud)
-#
-# Les valeurs viennent du fichier .env (copie de .env.example). Sans .env, les valeurs par défaut
-# ci-dessous s'appliquent : elles suffisent en local, jamais en production (mots de passe).
-# Dans les conteneurs, les services se joignent par leur nom (db, redis, backend, ia-service) :
-# les adresses « localhost » du .env sont donc remplacées ici.
+# CENTRE DE LANGUES IA — Stack complète (monorepo) - ISOLÉE (PRE-06)
 # ============================================================
 
 name: centre-langues
 
-# Vérifie qu'un service FastAPI répond sur /health (utilisé par depends_on: service_healthy)
 x-healthcheck-python: &healthcheck-python
   interval: 10s
   timeout: 5s
@@ -41,8 +32,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Pas de port publié : backend et service IA joignent la base par le réseau Docker (db:5432).
-    # Accès depuis la machine (pgAdmin, DBeaver) : docker-compose.dev.yml, ou `docker compose exec db psql`.
+    networks:
+      - back-tier
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -55,7 +46,8 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
-    # Pas de port publié : joignable par le réseau Docker (redis:6379)
+    networks:
+      - back-tier
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -73,16 +65,12 @@ services:
     environment:
       <<: *python-env
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      # Comptes de démonstration (mot de passe Demo2026) : false en production
       SEED_DEMO: ${SEED_DEMO:-true}
-      # Analyse IA du diagnostic (PRE-05). Une panne du service IA dégrade en résultat partiel, sans bloquer.
-      IA_SERVICE_URL: ${IA_SERVICE_URL:-http://ia-service:8001}
+      IA_SERVICE_URL: http://ia-service:8001
       IA_SERVICE_TIMEOUT_S: ${IA_SERVICE_TIMEOUT_S:-55}
-      # Les clés des fournisseurs LLM sont réservées au service IA.
       LLM_API_KEY: ""
       GEMINI_API_KEY: ""
     volumes:
-      # Photos de profil (servies sous /media), conservées d'un redémarrage à l'autre
       - media_data:/srv/media
     depends_on:
       db:
@@ -91,6 +79,9 @@ services:
         condition: service_healthy
     ports:
       - "${BACKEND_PORT:-8000}:8000"
+    networks:
+      - front-tier
+      - back-tier   # Le backend est la passerelle : il est sur les deux réseaux
     healthcheck:
       <<: *healthcheck-python
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
@@ -104,7 +95,6 @@ services:
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
       ENVIRONNEMENT: ${ENVIRONNEMENT:-dev}
       LLM_FOURNISSEUR: ${LLM_FOURNISSEUR:-factice}
-      # Sans clé LLM, le factice répond au diagnostic par une analyse de démonstration (I-01, D-01)
       LLM_FACTICE_SCENARIO: ${LLM_FACTICE_SCENARIO:-demonstration}
       LLM_MODELE: ${LLM_MODELE:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
@@ -118,32 +108,25 @@ services:
       LLM_REPRISE_DELAI_S: ${LLM_REPRISE_DELAI_S:-0.5}
       LLM_REPRISE_DELAI_MAX_S: ${LLM_REPRISE_DELAI_MAX_S:-4}
       LLM_BUDGET_TOTAL_S: ${LLM_BUDGET_TOTAL_S:-30}
-      # Corpus CECRL (PRE-08) : désactivé par défaut, descripteurs privés non versionnés
       RAG_CORPUS_ACTIF: ${RAG_CORPUS_ACTIF:-false}
       RAG_CORPUS_CHEMIN: ${RAG_CORPUS_CHEMIN:-/app/corpus/cecrl}
       RAG_CORPUS_VERIFIER_EMPREINTE: ${RAG_CORPUS_VERIFIER_EMPREINTE:-true}
     volumes:
-      # Modèles entraînés (*.pkl, *.joblib…) : non versionnés, déposés dans ia-service/models
       - ./ia-service/models:/app/models:ro
-      # Manifeste versionné + descripteurs privés générés hors dépôt (lecture seule)
       - ./ia-service/corpus:/app/corpus:ro
     depends_on:
       redis:
         condition: service_healthy
-    ports:
-      - "${IA_PORT:-8001}:8001"
-    healthcheck:
-      <<: *healthcheck-python
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"]
+    #  SUPPRIMÉ : ports: - "${IA_PORT:-8001}:8001" -> Le service IA n'est plus exposé sur l'hôte !
+    networks:
+      - back-tier   # Uniquement sur le réseau privé (inaccessible par le frontend)
 
   frontend:
     build:
       context: ./frontend
       target: prod
-      # Intégrées au build (NEXT_PUBLIC_*) : reconstruire l'image après un changement
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-        # false : le frontend appelle le backend ; true : données simulées (frontend/src/mocks)
         NEXT_PUBLIC_API_MOCK: ${NEXT_PUBLIC_API_MOCK:-false}
     restart: unless-stopped
     depends_on:
@@ -151,6 +134,8 @@ services:
         condition: service_healthy
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - front-tier   # Uniquement sur le réseau public/intermédiaire
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
       interval: 10s
@@ -162,3 +147,9 @@ volumes:
   postgres_data:
   redis_data:
   media_data:
+
+networks:
+  front-tier:
+    driver: bridge
+  back-tier:
+    driver: bridge
