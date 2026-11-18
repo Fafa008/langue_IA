@@ -148,6 +148,7 @@ class ResultatDiagnostic(ModeleStrict):
     @field_validator("points_faibles")
     @classmethod
     def verifier_domaines_uniques(cls, points: list[PointFaible]) -> list[PointFaible]:
+        """Interdire les doublons : deux points faibles sur le même domaine rendraient le retour illisible."""
         domaines = [point.domaine for point in points]
         if len(domaines) != len(set(domaines)):
             raise erreur("Un domaine ne peut apparaître qu'une fois dans les points faibles.")
@@ -155,6 +156,11 @@ class ResultatDiagnostic(ModeleStrict):
 
     @model_validator(mode="after")
     def verifier_referentiel_et_niveaux(self) -> "ResultatDiagnostic":
+        """Imposer le référentiel de la langue et vérifier que les deux niveaux en font partie.
+
+        Le référentiel n'est pas libre : le chinois suit le HSK, les autres langues le CECRL. Un modèle qui
+        mélange les deux échelles doit être rejeté avant d'atteindre le backend.
+        """
         attendu = referentiel_pour_langue(self.code_langue)
         if self.referentiel != attendu:
             raise erreur(f"La langue « {self.code_langue} » impose le référentiel {attendu}, pas {self.referentiel}.")
@@ -169,6 +175,10 @@ class ResultatDiagnostic(ModeleStrict):
 
     @model_validator(mode="after")
     def verifier_ecart(self) -> "ResultatDiagnostic":
+        """Recalculer l'écart plutôt que de croire celui renvoyé par le modèle.
+
+        C'est une règle déterministe : l'écart est déduit des deux niveaux, jamais accepté tel quel.
+        """
         attendu = calculer_ecart(self.referentiel, self.niveau_preliminaire, self.niveau_estime)
         if attendu != self.ecart_avec_niveau_preliminaire:
             raise erreur(
