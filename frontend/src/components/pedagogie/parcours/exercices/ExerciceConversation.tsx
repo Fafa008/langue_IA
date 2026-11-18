@@ -19,11 +19,13 @@ export default function ExerciceConversation({
   contenu,
   langue,
   enCours,
+  verrouille,
   onSoumettre,
 }: {
   contenu: Extract<ContenuExercice, { format: "conversation" }>;
   langue: string;
   enCours: boolean;
+  verrouille: boolean;
   onSoumettre: (reponse: ReponseExercice) => void;
 }) {
   const [messages, setMessages] = useState<MessageChatbot[]>([{ role: "assistant", contenu: contenu.messageInitial }]);
@@ -101,14 +103,16 @@ export default function ExerciceConversation({
       </form>
       {voix.erreur && <p role="alert" className="msg-error mt-2">{voix.erreur}</p>}
 
-      <button
-        type="button"
-        onClick={() => onSoumettre({ format: "conversation", messages })}
-        disabled={echanges === 0 || enCours || chatbot.isPending}
-        className="btn-primary mt-4 px-5 py-2.5 disabled:opacity-50"
-      >
-        {enCours ? "Évaluation en cours…" : "Terminer et évaluer la conversation"}
-      </button>
+      {!verrouille && (
+        <button
+          type="button"
+          onClick={() => onSoumettre({ format: "conversation", messages })}
+          disabled={echanges === 0 || enCours || chatbot.isPending}
+          className="btn-primary mt-4 px-5 py-2.5 disabled:opacity-50"
+        >
+          {enCours ? "Évaluation en cours…" : "Terminer et évaluer la conversation"}
+        </button>
+      )}
     </div>
   );
 }

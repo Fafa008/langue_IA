@@ -67,13 +67,13 @@ describe("Exercices du parcours (US42)", () => {
 
     const lecon = await screen.findByRole("list", { name: "Exercices de la leçon du jour" });
     const lignes = within(lecon).getAllByRole("listitem");
-    expect(lignes).toHaveLength(5);
+    expect(lignes).toHaveLength(6);
     expect(lignes[0]).toHaveTextContent("Réussi");
     expect(lignes[0]).toHaveTextContent("90/100");
     expect(lignes[1]).toHaveTextContent("À faire");
     expect(screen.getByRole("progressbar", { name: "Avancement de la leçon 23" })).toHaveAttribute(
       "aria-valuetext",
-      "1 exercice fait sur 5",
+      "1 exercice fait sur 6",
     );
     expect(screen.getByRole("link", { name: /Continuer la leçon/ })).toHaveAttribute("href", "/espace/apprenant/parcours/lecons/23");
   });

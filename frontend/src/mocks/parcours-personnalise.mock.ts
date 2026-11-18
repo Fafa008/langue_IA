@@ -51,23 +51,23 @@ const DERNIERE_LECON = MODULES.length * LECONS_PAR_MODULE;
 /* ---------- Banque de contenus (exercice.contenu), choisie selon le numéro de leçon ---------- */
 
 const CHOIX = [
-  { type: "GRAMMAIRE", intitule: "Le passé composé", consigne: "Choisissez la bonne forme.", enonce: "Hier, je ___ au cinéma.", choix: ["vais", "suis allé", "irai"], reponse: "suis allé" },
-  { type: "GRAMMAIRE", intitule: "Le futur proche", consigne: "Choisissez la bonne forme.", enonce: "Ce soir, nous ___ dîner chez des amis.", choix: ["allons", "sommes allés", "allions"], reponse: "allons" },
-  { type: "COMPREHENSION", intitule: "Lire une annonce", consigne: "« Le musée est ouvert du mardi au dimanche, de 10 h à 18 h. »", enonce: "Peut-on visiter le musée le lundi ?", choix: ["Oui", "Non", "Seulement le matin"], reponse: "Non" },
-  { type: "COMPREHENSION", intitule: "Comprendre un message", consigne: "« Rendez-vous devant la gare à 9 h, ne sois pas en retard ! »", enonce: "Où est le rendez-vous ?", choix: ["À la gare", "Au café", "À l'école"], reponse: "À la gare" },
+  { type: "GRAMMAIRE", intitule: "Le passé composé", consigne: "Choisissez la bonne forme.", enonce: "Hier, je ___ au cinéma.", choix: ["vais", "suis allé", "irai"], reponse: "suis allé", explication: "« Hier » situe l'action dans le passé : on emploie le passé composé, avec l'auxiliaire être pour « aller »." },
+  { type: "GRAMMAIRE", intitule: "Le futur proche", consigne: "Choisissez la bonne forme.", enonce: "Ce soir, nous ___ dîner chez des amis.", choix: ["allons", "sommes allés", "allions"], reponse: "allons", explication: "« Ce soir » annonce un futur proche : aller au présent + infinitif (« nous allons dîner »)." },
+  { type: "COMPREHENSION", intitule: "Lire une annonce", consigne: "« Le musée est ouvert du mardi au dimanche, de 10 h à 18 h. »", enonce: "Peut-on visiter le musée le lundi ?", choix: ["Oui", "Non", "Seulement le matin"], reponse: "Non", explication: "Le musée ouvre du mardi au dimanche : il est donc fermé le lundi." },
+  { type: "COMPREHENSION", intitule: "Comprendre un message", consigne: "« Rendez-vous devant la gare à 9 h, ne sois pas en retard ! »", enonce: "Où est le rendez-vous ?", choix: ["À la gare", "Au café", "À l'école"], reponse: "À la gare", explication: "Le message dit « devant la gare »." },
 ] as const;
 
 const TEXTES = [
-  { intitule: "Les salutations", consigne: "Complétez la phrase.", enonce: "___, je m'appelle Marie.", reponses: ["Bonjour", "Bonsoir", "Salut"] },
-  { intitule: "Prendre rendez-vous", consigne: "Complétez avec le bon verbe.", enonce: "Je voudrais ___ un rendez-vous chez le médecin.", reponses: ["prendre"] },
-  { intitule: "Demander poliment", consigne: "Complétez avec « pouvoir » au conditionnel.", enonce: "___-vous m'indiquer la gare, s'il vous plaît ?", reponses: ["Pourriez"] },
-  { intitule: "Au restaurant", consigne: "Complétez la commande.", enonce: "Je ___ un café, s'il vous plaît.", reponses: ["voudrais", "veux", "prends"] },
+  { intitule: "Les salutations", consigne: "Complétez la phrase.", enonce: "___, je m'appelle Marie.", reponses: ["Bonjour", "Bonsoir", "Salut"], explication: "On ouvre une présentation par une salutation : « Bonjour », « Bonsoir » ou « Salut »." },
+  { intitule: "Prendre rendez-vous", consigne: "Complétez avec le bon verbe.", enonce: "Je voudrais ___ un rendez-vous chez le médecin.", reponses: ["prendre"], explication: "On dit « prendre un rendez-vous »." },
+  { intitule: "Demander poliment", consigne: "Complétez avec « pouvoir » au conditionnel.", enonce: "___-vous m'indiquer la gare, s'il vous plaît ?", reponses: ["Pourriez"], explication: "« Pouvoir » au conditionnel avec « vous » : « pourriez ». Le conditionnel rend la demande polie." },
+  { intitule: "Au restaurant", consigne: "Complétez la commande.", enonce: "Je ___ un café, s'il vous plaît.", reponses: ["voudrais", "veux", "prends"], explication: "« Je voudrais » (conditionnel) est la forme la plus polie pour commander." },
 ];
 
 const ECOUTES = [
-  { intitule: "Un message vocal", texte: "Bonjour, c'est Paul. Je serai en retard de dix minutes. À tout à l'heure !", question: "Que dit Paul ?", choix: ["Il annule le rendez-vous", "Il sera en retard", "Il est déjà arrivé"], reponse: "Il sera en retard" },
-  { intitule: "À la gare", texte: "Le train pour Lyon partira du quai numéro trois à quatorze heures.", question: "De quel quai part le train ?", choix: ["Quai 1", "Quai 3", "Quai 14"], reponse: "Quai 3" },
-  { intitule: "La météo", texte: "Demain, il pleuvra le matin, puis le soleil reviendra l'après-midi.", question: "Quel temps fera-t-il demain après-midi ?", choix: ["Pluie", "Soleil", "Neige"], reponse: "Soleil" },
+  { intitule: "Un message vocal", texte: "Bonjour, c'est Paul. Je serai en retard de dix minutes. À tout à l'heure !", question: "Que dit Paul ?", choix: ["Il annule le rendez-vous", "Il sera en retard", "Il est déjà arrivé"], reponse: "Il sera en retard", explication: "Paul dit : « Je serai en retard de dix minutes »." },
+  { intitule: "À la gare", texte: "Le train pour Lyon partira du quai numéro trois à quatorze heures.", question: "De quel quai part le train ?", choix: ["Quai 1", "Quai 3", "Quai 14"], reponse: "Quai 3", explication: "L'annonce dit « quai numéro trois » ; quatorze heures est l'horaire." },
+  { intitule: "La météo", texte: "Demain, il pleuvra le matin, puis le soleil reviendra l'après-midi.", question: "Quel temps fera-t-il demain après-midi ?", choix: ["Pluie", "Soleil", "Neige"], reponse: "Soleil", explication: "« Le soleil reviendra l'après-midi » ; la pluie, c'est le matin." },
 ];
 
 const PRONONCIATIONS = [
@@ -97,13 +97,31 @@ const CONVERSATIONS = [
   },
 ];
 
-const RANGS = ["choix", "texte", "ecoute", "prononciation", "conversation"] as const;
+const REDACTIONS = [
+  { intitule: "Raconter son week-end", enonce: "Racontez votre dernier week-end en quelques phrases : où étiez-vous, avec qui, qu'avez-vous fait ?" },
+  { intitule: "Écrire à un ami", enonce: "Écrivez un court message à un ami pour lui proposer une sortie samedi." },
+  { intitule: "Décrire sa ville", enonce: "Décrivez votre ville ou votre quartier : ce que vous aimez et ce que vous aimez moins." },
+];
+
+/* Rédaction : erreurs fréquentes que le professeur IA simulé sait repérer (le vrai correcteur est le LLM). */
+const ERREURS_FREQUENTES: { motif: RegExp; correction: string; explication: string }[] = [
+  { motif: /\bj'ai allée?s?(?![\p{L}])/iu, correction: "je suis allé(e)", explication: "« Aller » se conjugue avec l'auxiliaire être au passé composé." },
+  { motif: /\bil faut que je vais\b/i, correction: "il faut que j'aille", explication: "Après « il faut que », on emploie le subjonctif." },
+  { motif: /\bsi j'aurais\b/i, correction: "si j'avais", explication: "Après « si », on n'emploie pas le conditionnel mais l'imparfait." },
+  { motif: /\bmalgré que\b/i, correction: "bien que", explication: "« Malgré que » est à éviter : on écrit « bien que » + subjonctif." },
+  { motif: /\bje suis d'accord à(?![\p{L}])/iu, correction: "je suis d'accord avec", explication: "On est d'accord « avec » quelqu'un." },
+  { motif: /(?<![\p{L}])ça va bien\b/iu, correction: "je vais bien", explication: "Dans un texte écrit, préférez « je vais bien »." },
+];
+
+const RANGS = ["choix", "texte", "ecoute", "prononciation", "conversation", "redaction"] as const;
 
 interface ExerciceMock {
   ligne: Omit<ExerciceParcoursDto, "statut" | "score_obtenu">;
   contenu: Record<string, unknown>;
   /** Réponses acceptées (formats choix, texte, écoute) ou phrase attendue (prononciation). */
   attendu: string[];
+  /** Raison de la bonne réponse, renvoyée avec la correction automatique. */
+  explication?: string;
 }
 
 function exerciceMock(lecon: number, rang: number): ExerciceMock {
@@ -113,11 +131,11 @@ function exerciceMock(lecon: number, rang: number): ExerciceMock {
   switch (RANGS[rang]) {
     case "choix": {
       const c = pick(CHOIX);
-      return { ligne: { ...base, type: c.type, intitule: c.intitule }, contenu: { format: "choix", consigne: c.consigne, enonce: c.enonce, choix: c.choix }, attendu: [c.reponse] };
+      return { ligne: { ...base, type: c.type, intitule: c.intitule }, contenu: { format: "choix", consigne: c.consigne, enonce: c.enonce, choix: c.choix }, attendu: [c.reponse], explication: c.explication };
     }
     case "texte": {
       const t = pick(TEXTES);
-      return { ligne: { ...base, type: "VOCABULAIRE", intitule: t.intitule }, contenu: { format: "texte", consigne: t.consigne, enonce: t.enonce }, attendu: t.reponses };
+      return { ligne: { ...base, type: "VOCABULAIRE", intitule: t.intitule }, contenu: { format: "texte", consigne: t.consigne, enonce: t.enonce }, attendu: t.reponses, explication: t.explication };
     }
     case "ecoute": {
       const e = pick(ECOUTES);
@@ -125,11 +143,21 @@ function exerciceMock(lecon: number, rang: number): ExerciceMock {
         ligne: { ...base, type: "ECOUTE", intitule: e.intitule },
         contenu: { format: "ecoute", consigne: "Écoutez l'extrait, puis répondez.", question: e.question, choix: e.choix, audio_url: null, texte_audio: e.texte },
         attendu: [e.reponse],
+        explication: e.explication,
       };
     }
     case "prononciation": {
       const p = pick(PRONONCIATIONS);
       return { ligne: { ...base, type: "ORAL", intitule: p.intitule }, contenu: { format: "prononciation", consigne: "Lisez la phrase à voix haute.", phrase: p.phrase }, attendu: [p.phrase] };
+    }
+    case "redaction": {
+      const r = pick(REDACTIONS);
+      // Le backend n'a pas encore de type « expression écrite » : la rédaction est rangée en grammaire
+      return {
+        ligne: { ...base, type: "GRAMMAIRE", intitule: `Expression écrite : ${r.intitule.toLowerCase()}` },
+        contenu: { format: "redaction", consigne: "Rédigez votre réponse ; le professeur IA la corrigera.", enonce: r.enonce, mots_minimum: 25 },
+        attendu: [],
+      };
     }
     default: {
       const c = pick(CONVERSATIONS);
@@ -206,6 +234,53 @@ export function scorePrononciation(attendue: string, dite: string): number {
   return Math.round((mots.filter((m) => dits.has(m)).length / mots.length) * 100);
 }
 
+/**
+ * Professeur IA simulé pour une rédaction : longueur, majuscule, ponctuation finale et erreurs fréquentes.
+ * Même forme de réponse que la future correction par le LLM (score, points forts, erreurs, conseil).
+ */
+export function corrigerRedaction(texte: string, motsMinimum: number): Omit<CorrectionExerciceDto, "statut"> {
+  const propre = texte.trim();
+  const mots = propre.split(/\s+/).filter(Boolean);
+  const erreurs: NonNullable<CorrectionExerciceDto["erreurs"]> = [];
+
+  for (const { motif, correction, explication } of ERREURS_FREQUENTES) {
+    const trouve = propre.match(motif);
+    if (trouve) erreurs.push({ extrait: trouve[0], correction, explication });
+  }
+  if (/^[a-zà-ÿ]/.test(propre)) {
+    erreurs.push({ extrait: mots[0], correction: mots[0].charAt(0).toUpperCase() + mots[0].slice(1), explication: "Une phrase commence par une majuscule." });
+  }
+  if (!/[.!?…]$/.test(propre)) {
+    erreurs.push({ extrait: mots.at(-1) ?? "", correction: `${mots.at(-1) ?? ""}.`, explication: "Terminez chaque phrase par un point." });
+  }
+
+  const pointsForts: string[] = [];
+  if (mots.length >= motsMinimum) pointsForts.push(`Texte assez développé (${mots.length} mots).`);
+  if (/\b(mais|parce que|donc|puis|ensuite|car|alors)\b/i.test(propre)) pointsForts.push("Vous reliez vos idées avec des connecteurs (mais, parce que, ensuite…).");
+  if (/\b(ai|as|a|avons|avez|ont|suis|es|est|sommes|êtes|sont)\s+\p{L}+(é|i|is|it|u)e?s?\b/iu.test(propre)) pointsForts.push("Vous employez le passé composé.");
+
+  const manque = Math.max(0, motsMinimum - mots.length);
+  const score = Math.max(0, Math.min(100, 100 - erreurs.length * 15 - Math.ceil((manque / motsMinimum) * 50)));
+  return {
+    score_obtenu: score,
+    mode_correction: "IA",
+    commentaire:
+      score >= 80
+        ? "Très bon texte, clair et bien construit."
+        : score >= SEUIL_REUSSITE
+          ? "Bon travail ! Quelques points sont à corriger."
+          : "Votre texte doit être complété et corrigé.",
+    points_forts: pointsForts,
+    erreurs,
+    conseil:
+      manque > 0
+        ? `Développez davantage : écrivez au moins ${motsMinimum} mots (il en manque ${manque}).`
+        : erreurs.length > 0
+          ? "Relisez-vous en vérifiant les majuscules, la ponctuation et les auxiliaires."
+          : "Essayez maintenant d'ajouter une opinion personnelle (« À mon avis… »).",
+  };
+}
+
 export const parcoursPersonnaliseMock = {
   async enCours(): Promise<ParcoursPersonnaliseDto> {
     await repondre();
@@ -261,37 +336,49 @@ export const parcoursPersonnaliseMock = {
     if (lecon > leconAtteinte || !RANGS[rang]) throw new ApiError(403, "Exercice indisponible");
     const exercice = exerciceMock(lecon, rang);
 
-    let score: number;
-    let commentaire: string;
+    let correction: Omit<CorrectionExerciceDto, "statut">;
     if (reponse.format === "conversation") {
       const contenu = exercice.contenu as { echanges_minimum: number };
       const tours = reponse.messages.filter((m) => m.role === "apprenant").length;
-      score = Math.min(100, Math.round((tours / contenu.echanges_minimum) * 100));
-      commentaire =
-        score >= SEUIL_REUSSITE
-          ? "Belle conversation ! Vos réponses étaient claires et adaptées."
-          : "Continuez l'échange : répondez à au moins trois questions du professeur.";
+      const score = Math.min(100, Math.round((tours / contenu.echanges_minimum) * 100));
+      correction = {
+        score_obtenu: score,
+        mode_correction: "IA",
+        commentaire:
+          score >= SEUIL_REUSSITE
+            ? "Belle conversation ! Vos réponses étaient claires et adaptées."
+            : "Continuez l'échange : répondez à au moins trois questions du professeur.",
+        points_forts: tours > 0 ? ["Vous avez répondu dans la langue étudiée."] : [],
+        conseil: "Essayez de poser vous aussi une question au professeur.",
+      };
+    } else if (reponse.format === "redaction") {
+      correction = corrigerRedaction(reponse.reponse, (exercice.contenu as { mots_minimum: number }).mots_minimum);
     } else if (reponse.format === "prononciation") {
-      score = scorePrononciation(exercice.attendu[0], reponse.reponse);
-      commentaire = score >= 80 ? "Très bonne prononciation !" : score >= SEUIL_REUSSITE ? "Bien ! Quelques mots ne sont pas reconnus." : "Réessayez en articulant chaque mot.";
+      const score = scorePrononciation(exercice.attendu[0], reponse.reponse);
+      correction = {
+        score_obtenu: score,
+        mode_correction: "AUTOMATIQUE",
+        commentaire:
+          score >= 80 ? "Très bonne prononciation !" : score >= SEUIL_REUSSITE ? "Bien ! Quelques mots ne sont pas reconnus." : "Réessayez en articulant chaque mot.",
+      };
     } else {
+      // Correction déterministe (US43-BE) : comparaison avec la réponse attendue, jamais envoyée avant la réponse
       const juste = exercice.attendu.some((a) => normaliserReponse(a) === normaliserReponse(reponse.reponse));
-      score = juste ? 100 : 0;
-      commentaire = juste ? "Bonne réponse !" : "Ce n'est pas la bonne réponse.";
+      correction = {
+        score_obtenu: juste ? 100 : 0,
+        mode_correction: "AUTOMATIQUE",
+        commentaire: juste ? "Bonne réponse !" : "Ce n'est pas la bonne réponse.",
+        reponse_attendue: juste ? null : exercice.attendu[0],
+        explication: exercice.explication ?? null,
+      };
     }
 
-    scores.set(idParcoursExercice, score);
+    scores.set(idParcoursExercice, correction.score_obtenu);
     // Leçon du jour terminée (tous les exercices ont une réponse) : la leçon suivante s'ouvre
     const tousFaits = RANGS.every((_, r) => scores.has(lecon * 10 + r + 1));
     if (lecon === leconAtteinte && tousFaits && leconAtteinte < DERNIERE_LECON) leconAtteinte += 1;
 
-    const statut = statutDe(score);
-    return {
-      statut,
-      score_obtenu: score,
-      commentaire,
-      reponse_attendue: statut === "A_REVOIR" && reponse.format !== "conversation" ? exercice.attendu[0] : null,
-    };
+    return { statut: statutDe(correction.score_obtenu), ...correction };
   },
 
   /** Professeur IA simulé : réagit puis relance avec une question liée au sujet de la conversation. */
