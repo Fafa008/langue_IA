@@ -31,6 +31,13 @@ from app.schemas.regles import (
 DESCRIPTEURS_MAX = 8
 TEXTE_REQUETE_MAX = 4_000
 
+# Provenances et statut de repli (US150-B). Ces étiquettes restent internes au service : elles alimentent
+# ``MetaExecution.version_corpus`` sans modifier le contrat Pydantic public.
+PROVENANCE_OFFICIELLE = "officiel"
+PROVENANCE_SYNTHETIQUE = "synthetique_fallback"
+STATUT_A_VERIFIER = "A_VERIFIER"
+PREFIXE_IDENTIFIANT_SYNTHETIQUE = f"{PROVENANCE_SYNTHETIQUE}:"
+
 
 class RequeteRAG(ModeleStrict):
     """Recherche documentaire déterministe, filtrée par les facettes du diagnostic.

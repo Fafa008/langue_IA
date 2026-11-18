@@ -91,6 +91,23 @@ RESULTAT_PRUDENT = {
     "ecart_avec_niveau_preliminaire": 0,
 }
 
+CONTEXTE_HSK = {
+    "code_langue": "zh",
+    "referentiel": "HSK",
+    "niveau_preliminaire": "HSK 2",
+}
+
+RESULTAT_PRUDENT_HSK = {
+    "code_langue": "zh",
+    "referentiel": "HSK",
+    "niveau_estime": "HSK 2",
+    "phase_assimil": "impregnation",
+    "points_faibles": [],
+    "score_confiance": 0.0,
+    "niveau_preliminaire": "HSK 2",
+    "ecart_avec_niveau_preliminaire": 0,
+}
+
 DESCRIPTEURS = [
     {
         "identifiant": "cecrl-b1-ecrit",
@@ -268,7 +285,7 @@ def test_borne_et_deduplique_les_descripteurs() -> None:
     assert [descripteur["identifiant"] for descripteur in rendus] == [f"cecrl-b1-{index}" for index in range(8)]
 
 
-def test_procede_sans_descripteur_et_signale_la_prudence(caplog: pytest.LogCaptureFixture) -> None:
+def test_repli_synthetique_quand_le_rag_est_vide(caplog: pytest.LogCaptureFixture) -> None:
     harness, client, _, _ = preparer(resultat=RESULTAT_PRUDENT, descripteurs=())
     caplog.set_level(logging.WARNING, logger="app.agents.diagnostic")
 
@@ -276,8 +293,67 @@ def test_procede_sans_descripteur_et_signale_la_prudence(caplog: pytest.LogCaptu
 
     assert isinstance(resultat, ReponseAgent)
     assert resultat.resultat == ResultatDiagnostic.model_validate(RESULTAT_PRUDENT)
+    descripteurs = corps_prompt(client)["descripteurs_rag"]
+    assert len(descripteurs) == 2
+    assert all(descripteur["identifiant"].startswith("synthetique_fallback:") for descripteur in descripteurs)
+    assert all("non officiel" in descripteur["contenu"] for descripteur in descripteurs)
+    assert resultat.meta.version_corpus == "synthetique_fallback"
+    assert "Repli RAG synthetique utilise" in caplog.text
+
+
+def test_preserve_les_descripteurs_reels_sans_fausse_provenance() -> None:
+    harness, client, _, _ = preparer()
+
+    resultat = executer(harness, requete())
+
+    assert isinstance(resultat, ReponseAgent)
+    descripteurs = corps_prompt(client)["descripteurs_rag"]
+    assert [descripteur["identifiant"] for descripteur in descripteurs] == [
+        "cecrl-b1-ecrit",
+        "cecrl-b1-oral",
+    ]
+    assert not any(descripteur["identifiant"].startswith("synthetique_fallback:") for descripteur in descripteurs)
+    assert resultat.meta.version_corpus == "2026.11"
+
+
+def test_repli_si_rag_desactive() -> None:
+    harness, client, _, _ = preparer(recuperateur=RecuperateurVide())
+
+    resultat = executer(harness, requete())
+
+    assert isinstance(resultat, ReponseAgent)
+    assert resultat.meta.version_corpus == "synthetique_fallback"
+    assert all(
+        descripteur["identifiant"].startswith("synthetique_fallback:")
+        for descripteur in corps_prompt(client)["descripteurs_rag"]
+    )
+
+
+def test_repli_si_corpus_indisponible(caplog: pytest.LogCaptureFixture) -> None:
+    erreur = ErreurCorpusIndisponible("Corpus indisponible.")
+    recuperateur = RecuperateurFactice((), erreur=erreur)
+    harness, client, _, _ = preparer(recuperateur=recuperateur)
+    caplog.set_level(logging.WARNING, logger="app.rag.repli")
+
+    resultat = executer(harness, requete())
+
+    assert isinstance(resultat, ReponseAgent)
+    assert resultat.meta.version_corpus == "synthetique_fallback"
+    assert "Corpus indisponible" in caplog.text
+    assert len(corps_prompt(client)["descripteurs_rag"]) == 2
+
+
+def test_a_verifier_quand_aucun_repli_pertinent_n_existe(caplog: pytest.LogCaptureFixture) -> None:
+    harness, client, _, _ = preparer(resultat=RESULTAT_PRUDENT_HSK, descripteurs=())
+    caplog.set_level(logging.WARNING, logger="app.agents.diagnostic")
+
+    resultat = executer(harness, requete(contexte=CONTEXTE_HSK))
+
+    assert isinstance(resultat, ReponseAgent)
+    assert resultat.resultat == ResultatDiagnostic.model_validate(RESULTAT_PRUDENT_HSK)
     assert corps_prompt(client)["descripteurs_rag"] == []
-    assert "Aucun descripteur RAG disponible" in caplog.text
+    assert resultat.meta.version_corpus == "A_VERIFIER"
+    assert "diagnostic A_VERIFIER" in caplog.text
 
 
 def test_signale_un_ecart_important(caplog: pytest.LogCaptureFixture) -> None:
@@ -510,14 +586,18 @@ def test_mappe_une_panne_du_rag_en_corpus_indisponible() -> None:
     assert client.appels == []
 
 
-def test_conserve_une_erreur_rag_deja_typee() -> None:
+def test_repli_sur_une_erreur_rag_deja_typee() -> None:
     rag = RecuperateurFactice(DESCRIPTEURS, erreur=ErreurCorpusIndisponible("index vide"))
-    harness, _, _, _ = preparer(recuperateur=rag)
+    harness, client, _, _ = preparer(recuperateur=rag)
 
     resultat = executer(harness, requete())
 
-    assert isinstance(resultat, ReponseErreur)
-    assert resultat.erreur.code is CodeErreur.CORPUS_INDISPONIBLE
+    assert isinstance(resultat, ReponseAgent)
+    assert resultat.meta.version_corpus == "synthetique_fallback"
+    assert all(
+        descripteur["identifiant"].startswith("synthetique_fallback:")
+        for descripteur in corps_prompt(client)["descripteurs_rag"]
+    )
 
 
 def test_une_incoherence_interne_des_variables_reste_une_erreur_interne(monkeypatch: pytest.MonkeyPatch) -> None:
