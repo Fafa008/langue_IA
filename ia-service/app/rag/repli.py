@@ -80,8 +80,7 @@ def descripteurs_repli(requete: RequeteRAG) -> tuple[DescripteurRAGPrompt, ...]:
         )
         resultats.append(
             DescripteurRAGPrompt(
-                identifiant=f"{PREFIXE_IDENTIFIANT_SYNTHETIQUE}{requete.code_langue}:"
-                f"{requete.niveau}:{competence}",
+                identifiant=f"{PREFIXE_IDENTIFIANT_SYNTHETIQUE}{requete.code_langue}:" f"{requete.niveau}:{competence}",
                 code_langue=requete.code_langue,
                 referentiel=requete.referentiel,
                 niveau=requete.niveau,
@@ -119,4 +118,3 @@ class RecuperateurAvecRepli:
     async def fermer(self) -> None:
         """Deleguer la liberation des ressources au recuperateur wrappe."""
         await self._principal.fermer()
-

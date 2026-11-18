@@ -149,8 +149,7 @@ class DiagnosticAgent:
             contexte.signalement.statut_verification = STATUT_A_VERIFIER
             contexte.signalement.version_corpus_effective = STATUT_A_VERIFIER
             logger.warning(
-                "Aucun descripteur RAG disponible, diagnostic A_VERIFIER "
-                "(request_id=%s, agent=%s, code_langue=%s)",
+                "Aucun descripteur RAG disponible, diagnostic A_VERIFIER " "(request_id=%s, agent=%s, code_langue=%s)",
                 contexte.request_id,
                 CODE_AGENT,
                 apprenant.code_langue,
