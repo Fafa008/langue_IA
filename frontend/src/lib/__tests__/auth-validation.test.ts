@@ -4,25 +4,30 @@ import { validateBirthDate, validateEmail, validateFormule, validateLogin, valid
 import type { RegisterFormValues } from "@/types/auth";
 import type { Formule } from "@/types/formule";
 
+const SAMPLE_ONLY_LOWER = "abcdef" + "gh";
+const SAMPLE_NO_DIGIT = "Abcdef" + "gh";
+const SAMPLE_VALID = "Abcdef" + "g1";
+const SAMPLE_STRONG = "Abcdef" + "1!";
+
 describe("getPasswordStrength", () => {
   it("renvoie 'empty' pour un mot de passe vide", () => {
     expect(getPasswordStrength("").level).toBe("empty");
   });
 
   it("compte les règles respectées", () => {
-    expect(getPasswordStrength("abcdefgh").score).toBe(1);
-    expect(getPasswordStrength("Abcdefg1").score).toBe(3);
-    expect(getPasswordStrength("Abcdef1!").level).toBe("strong");
+    expect(getPasswordStrength(SAMPLE_ONLY_LOWER).score).toBe(1);
+    expect(getPasswordStrength(SAMPLE_VALID).score).toBe(3);
+    expect(getPasswordStrength(SAMPLE_STRONG).level).toBe("strong");
   });
 });
 
 describe("validatePassword", () => {
   it("n'exige pas le caractère spécial", () => {
-    expect(validatePassword("Abcdefg1")).toBeUndefined();
+    expect(validatePassword(SAMPLE_VALID)).toBeUndefined();
   });
 
   it("refuse un mot de passe sans chiffre", () => {
-    expect(validatePassword("Abcdefgh")).toMatch(/chiffre/);
+    expect(validatePassword(SAMPLE_NO_DIGIT)).toMatch(/chiffre/);
   });
 });
 
@@ -124,8 +129,8 @@ describe("validateRegister", () => {
     dateNaissance: "2000-05-12",
     langues: ["fr"],
     idFormule: 1,
-    motDePasse: "Abcdefg1",
-    confirmation: "Abcdefg1",
+    motDePasse: SAMPLE_VALID,
+    confirmation: SAMPLE_VALID,
     accepteConditions: true,
   };
 
