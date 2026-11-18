@@ -104,6 +104,8 @@ services:
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
       ENVIRONNEMENT: ${ENVIRONNEMENT:-dev}
       LLM_FOURNISSEUR: ${LLM_FOURNISSEUR:-factice}
+      # Sans clé LLM, le factice répond au diagnostic par une analyse de démonstration (I-01, D-01)
+      LLM_FACTICE_SCENARIO: ${LLM_FACTICE_SCENARIO:-demonstration}
       LLM_MODELE: ${LLM_MODELE:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}

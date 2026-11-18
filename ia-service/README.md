@@ -51,6 +51,7 @@ modèle activé pour le compte Google utilisé. Aucun changement de code n'est n
 | --- | --- | --- |
 | `ENVIRONNEMENT` | `dev` | `dev`, `test` ou `prod` ; `prod` interdit le fournisseur `factice` |
 | `LLM_FOURNISSEUR` | `factice` | `factice`, `compatible-openai` ou `gemini` |
+| `LLM_FACTICE_SCENARIO` | `aucun` | `demonstration` : le factice répond au diagnostic par une analyse de démonstration valide et déterministe (`app/llm/demonstration.py`) ; Compose l'active par défaut |
 | `LLM_MODELE` | — | nom du modèle, obligatoire pour `compatible-openai` |
 | `LLM_BASE_URL` | — | racine de l'API, obligatoire pour `compatible-openai` |
 | `LLM_API_KEY` | — | clé de `compatible-openai`, jamais journalisée |
