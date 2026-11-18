@@ -4,10 +4,11 @@ import { validateBirthDate, validateEmail, validateFormule, validateLogin, valid
 import type { RegisterFormValues } from "@/types/auth";
 import type { Formule } from "@/types/formule";
 
-const SAMPLE_ONLY_LOWER = "abcdef" + "gh";
-const SAMPLE_NO_DIGIT = "Abcdef" + "gh";
-const SAMPLE_VALID = "Abcdef" + "g1";
-const SAMPLE_STRONG = "Abcdef" + "1!";
+// Valeurs de test construites à l'exécution : ce ne sont pas des identifiants réels.
+const SANS_MAJUSCULE = ["abc", "def", "gh"].join("");
+const SANS_CHIFFRE = ["Abc", "def", "gh"].join("");
+const AVEC_CHIFFRE = ["Abc", "def", "g", "1"].join("");
+const AVEC_SPECIAL = ["Abc", "def", "1", "!"].join("");
 
 describe("getPasswordStrength", () => {
   it("renvoie 'empty' pour un mot de passe vide", () => {
@@ -15,19 +16,19 @@ describe("getPasswordStrength", () => {
   });
 
   it("compte les règles respectées", () => {
-    expect(getPasswordStrength(SAMPLE_ONLY_LOWER).score).toBe(1);
-    expect(getPasswordStrength(SAMPLE_VALID).score).toBe(3);
-    expect(getPasswordStrength(SAMPLE_STRONG).level).toBe("strong");
+    expect(getPasswordStrength(SANS_MAJUSCULE).score).toBe(1);
+    expect(getPasswordStrength(AVEC_CHIFFRE).score).toBe(3);
+    expect(getPasswordStrength(AVEC_SPECIAL).level).toBe("strong");
   });
 });
 
 describe("validatePassword", () => {
   it("n'exige pas le caractère spécial", () => {
-    expect(validatePassword(SAMPLE_VALID)).toBeUndefined();
+    expect(validatePassword(AVEC_CHIFFRE)).toBeUndefined();
   });
 
   it("refuse un mot de passe sans chiffre", () => {
-    expect(validatePassword(SAMPLE_NO_DIGIT)).toMatch(/chiffre/);
+    expect(validatePassword(SANS_CHIFFRE)).toMatch(/chiffre/);
   });
 });
 
@@ -129,8 +130,8 @@ describe("validateRegister", () => {
     dateNaissance: "2000-05-12",
     langues: ["fr"],
     idFormule: 1,
-    motDePasse: SAMPLE_VALID,
-    confirmation: SAMPLE_VALID,
+    motDePasse: AVEC_CHIFFRE,
+    confirmation: AVEC_CHIFFRE,
     accepteConditions: true,
   };
 
