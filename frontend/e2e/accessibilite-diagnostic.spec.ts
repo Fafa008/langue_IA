@@ -112,7 +112,7 @@ async function parcourirLesEcrans(page: Page, verifier: (ecran: string, elements
   ]);
 }
 
-/** États secondaires : erreur d'envoi, résultat en attente, minuteur presque écoulé, test interrompu, résultat partiel. */
+/** États secondaires : erreur d'envoi, résultat en attente, minuteur presque écoulé, résultat partiel. */
 async function parcourirLesEtats(page: Page, verifier: (ecran: string, elements?: Locator[]) => Promise<void>) {
   await page.clock.install();
   await ouvrir(page, { failFirstAnswer: true, premiereTerminaison: "en_attente" });
@@ -139,17 +139,7 @@ async function parcourirLesEtats(page: Page, verifier: (ecran: string, elements?
   await expect(page.getByTestId("resultat-partiel")).toBeVisible();
   await verifier("résultat partiel");
 
-  // Test interrompu (nouvelle tentative, onglet rouvert sans mémoire locale)
-  await page.getByRole("button", { name: "Refaire le test" }).click();
-  await demarrer(page);
-  await repondreChoix(page, 0);
-  await page.evaluate(() => sessionStorage.clear());
-  await page.goto(URL_TEST);
-  await expect(page.getByTestId("test-interrompu")).toBeVisible();
-  await verifier("test interrompu", [
-    page.getByRole("button", { name: "Reprendre le test" }),
-    page.getByRole("button", { name: "Commencer un nouveau test" }),
-  ]);
+  // Décision D1 (démo) : pas d'état « test interrompu », la reprise est retirée (voir reprise-test.spec.ts).
 }
 
 test.describe("Accessibilité des écrans du diagnostic (WCAG 2.1 AA)", () => {
@@ -157,7 +147,7 @@ test.describe("Accessibilité des écrans du diagnostic (WCAG 2.1 AA)", () => {
     await parcourirLesEcrans(page, (ecran) => expectAccessible(page, ecran));
   });
 
-  test("erreurs, attente, minuteur et test interrompu : aucune violation", async ({ page }) => {
+  test("erreurs, attente, minuteur : aucune violation", async ({ page }) => {
     await parcourirLesEtats(page, (ecran) => expectAccessible(page, ecran));
   });
 });

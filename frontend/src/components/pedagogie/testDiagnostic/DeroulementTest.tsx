@@ -115,7 +115,7 @@ export default function DeroulementTest() {
       {sortie.destination && (
         <ConfirmDialog
           title="Quitter la page du test ?"
-          description="Vos réponses déjà validées sont enregistrées. Le test sera interrompu : vous pourrez le reprendre là où vous en étiez depuis la page du test diagnostic."
+          description="Vos réponses déjà validées sont enregistrées. Le test sera interrompu et ne pourra pas être repris."
           confirmLabel="Quitter la page"
           onClose={sortie.annuler}
           onConfirm={sortie.confirmer}
