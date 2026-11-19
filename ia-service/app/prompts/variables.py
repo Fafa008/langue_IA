@@ -1,4 +1,4 @@
-"""Données structurées rendues dans les prompts du diagnostic et du chatbot."""
+"""Données structurées rendues dans les prompts du diagnostic, du chatbot et de la correction."""
 
 from collections.abc import Sequence
 from typing import Literal
@@ -8,6 +8,7 @@ from pydantic import Field, field_validator, model_validator
 from app.schemas.base import ModeleStrict
 from app.schemas.chatbot import HISTORIQUE_CHATBOT_MAX, MESSAGE_CHATBOT_MAX, MessageHistorique
 from app.schemas.contexte import ContexteApprenant
+from app.schemas.correction import EntreeCorrection, phase_de_lecon
 from app.schemas.diagnostic import PreuveReponse, ResultatDiagnostic
 from app.schemas.regles import CodeLangue, CodeNiveau, Competence, Referentiel, erreur, niveaux_du_referentiel
 
@@ -143,3 +144,30 @@ class VariablesConversationChatbot(ModeleStrict):
     contexte_apprenant: ContexteApprenant
     historique: list[MessageHistorique] = Field(max_length=HISTORIQUE_CHATBOT_MAX)
     message: str = Field(min_length=1, max_length=MESSAGE_CHATBOT_MAX)
+
+
+class VariablesCorrectionReponseLibre(ModeleStrict):
+    """Variables du prompt de correction d'une réponse libre (US157).
+
+    La phase est recalculée depuis la leçon atteinte du contexte : elle n'est jamais fournie librement par
+    l'appelant. Les descripteurs, s'il y en a, correspondent à la langue et au référentiel de l'apprenant.
+    """
+
+    contexte_apprenant: ContexteApprenant
+    phase: Literal["PASSIVE", "ACTIVE"]
+    exercice: EntreeCorrection
+    descripteurs_rag: list[DescripteurRAGPrompt] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def verifier_coherence(self) -> "VariablesCorrectionReponseLibre":
+        contexte = self.contexte_apprenant
+        if contexte.lecon_atteinte is None:
+            raise erreur("La correction d'une réponse libre exige la leçon atteinte dans le contexte.")
+        if self.phase != phase_de_lecon(contexte.lecon_atteinte):
+            raise erreur("La phase doit découler de la leçon atteinte du contexte.")
+        if any(
+            descripteur.code_langue != contexte.code_langue or descripteur.referentiel != contexte.referentiel
+            for descripteur in self.descripteurs_rag
+        ):
+            raise erreur("Les descripteurs RAG doivent correspondre à la langue et au référentiel de l'apprenant.")
+        return self

@@ -9,10 +9,16 @@ from string import Template
 from app.core.erreurs import ErreurPromptIntrouvable, ErreurRegistre
 from app.llm.base import MessageLLM
 from app.prompts.bibliotheque_few_shot import BibliothequeFewShot
-from app.prompts.variables import ExempleFewShot, VariablesConversationChatbot, VariablesEvaluationDiagnostic
+from app.prompts.variables import (
+    ExempleFewShot,
+    VariablesConversationChatbot,
+    VariablesCorrectionReponseLibre,
+    VariablesEvaluationDiagnostic,
+)
 
 VERSION_EVALUATION_DIAGNOSTIC = "1.1.0"
 VERSION_CONVERSATION_CHATBOT = "1.0.0"
+VERSION_CORRECTION_REPONSE_LIBRE = "1.0.0"
 _VARIABLES_TEMPLATE = frozenset(
     {
         "code_langue",
@@ -25,6 +31,7 @@ _VARIABLES_TEMPLATE = frozenset(
     }
 )
 _VARIABLES_TEMPLATE_CHATBOT = frozenset({"contexte_apprenant", "historique", "message"})
+_VARIABLES_TEMPLATE_CORRECTION = frozenset({"contexte_apprenant", "phase", "exercice", "descripteurs_rag"})
 _NOMBRE_EXEMPLES_MAX = 3
 
 
@@ -66,6 +73,11 @@ class RegistrePrompts:
         self._definitions = {
             ("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC): self._charger_evaluation_diagnostic(),
             ("chatbot", "conversation", VERSION_CONVERSATION_CHATBOT): self._charger_conversation_chatbot(),
+            (
+                "correction",
+                "reponse-libre",
+                VERSION_CORRECTION_REPONSE_LIBRE,
+            ): self._charger_correction_reponse_libre(),
         }
 
     def definition(self, agent: str, tache: str, version: str) -> tuple[str, str]:
@@ -93,6 +105,30 @@ class RegistrePrompts:
             messages=(
                 MessageLLM(role="system", contenu=definition.systeme),
                 MessageLLM(role="user", contenu=contenu_utilisateur),
+            ),
+            version_prompt=definition.version_prompt,
+            empreinte_prompt=definition.empreinte_prompt,
+            temperature=definition.temperature,
+            max_tokens=definition.max_tokens,
+        )
+
+    def rendre_correction_reponse_libre(
+        self,
+        variables: VariablesCorrectionReponseLibre,
+        *,
+        version: str = VERSION_CORRECTION_REPONSE_LIBRE,
+    ) -> PromptRendu:
+        """Rendre le prompt de correction d'une réponse libre (US157) à partir de variables validées."""
+        definition = self._definitions.get(("correction", "reponse-libre", version))
+        if definition is None:
+            raise ErreurPromptIntrouvable("La version du prompt de correction des réponses libres est introuvable.")
+
+        donnees = variables.model_dump(mode="json")
+        valeurs = {nom: _json_prompt(donnees[nom]) for nom in _VARIABLES_TEMPLATE_CORRECTION}
+        return PromptRendu(
+            messages=(
+                MessageLLM(role="system", contenu=definition.systeme),
+                MessageLLM(role="user", contenu=definition.template_utilisateur.substitute(valeurs)),
             ),
             version_prompt=definition.version_prompt,
             empreinte_prompt=definition.empreinte_prompt,
@@ -209,6 +245,26 @@ class RegistrePrompts:
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.5,
             max_tokens=600,
+        )
+
+    def _charger_correction_reponse_libre(self) -> _DefinitionPrompt:
+        nom = f"reponse-libre@{VERSION_CORRECTION_REPONSE_LIBRE}"
+        repertoire = self._repertoire / "correction"
+        systeme = self._lire(repertoire / f"{nom}.systeme.md")
+        texte_utilisateur = self._lire(repertoire / f"{nom}.utilisateur.md")
+        template = _valider_template(texte_utilisateur, _VARIABLES_TEMPLATE_CORRECTION)
+
+        empreinte = hashlib.sha256(b"\0".join((systeme.encode("utf-8"), texte_utilisateur.encode("utf-8"))))
+        # Température basse : une correction doit être stable ; la réécriture complète (phase active) demande de
+        # la place, d'où un plafond de jetons plus haut que le diagnostic.
+        return _DefinitionPrompt(
+            version_prompt=f"correction/reponse-libre@{VERSION_CORRECTION_REPONSE_LIBRE}",
+            systeme=systeme.strip(),
+            template_utilisateur=template,
+            exemples=(),
+            empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
+            temperature=0.2,
+            max_tokens=1500,
         )
 
     @staticmethod

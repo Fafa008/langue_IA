@@ -7,14 +7,20 @@ sortie) et **sans appel réseau**, calculé à partir des données que le prompt
 
 Le résultat ne prétend pas être une analyse : chaque point faible annonce qu'il vient d'une démonstration, à
 confirmer avec un vrai fournisseur. Le factice reste interdit en production (``ConfigLLM``).
+
+US157 : le prompt de correction d'une réponse libre reçoit de la même façon un feedback de démonstration, conforme
+au contrat v2 (phase passive ou active), qui ne vérifie que la majuscule initiale, la ponctuation finale et la
+longueur, et le dit dans son commentaire.
 """
 
 import json
+import math
 from collections.abc import Sequence
 
 from pydantic import BaseModel
 
 from app.llm.base import MessageLLM
+from app.schemas.correction import EXTRAIT_MAX, ErreurRelevee, ResultatCorrection
 from app.schemas.diagnostic import (
     PhaseAssimil,
     PointFaible,
@@ -27,6 +33,7 @@ from app.schemas.regles import niveaux_du_referentiel
 
 BALISE_OUVRANTE = "<donnees_diagnostic_non_fiables>"
 BALISE_FERMANTE = "</donnees_diagnostic_non_fiables>"
+BALISE_CORRECTION = "donnees_correction_non_fiables"
 
 SCORE_NIVEAU_SUPERIEUR = 85.0
 SCORE_NIVEAU_INFERIEUR = 30.0
@@ -50,17 +57,21 @@ JUSTIFICATION = (
 )
 
 
-def _donnees_diagnostic(messages: Sequence[MessageLLM]) -> dict | None:
-    """Relire le bloc JSON des données du diagnostic dans le message utilisateur, ou ``None`` s'il est absent."""
+def _donnees_diagnostic(
+    messages: Sequence[MessageLLM],
+    ouvrante: str = BALISE_OUVRANTE,
+    fermante: str = BALISE_FERMANTE,
+) -> dict | None:
+    """Relire le bloc JSON des données du prompt dans le message utilisateur, ou ``None`` s'il est absent."""
     for message in messages:
         if message.role != "user":
             continue
-        debut = message.contenu.find(BALISE_OUVRANTE)
-        fin = message.contenu.find(BALISE_FERMANTE)
+        debut = message.contenu.find(ouvrante)
+        fin = message.contenu.find(fermante)
         if debut == -1 or fin == -1:
             continue
         try:
-            donnees = json.loads(message.contenu[debut + len(BALISE_OUVRANTE) : fin])
+            donnees = json.loads(message.contenu[debut + len(ouvrante) : fin])
         except ValueError:
             return None
         return donnees if isinstance(donnees, dict) else None
@@ -128,8 +139,71 @@ def resultat_diagnostic_demonstration(messages: Sequence[MessageLLM]) -> Resulta
     )
 
 
-def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseModel]) -> BaseModel | None:
-    """Répondeur du faux client : seul le schéma ``ResultatDiagnostic`` a une réponse de démonstration."""
-    if schema is not ResultatDiagnostic:
+COMMENTAIRE_CORRECTION = (
+    "Correction de démonstration sans modèle de langue (fournisseur factice) : seules la majuscule, la "
+    "ponctuation finale et la longueur sont vérifiées."
+)
+CONSEIL_CORRECTION = {
+    "PASSIVE": "Relisez la leçon du jour à voix haute en repérant les formes corrigées.",
+    "ACTIVE": "Comparez votre texte à la version corrigée, puis réécrivez-le sans la regarder.",
+}
+
+
+def resultat_correction_demonstration(messages: Sequence[MessageLLM]) -> ResultatCorrection | None:
+    """Feedback de démonstration d'une réponse libre, ou ``None`` s'il ne s'agit pas d'une correction (US157)."""
+    donnees = _donnees_diagnostic(messages, f"<{BALISE_CORRECTION}>", f"</{BALISE_CORRECTION}>")
+    if donnees is None:
         return None
-    return resultat_diagnostic_demonstration(messages)
+    phase = donnees["phase"]
+    exercice = donnees["exercice"]
+    texte = " ".join(exercice["reponse"].split())
+    mots = texte.split(" ")
+    mots_minimum = exercice["mots_minimum"]
+
+    erreurs: list[ErreurRelevee] = []
+    if texte[0].isalpha() and texte[0].islower() and len(mots[0]) <= EXTRAIT_MAX:
+        erreurs.append(
+            ErreurRelevee(
+                extrait=mots[0],
+                correction=mots[0][0].upper() + mots[0][1:],
+                explication="Une phrase commence par une majuscule.",
+            )
+        )
+    dernier = mots[-1]
+    deja_releve = any(e.extrait.casefold() == dernier.casefold() for e in erreurs)
+    if texte[-1] not in ".!?…。！？" and len(dernier) < EXTRAIT_MAX and not deja_releve:
+        erreurs.append(
+            ErreurRelevee(extrait=dernier, correction=f"{dernier}.", explication="Terminez la phrase par un point.")
+        )
+
+    manque = max(0, mots_minimum - len(mots))
+    score = max(0, min(100, 100 - 15 * len(erreurs) - math.ceil(manque / mots_minimum * 50)))
+    reformulation = None
+    if phase == "ACTIVE" and erreurs:
+        reformulation = texte[0].upper() + texte[1:]
+        if reformulation[-1] not in ".!?…。！？":
+            reformulation += "."
+
+    return ResultatCorrection(
+        phase=phase,
+        lecon_atteinte=donnees["contexte_apprenant"]["lecon_atteinte"],
+        score=score,
+        commentaire=COMMENTAIRE_CORRECTION,
+        points_forts=[f"Réponse assez développée ({len(mots)} mots)."] if manque == 0 else [],
+        erreurs=erreurs,
+        reformulation=reformulation,
+        conseil=(
+            f"Développez votre réponse : au moins {mots_minimum} mots (il en manque {manque})."
+            if manque
+            else CONSEIL_CORRECTION[phase]
+        ),
+    )
+
+
+def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseModel]) -> BaseModel | None:
+    """Répondeur du faux client : le diagnostic et la correction des réponses libres ont une démonstration."""
+    if schema is ResultatDiagnostic:
+        return resultat_diagnostic_demonstration(messages)
+    if schema is ResultatCorrection:
+        return resultat_correction_demonstration(messages)
+    return None
