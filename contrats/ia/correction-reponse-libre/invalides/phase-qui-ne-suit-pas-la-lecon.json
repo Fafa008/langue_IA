@@ -1,0 +1,42 @@
+{
+  "request_id": "3f1c9b7e-6a2d-4f0e-9c1a-2b7d5e8f4a10",
+  "agent": "correction",
+  "version_agent": "1.0.0",
+  "version_prompt": "correction/reponse-libre@1.0.0",
+  "statut": "succes",
+  "resultat": {
+    "phase": "ACTIVE",
+    "lecon_atteinte": 23,
+    "score": 55,
+    "commentaire": "Votre message se comprend bien ; le passé reste à travailler.",
+    "points_forts": [
+      "Vous reliez vos idées avec « and »."
+    ],
+    "erreurs": [
+      {
+        "extrait": "I go",
+        "correction": "I went",
+        "explication": "« Yesterday » situe l'action dans le passé : on emploie le prétérit."
+      },
+      {
+        "extrait": "we buy",
+        "correction": "we bought",
+        "explication": "La suite du récit reste au prétérit."
+      },
+      {
+        "extrait": "yesterday",
+        "correction": "Yesterday",
+        "explication": "Une phrase commence par une majuscule."
+      }
+    ],
+    "reformulation": "Yesterday I went to the market with my sister and we bought apples.",
+    "conseil": "Relisez la leçon du jour à voix haute en repérant les verbes au passé."
+  },
+  "meta": {
+    "duree_ms": 1840,
+    "fournisseur": "compatible-openai",
+    "modele": "modele-exemple",
+    "version_corpus": "synthetique_fallback",
+    "empreinte_prompt": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  }
+}

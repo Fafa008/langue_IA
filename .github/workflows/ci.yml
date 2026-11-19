@@ -197,6 +197,8 @@ jobs:
             http://localhost:8000/api/v1/auth/login | jq -r .access_token)
           curl --fail --silent -H "Authorization: Bearer $jeton" http://localhost:8000/api/v1/diagnostic/langues \
             | jq -e '[.[] | select(.disponible)] | map(.code) | contains(["en", "fr"])'
+      - name: Contrat backend ↔ service IA, appel réel (US157-QA)
+        run: docker compose exec -T backend python -m scripts.verifier_contrat_ia
       - name: Le seed est idempotent (second passage, comme au redémarrage du conteneur)
         run: docker compose exec -T backend python -m app.seed
       - name: Journaux en cas d'échec
