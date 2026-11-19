@@ -55,6 +55,17 @@ export function pointsFaiblesDe(resultat: ResultatTest): PointFaible[] | null {
 }
 
 /**
+ * Préfixe des identifiants de repères du repli synthétique (ia-service, app/rag/base.py : PREFIXE_IDENTIFIANT_SYNTHETIQUE).
+ * Un repère qui commence par ce préfixe n'est pas extrait d'un référentiel officiel : l'écran le dit (décision D2).
+ */
+export const PREFIXE_REPERE_NON_OFFICIEL = "synthetique_fallback:";
+
+/** Vrai pour un repère du repli synthétique, à étiqueter « repères non officiels ». */
+export function estRepereNonOfficiel(source: { id: string }): boolean {
+  return source.id.startsWith(PREFIXE_REPERE_NON_OFFICIEL);
+}
+
+/**
  * Décision D5 (F-01) : la justification n'est pas une information « manquante ». Quand l'analyse ne la fournit
  * pas, la section n'est pas affichée (voir TestResult), au lieu d'annoncer un détail à venir.
  */

@@ -1,5 +1,5 @@
 import { BookMarked, ExternalLink } from "lucide-react";
-import { estLienSur } from "@/lib/resultatDiagnostic";
+import { estLienSur, estRepereNonOfficiel } from "@/lib/resultatDiagnostic";
 import type { Justification } from "@/types/test-diagnostic";
 
 /**
@@ -25,12 +25,25 @@ export default function JustificationNiveau({ justification }: { justification?:
               <h3 className="text-small font-semibold text-content-secondary">
                 Sources du référentiel ({justification.sources.length})
               </h3>
+              {justification.sources.some(estRepereNonOfficiel) && (
+                <p data-testid="reperes-non-officiels" className="mt-2 rounded-btn bg-warning/10 px-3 py-2 text-small text-content">
+                  <span className="font-semibold">Repères non officiels.</span> Ces repères pédagogiques ne sont pas extraits
+                  d&apos;un référentiel officiel : ils servent de repère provisoire.
+                </p>
+              )}
               <ul className="mt-2 space-y-2">
                 {justification.sources.map((source) => (
                   <li key={source.id}>
                     <details className="group rounded-btn border border-border" data-testid="source-referentiel">
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-medium text-content hover:bg-background">
-                        <span>{source.titre}</span>
+                        <span>
+                          {source.titre}
+                          {estRepereNonOfficiel(source) && (
+                            <span className="ml-2 rounded-full bg-warning/10 px-2 py-0.5 text-small font-semibold text-warning-dark">
+                              Repère non officiel
+                            </span>
+                          )}
+                        </span>
                         <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-small font-semibold text-primary">
                           {source.referentiel} · {source.niveau}
                         </span>
