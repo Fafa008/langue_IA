@@ -24,7 +24,7 @@ import {
 } from "./parcours-personnalise.mapper";
 
 /** Correction et chatbot passent par le LLM : délai plus long que les autres requêtes (budget IA de 30 s). */
-const DELAI_IA_MS = 45_000;
+export const DELAI_IA_MS = 45_000;
 /** Le service IA n'accepte que les 20 derniers tours de parole (ia-service/app/schemas/chatbot.py). */
 export const HISTORIQUE_CHATBOT_MAX = 20;
 
