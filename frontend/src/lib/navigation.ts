@@ -7,6 +7,7 @@ import {
   GraduationCap,
   House,
   LayoutDashboard,
+  ClipboardCheck,
   TrendingUp,
   MessageSquare,
   Presentation,
@@ -62,6 +63,7 @@ const FORMATEUR: NavItem[] = [
   { label: "Mes séances", href: ROUTES.formateur.seances, icon: Presentation, bientot: true },
   { label: "Ateliers", href: ROUTES.formateur.ateliers, icon: CalendarDays, bientot: true },
   { label: "Mes apprenants", href: ROUTES.formateur.apprenants, icon: UsersRound },
+  { label: "Synthèse des erreurs", href: ROUTES.formateur.syntheseErreurs, icon: ClipboardCheck },
   { label: "Mon profil", href: ROUTES.profil, icon: UserRound },
   { label: "Paramètres", href: ROUTES.formateur.parametres, icon: Settings, bientot: true },
 ];
