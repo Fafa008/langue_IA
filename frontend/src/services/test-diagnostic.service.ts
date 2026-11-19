@@ -146,12 +146,6 @@ function lireJustification(dto: ScoreDiagnosticDto["justification"]): Justificat
   return { resume, sources };
 }
 
-/** 202 : l'analyse des réponses n'est pas terminée, le résultat sera disponible plus tard. */
-interface AnalyseEnAttenteDto {
-  id_tentative: number;
-  statut: "en_attente";
-}
-
 /**
  * Délai laissé au service d'analyse (LLM) pour évaluer une réponse libre ou clore le test.
  * Au-delà, l'apprenant garde ses réponses et peut réessayer.
@@ -293,14 +287,11 @@ export const httpTestDiagnosticService = {
     if (!Number.isSafeInteger(tentativeId) || tentativeId <= 0) {
       throw new Error("Identifiant de tentative invalide.");
     }
-    const dto = await apiRequest<ScoreDiagnosticDto | AnalyseEnAttenteDto>(
+    const dto = await apiRequest<ScoreDiagnosticDto>(
       ENDPOINTS.diagnostic.terminerTentative(tentativeId),
       { method: "POST", timeoutMs: TIMEOUT_ANALYSE_MS },
     );
-    if ("statut" in dto && dto.statut === "en_attente" && dto.id_tentative === tentativeId) {
-      return { statut: "en_attente" };
-    }
-    if ("statut" in dto || (
+    if (
       dto.id_tentative !== tentativeId
       || !Number.isFinite(dto.score)
       || !Number.isFinite(dto.percentage)
@@ -311,7 +302,7 @@ export const httpTestDiagnosticService = {
       || dto.percentage > 100
       || !dto.level
       || (dto.framework !== "CECRL" && dto.framework !== "HSK")
-    )) {
+    ) {
       throw new Error("Le résultat de scoring renvoyé par le serveur est invalide.");
     }
     const competences = lireCompetences(dto.competences);

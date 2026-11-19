@@ -112,10 +112,10 @@ async function parcourirLesEcrans(page: Page, verifier: (ecran: string, elements
   ]);
 }
 
-/** États secondaires : erreur d'envoi, résultat en attente, minuteur presque écoulé, résultat partiel. */
+/** États secondaires : erreur d'envoi, minuteur presque écoulé, résultat partiel. */
 async function parcourirLesEtats(page: Page, verifier: (ecran: string, elements?: Locator[]) => Promise<void>) {
   await page.clock.install();
-  await ouvrir(page, { failFirstAnswer: true, premiereTerminaison: "en_attente" });
+  await ouvrir(page, { failFirstAnswer: true });
   await demarrer(page);
 
   await page.getByTestId("option-0").click();
@@ -133,9 +133,6 @@ async function parcourirLesEtats(page: Page, verifier: (ecran: string, elements?
   await page.getByTestId("option-1").click();
   await page.getByRole("button", { name: "Valider et finaliser" }).click();
   await page.getByRole("button", { name: "Finaliser le test" }).click();
-  await expect(page.getByTestId("resultat-en-attente")).toBeVisible();
-  await verifier("résultat en attente", [page.getByRole("button", { name: "Vérifier mon résultat" })]);
-  await page.getByRole("button", { name: "Vérifier mon résultat" }).click();
   await expect(page.getByTestId("resultat-partiel")).toBeVisible();
   await verifier("résultat partiel");
 

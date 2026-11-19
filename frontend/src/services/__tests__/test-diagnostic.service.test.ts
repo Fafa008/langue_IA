@@ -277,9 +277,9 @@ describe("httpTestDiagnosticService", () => {
     expect(issue.resultat.justification?.sources.map((source) => source.id)).toEqual(["7"]);
   });
 
-  it("signale un résultat en attente quand l'analyse par le LLM n'est pas terminée (202)", async () => {
+  it("refuse une réponse 202 : le backend répond toujours de façon synchrone (F-04)", async () => {
     mockFetch({ status: 202, body: { id_tentative: 42, statut: "en_attente" } });
-    await expect(httpTestDiagnosticService.terminer("42")).resolves.toEqual({ statut: "en_attente" });
+    await expect(httpTestDiagnosticService.terminer("42")).rejects.toThrow("invalide");
   });
 
   it("laisse 60 secondes à l'analyse finale avant d'abandonner", async () => {
