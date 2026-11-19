@@ -12,17 +12,19 @@ import type {
 /** Première leçon de la phase active (même règle que backend/app/services/phase_parcours.py). */
 export const PREMIERE_LECON_ACTIVE = 50;
 
-export const PHASES: Record<PhaseParcours, { libelle: string; periode: string; explication: string }> = {
+export const PHASES: Record<PhaseParcours, { libelle: string; periode: string; explication: string; retourIA: string }> = {
   PASSIVE: {
     libelle: "Mode passif",
     periode: `Leçons 1 à ${PREMIERE_LECON_ACTIVE - 1}`,
     explication: "Vous écoutez, lisez et répétez : vous vous imprégnez de la langue sans chercher à la produire.",
+    retourIA: "seules les erreurs essentielles sont relevées.",
   },
   ACTIVE: {
     libelle: "Mode actif",
     periode: `À partir de la leçon ${PREMIERE_LECON_ACTIVE}`,
     explication:
       "Vous produisez la langue vous-même en reprenant les leçons déjà vues ; une leçon sur sept est une révision.",
+    retourIA: "votre texte est corrigé en détail.",
   },
 };
 

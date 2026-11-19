@@ -122,6 +122,14 @@ export interface CorrectionExercice {
   erreurs: ErreurRelevee[];
   /** Conseil pour progresser. */
   conseil: string | null;
+  /**
+   * Contrat v2 (US157) — correction par l'IA seulement : phase et leçon atteinte selon lesquelles le retour a été
+   * rédigé (passive : erreurs essentielles ; active : correction détaillée). null pour une correction automatique.
+   */
+  phase: PhaseParcours | null;
+  leconAtteinte: number | null;
+  /** Phase active : la réponse de l'apprenant entièrement corrigée, à comparer à la sienne. */
+  reformulation: string | null;
 }
 
 /** Tour de parole du chatbot ; mêmes rôles que le service IA (ia-service/app/schemas/chatbot.py). */

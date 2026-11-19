@@ -234,11 +234,20 @@ export function scorePrononciation(attendue: string, dite: string): number {
   return Math.round((mots.filter((m) => dits.has(m)).length / mots.length) * 100);
 }
 
+/** Même règle que backend/app/services/phase_parcours.py : passive jusqu'à la leçon 49, active ensuite. */
+const phaseDe = (lecon: number) => (lecon < 50 ? "PASSIVE" : "ACTIVE");
+
+/** Phase passive : seules les erreurs essentielles sont relevées (contrat v2, US157). */
+export const ERREURS_MAX_PHASE_PASSIVE = 3;
+
 /**
  * Professeur IA simulé pour une rédaction : longueur, majuscule, ponctuation finale et erreurs fréquentes.
- * Même forme de réponse que la future correction par le LLM (score, points forts, erreurs, conseil).
+ * Même forme de réponse que la correction par le LLM (contrat v2, US157) : le retour dépend de la phase de la leçon
+ * atteinte — en phase passive, les erreurs essentielles seulement ; en phase active, toutes les erreurs et le texte
+ * entièrement corrigé (`reformulation`). Le score, lui, ne dépend que du texte.
  */
-export function corrigerRedaction(texte: string, motsMinimum: number): Omit<CorrectionExerciceDto, "statut"> {
+export function corrigerRedaction(texte: string, motsMinimum: number, leconAtteinte: number): Omit<CorrectionExerciceDto, "statut"> {
+  const phase = phaseDe(leconAtteinte);
   const propre = texte.trim();
   const mots = propre.split(/\s+/).filter(Boolean);
   const erreurs: NonNullable<CorrectionExerciceDto["erreurs"]> = [];
@@ -261,9 +270,21 @@ export function corrigerRedaction(texte: string, motsMinimum: number): Omit<Corr
 
   const manque = Math.max(0, motsMinimum - mots.length);
   const score = Math.max(0, Math.min(100, 100 - erreurs.length * 15 - Math.ceil((manque / motsMinimum) * 50)));
+
+  // Phase active : le texte entièrement corrigé, pour que l'apprenant compare avec le sien
+  let reformulation: string | null = null;
+  if (phase === "ACTIVE" && erreurs.length > 0) {
+    reformulation = ERREURS_FREQUENTES.reduce((t, { motif, correction }) => t.replace(motif, correction), propre);
+    reformulation = reformulation.charAt(0).toUpperCase() + reformulation.slice(1);
+    if (!/[.!?…]$/.test(reformulation)) reformulation += ".";
+  }
+
   return {
     score_obtenu: score,
     mode_correction: "IA",
+    phase,
+    lecon_atteinte: leconAtteinte,
+    reformulation,
     commentaire:
       score >= 80
         ? "Très bon texte, clair et bien construit."
@@ -271,12 +292,14 @@ export function corrigerRedaction(texte: string, motsMinimum: number): Omit<Corr
           ? "Bon travail ! Quelques points sont à corriger."
           : "Votre texte doit être complété et corrigé.",
     points_forts: pointsForts,
-    erreurs,
+    erreurs: phase === "PASSIVE" ? erreurs.slice(0, ERREURS_MAX_PHASE_PASSIVE) : erreurs,
     conseil:
       manque > 0
         ? `Développez davantage : écrivez au moins ${motsMinimum} mots (il en manque ${manque}).`
         : erreurs.length > 0
-          ? "Relisez-vous en vérifiant les majuscules, la ponctuation et les auxiliaires."
+          ? phase === "PASSIVE"
+            ? "Relisez la leçon du jour à voix haute : ces formes deviendront naturelles."
+            : "Comparez votre texte à la version corrigée, puis réécrivez-le sans la regarder."
           : "Essayez maintenant d'ajouter une opinion personnelle (« À mon avis… »).",
   };
 }
@@ -295,8 +318,7 @@ export const parcoursPersonnaliseMock = {
       niveau_depart: "A2",
       niveau_vise: "B1",
       lecon_atteinte: leconAtteinte,
-      // Mêmes règles que backend/app/services/phase_parcours.py
-      phase: leconAtteinte < 50 ? "PASSIVE" : "ACTIVE",
+      phase: phaseDe(leconAtteinte),
       est_lecon_de_revision: leconAtteinte >= 50 && leconAtteinte % 7 === 0,
       modules: MODULES.map((m, i) => ({
         ...m,
@@ -344,6 +366,8 @@ export const parcoursPersonnaliseMock = {
       correction = {
         score_obtenu: score,
         mode_correction: "IA",
+        phase: phaseDe(leconAtteinte),
+        lecon_atteinte: leconAtteinte,
         commentaire:
           score >= SEUIL_REUSSITE
             ? "Belle conversation ! Vos réponses étaient claires et adaptées."
@@ -352,7 +376,7 @@ export const parcoursPersonnaliseMock = {
         conseil: "Essayez de poser vous aussi une question au professeur.",
       };
     } else if (reponse.format === "redaction") {
-      correction = corrigerRedaction(reponse.reponse, (exercice.contenu as { mots_minimum: number }).mots_minimum);
+      correction = corrigerRedaction(reponse.reponse, (exercice.contenu as { mots_minimum: number }).mots_minimum, leconAtteinte);
     } else if (reponse.format === "prononciation") {
       const score = scorePrononciation(exercice.attendu[0], reponse.reponse);
       correction = {

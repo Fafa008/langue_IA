@@ -89,6 +89,10 @@ export interface CorrectionExerciceDto {
   points_forts?: string[];
   erreurs?: { extrait: string; correction: string; explication: string }[];
   conseil?: string | null;
+  /** Contrat v2 (US157) : obligatoires quand mode_correction vaut IA, absents ou null sinon. */
+  phase?: string | null;
+  lecon_atteinte?: number | null;
+  reformulation?: string | null;
 }
 
 /** POST /chatbot/message (relais backend du service IA, tâche B-10) : mêmes champs que ia-service. */
@@ -204,15 +208,24 @@ export function toLeconParcours(dto: LeconParcoursDto): LeconParcours {
 }
 
 export function toCorrectionExercice(dto: CorrectionExerciceDto): CorrectionExercice {
+  const mode = valeurConnue(MODES_CORRECTION, dto.mode_correction, "Mode de correction");
+  // Contrat v2 (US157) : un retour de l'IA dit toujours selon quelle phase et quelle leçon il a été rédigé
+  const ia = mode === "IA";
+  if (ia && (!dto.phase || !Number.isInteger(dto.lecon_atteinte) || (dto.lecon_atteinte ?? 0) < 1)) {
+    throw new Error("Correction IA incomplète : phase et lecon_atteinte sont obligatoires");
+  }
   return {
     statut: valeurConnue(STATUTS_EXERCICE, dto.statut, "Statut d'exercice"),
     scoreObtenu: dto.score_obtenu,
-    mode: valeurConnue(MODES_CORRECTION, dto.mode_correction, "Mode de correction"),
+    mode,
     commentaire: dto.commentaire,
     reponseAttendue: dto.reponse_attendue ?? null,
     explication: dto.explication ?? null,
     pointsForts: dto.points_forts ?? [],
     erreurs: dto.erreurs ?? [],
     conseil: dto.conseil ?? null,
+    phase: ia ? valeurConnue(PHASES, dto.phase!, "Phase de correction") : null,
+    leconAtteinte: ia ? dto.lecon_atteinte! : null,
+    reformulation: ia ? dto.reformulation?.trim() || null : null,
   };
 }
