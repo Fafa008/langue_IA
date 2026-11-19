@@ -51,7 +51,7 @@ const APPRENANT: NavItem[] = [
   { label: "Test de positionnement", href: ROUTES.apprenant.testDiagnostic.demarrage, icon: ClipboardList },
   { label: "Mon parcours", href: ROUTES.apprenant.parcours.accueil, icon: Route, sousPages: true },
   { label: "Ma progression", href: ROUTES.apprenant.progression, icon: TrendingUp },
-  { label: "Professeur IA", href: ROUTES.apprenant.chat, icon: MessageSquare, bientot: true, libelleEtat: "À venir" },
+  { label: "Professeur IA", href: ROUTES.apprenant.chat, icon: MessageSquare },
   { label: "Ateliers", href: ROUTES.apprenant.ateliers, icon: CalendarDays, bientot: true },
   { label: "Mon profil", href: ROUTES.profil, icon: UserRound },
   { label: "Mes inscriptions", href: ROUTES.apprenant.mesInscriptions, icon: ClipboardList, bientot: true },
