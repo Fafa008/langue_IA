@@ -27,9 +27,7 @@ from app.services.parcours import (
 from tests.conftest import creer_utilisateur, entete
 
 
-def _question_scorable(
-    db: Session, code_langue: str, code_niveau: str, enonce: str, correcte: int = 0
-) -> Question:
+def _question_scorable(db: Session, code_langue: str, code_niveau: str, enonce: str, correcte: int = 0) -> Question:
     choix = ["is", "are", "am", "be"]
     question = Question(
         enonce=enonce,
@@ -210,9 +208,7 @@ class TestAssociationExercices:
         db.commit()
 
         assert parcours is not None
-        liens = db.scalars(
-            select(ParcoursExercice).where(ParcoursExercice.id_parcours == parcours.id_parcours)
-        ).all()
+        liens = db.scalars(select(ParcoursExercice).where(ParcoursExercice.id_parcours == parcours.id_parcours)).all()
         ids_exercices = {lien.id_exercice for lien in liens}
         assert ids_exercices == {ex_a1.id_exercice, ex_a2.id_exercice}
         assert all(lien.numero_lecon == parcours.lecon_atteinte for lien in liens)
@@ -228,9 +224,7 @@ class TestAssociationExercices:
         tentative.statut = StatutDiagnostic.TERMINE
         tentative.score = 0
         tentative.niveau_final = db.scalar(select(Niveau).where(Niveau.code == "A1"))
-        tentative.analyse_ia = {
-            "resultat": {"points_faibles": [{"domaine": "vocabulaire"}, {"domaine": "grammaire"}]}
-        }
+        tentative.analyse_ia = {"resultat": {"points_faibles": [{"domaine": "vocabulaire"}, {"domaine": "grammaire"}]}}
         db.commit()
         db.refresh(tentative)
 
@@ -283,9 +277,9 @@ class TestAssociationExercices:
 
         assert (
             db.scalar(
-                select(func.count()).select_from(ParcoursExercice).where(
-                    ParcoursExercice.id_parcours == parcours.id_parcours
-                )
+                select(func.count())
+                .select_from(ParcoursExercice)
+                .where(ParcoursExercice.id_parcours == parcours.id_parcours)
             )
             == 2
         )
@@ -306,9 +300,9 @@ class TestAssociationExercices:
         assert parcours is not None
         assert (
             db.scalar(
-                select(func.count()).select_from(ParcoursExercice).where(
-                    ParcoursExercice.id_parcours == parcours.id_parcours
-                )
+                select(func.count())
+                .select_from(ParcoursExercice)
+                .where(ParcoursExercice.id_parcours == parcours.id_parcours)
             )
             == 0
         )
@@ -352,8 +346,6 @@ class TestGenerationApresDiagnostic:
         assert parcours is not None
         assert parcours.niveau_vise is not None
         assert parcours.lecon_atteinte >= 1
-        liens = db.scalars(
-            select(ParcoursExercice).where(ParcoursExercice.id_parcours == parcours.id_parcours)
-        ).all()
+        liens = db.scalars(select(ParcoursExercice).where(ParcoursExercice.id_parcours == parcours.id_parcours)).all()
         assert len(liens) >= 1
         assert any(lien.id_exercice == ex.id_exercice for lien in liens)

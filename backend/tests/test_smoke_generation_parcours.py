@@ -118,9 +118,7 @@ class TestSmokeGenerationParcours:
         db.expire_all()
         parcours = db.scalar(select(Parcours).where(Parcours.id_test == id_tentative))
         assert parcours is not None
-        liens = db.scalars(
-            select(ParcoursExercice).where(ParcoursExercice.id_parcours == parcours.id_parcours)
-        ).all()
+        liens = db.scalars(select(ParcoursExercice).where(ParcoursExercice.id_parcours == parcours.id_parcours)).all()
         assert len(liens) == 1
         assert liens[0].id_exercice == exercice.id_exercice
         assert liens[0].numero_lecon == parcours.lecon_atteinte

@@ -112,9 +112,7 @@ def _types_prioritaires(domaines_faibles: list[str]) -> list[TypeExercice]:
     return types
 
 
-def _ids_niveaux_cibles(
-    niveau_final: Niveau, niveau_vise: Niveau, niveaux_ouverts: list[Niveau]
-) -> set[int]:
+def _ids_niveaux_cibles(niveau_final: Niveau, niveau_vise: Niveau, niveaux_ouverts: list[Niveau]) -> set[int]:
     """Niveaux couverts par le parcours initial : du niveau estimé au niveau visé inclus."""
     ordonnes = _niveaux_ordonnes(niveaux_ouverts)
     ids = [niveau.id_niveau for niveau in ordonnes]
