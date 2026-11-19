@@ -104,3 +104,9 @@ class ErreurCorpusIndisponible(ErreurServiceIA):
     """Corpus documentaire absent, en échec ou incohérent avec le contexte de la requête."""
 
     code = CodeErreur.CORPUS_INDISPONIBLE
+
+
+class ErreurEntreeInvalide(ErreurServiceIA):
+    """Entrée conforme au schéma de l'agent mais incomplète pour sa tâche (par exemple une leçon atteinte absente)."""
+
+    code = CodeErreur.ENTREE_INVALIDE

@@ -8,6 +8,8 @@ agents du Harness).
 
 - `GET /health` : squelette de déploiement conservé (healthcheck Docker et CI).
 - `POST /chatbot/message` : premier endpoint d'inférence, connecté au modèle via l'agent `chatbot` du Harness (US67).
+- `POST /correction/reponse-libre` : feedback de l'IA sur une réponse libre selon la leçon atteinte, phase passive
+  ou active (agent `correction`, contrat v2, US157).
 - `app/schemas/` : contrat interne validé par Pydantic (US-151) — enveloppes du Harness, contexte apprenant, résultat
   du diagnostic et erreurs standardisées.
 - `app/core/` : configuration du client LLM (`SecretStr`, variables d'environnement), catalogue des codes d'erreur,
@@ -16,7 +18,7 @@ agents du Harness).
   (US-69).
 - `app/harness/` : définition d'agent, registre et pipeline commun d'exécution (US-69).
 - `app/prompts/` : registre partagé et prompts versionnés `diagnostic/evaluation@1.1.0` (US30) et
-  `chatbot/conversation@1.0.0` (US67).
+  `chatbot/conversation@1.0.0` (US67), `correction/reponse-libre@1.0.0` (US157).
 - `app/prompts/exemples/diagnostic/` : bibliothèque few-shot synthétique triée par scénario et langue (US71).
 - `app/rag/` : port `RecuperateurRAG`, récupérateur neutre `RecuperateurVide` (US29) et, derrière
   `RAG_CORPUS_ACTIF`, corpus CECRL local et `RecuperateurLocal` BM25 (PRE-08).
@@ -348,9 +350,11 @@ Ce test envoie une requête réelle et peut consommer du quota ; ne l'activez pa
 app/
 ├── main.py              # application FastAPI, lifespan, agents enregistrés et handlers d'erreurs
 ├── agents/
-│   └── chatbot.py       # agent chatbot : prompt de conversation + réponse JSON validée (US67)
+│   ├── chatbot.py       # agent chatbot : prompt de conversation + réponse JSON validée (US67)
+│   └── correction.py    # agent correction : feedback d'une réponse libre selon la phase (US157)
 ├── api/
-│   └── chatbot.py       # POST /chatbot/message (US67)
+│   ├── chatbot.py       # POST /chatbot/message (US67)
+│   └── correction.py    # POST /correction/reponse-libre (US157)
 ├── core/
 │   ├── config.py        # configuration LLM (pydantic-settings) et politique de reprise
 │   ├── codes_erreur.py  # catalogue des codes publics (message, retryable, statut HTTP)
@@ -404,6 +408,8 @@ tests/
   tests et extension aux neuf agents.
 - [`docs/US-67-api-chatbot.md`](docs/US-67-api-chatbot.md) — contrat de `POST /chatbot/message`, erreurs, décisions
   et vérifications.
+- [`docs/US-157-correction-reponse-libre.md`](docs/US-157-correction-reponse-libre.md) — contrat v2 du feedback
+  (phase passive ou active), prompt, contrôles de cohérence et démonstration sans clé.
 - [`docs/US-154-timeouts-erreurs-llm.md`](docs/US-154-timeouts-erreurs-llm.md) — timeouts, reprises bornées,
   gestionnaire d'erreurs, tests et limites.
 - [`docs/codes-erreur-ia.md`](docs/codes-erreur-ia.md) — catalogue des codes d'erreur et garanties de
