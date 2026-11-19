@@ -28,6 +28,8 @@ services:
     restart: "no"
     volumes:
       - ./backend:/app
+      # Exemples de contrat partagés backend ↔ service IA, lus par les tests (US157-QA)
+      - ./contrats:/contrats:ro
 
   ia-service:
     build:
@@ -35,6 +37,7 @@ services:
     restart: "no"
     volumes:
       - ./ia-service:/app
+      - ./contrats:/contrats:ro
 
   frontend:
     build:
