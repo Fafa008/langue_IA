@@ -21,7 +21,6 @@ const LIBELLES_MANQUANTS: Record<InformationManquante, string> = {
   competences: "le détail par compétence",
   points_faibles: "les points faibles",
   phase: "la phase de la méthode Assimil",
-  justification: "la justification du niveau",
 };
 
 /**
@@ -98,7 +97,8 @@ export default function TestResult() {
         </div>
       </div>
 
-      <JustificationNiveau justification={resultat.justification} />
+      {/* Décision D5 (F-01) : sans justification fournie par l'analyse, la section n'est pas affichée. */}
+      {resultat.justification && <JustificationNiveau justification={resultat.justification} />}
     </div>
   );
 }

@@ -460,10 +460,11 @@ test.describe("Écran de résultats : niveau, phase Assimil, points faibles et j
     const partiel = page.getByTestId("resultat-partiel");
     await expect(partiel).toContainText("Résultat partiel");
     await expect(partiel).toContainText("la phase de la méthode Assimil");
-    await expect(partiel).toContainText("la justification du niveau");
+    // Décision D5 (F-01) : la justification absente n'est ni listée comme manquante, ni affichée
+    await expect(partiel).not.toContainText("justification");
     await expect(page.getByTestId("result-phase")).toContainText("Non déterminée");
     await expect(page.getByTestId("result-weaknesses")).toContainText("identifiés par l'analyse complète");
-    await expect(page.getByTestId("result-justification")).toContainText("sera disponible après l'analyse complète");
+    await expect(page.getByTestId("result-justification")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Commencer mon parcours" })).toBeVisible();
 
     await expectSansDebordement(page);
