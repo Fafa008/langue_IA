@@ -1,4 +1,9 @@
-import { choisirScenarioParcoursMock, corrigerRedaction, scorePrononciation } from "@/mocks/parcours-personnalise.mock";
+import {
+  choisirScenarioParcoursMock,
+  corrigerRedaction,
+  ERREURS_MAX_PHASE_PASSIVE,
+  scorePrononciation,
+} from "@/mocks/parcours-personnalise.mock";
 import {
   toContenuExercice,
   toExerciceParcours,
@@ -162,8 +167,8 @@ describe("parcours simulé (démo sans backend)", () => {
   });
 
   it("fait corriger une rédaction par le professeur IA : erreurs, points forts et conseil", () => {
-    const correction = corrigerRedaction("samedi j'ai allé au marché avec ma sœur mais il pleuvait", 25);
-    expect(correction.mode_correction).toBe("IA");
+    const correction = corrigerRedaction("samedi j'ai allé au marché avec ma sœur mais il pleuvait", 25, 23);
+    expect(correction).toMatchObject({ mode_correction: "IA", phase: "PASSIVE", lecon_atteinte: 23, reformulation: null });
     expect(correction.erreurs?.map((e) => e.correction)).toEqual(["je suis allé(e)", "Samedi", "pleuvait."]);
     expect(correction.points_forts).toContain("Vous reliez vos idées avec des connecteurs (mais, parce que, ensuite…).");
     expect(correction.conseil).toMatch(/au moins 25 mots/);
@@ -172,9 +177,26 @@ describe("parcours simulé (démo sans backend)", () => {
     const bon = corrigerRedaction(
       "Samedi, je suis allée au marché avec ma sœur. Nous avons acheté des fruits, puis nous avons pris un café parce qu'il faisait froid. Le soir, nous avons regardé un film à la maison.",
       25,
+      23,
     );
     expect(bon).toMatchObject({ score_obtenu: 100, erreurs: [] });
     expect(bon.points_forts).toContain("Vous employez le passé composé.");
+  });
+
+  it("US157 — adapte le retour de l'IA à la phase de la leçon atteinte, sans changer le score", () => {
+    const texte = "salut, samedi j'ai allé au cinéma mais il faut que je vais au marché";
+    const passive = corrigerRedaction(texte, 25, 49);
+    const active = corrigerRedaction(texte, 25, 50);
+
+    // Bornes de la règle de phase (US155) : leçon 49 passive, leçon 50 active
+    expect(passive).toMatchObject({ phase: "PASSIVE", lecon_atteinte: 49, reformulation: null });
+    expect(passive.erreurs).toHaveLength(ERREURS_MAX_PHASE_PASSIVE);
+    expect(passive.conseil).toMatch(/au moins 25 mots/);
+    expect(active).toMatchObject({ phase: "ACTIVE", lecon_atteinte: 50 });
+    expect(active.erreurs).toHaveLength(4);
+    expect(active.reformulation).toBe("Salut, samedi je suis allé(e) au cinéma mais il faut que j'aille au marché.");
+    // Le score ne dépend que du texte
+    expect(active.score_obtenu).toBe(passive.score_obtenu);
   });
 
   it("note la prononciation sur les mots reconnus, sans accents ni ponctuation", () => {
@@ -217,12 +239,33 @@ describe("service HTTP (prêt pour le backend)", () => {
       pointsForts: [],
       erreurs: [],
       conseil: null,
+      phase: null,
+      leconAtteinte: null,
+      reformulation: null,
     });
     expect(apiRequest).toHaveBeenCalledWith("/api/v1/parcours/7/exercices/231/reponse", {
       method: "POST",
       body: { format: "prononciation", reponse: "bonjour" },
       timeoutMs: 45_000,
     });
+  });
+
+  it("US157 — lit le contrat v2 d'une correction par l'IA : phase et leçon obligatoires", async () => {
+    const ia = { statut: "A_REVOIR", score_obtenu: 40, mode_correction: "IA", commentaire: "À reprendre" };
+    apiRequest.mockResolvedValueOnce({ ...ia, phase: "active", lecon_atteinte: 56, reformulation: "  Je suis allé au marché.  " });
+    expect(await http.corriger(7, 566, { format: "redaction", reponse: "j'ai allé au marché" })).toMatchObject({
+      mode: "IA",
+      phase: "ACTIVE",
+      leconAtteinte: 56,
+      reformulation: "Je suis allé au marché.",
+    });
+
+    apiRequest.mockResolvedValueOnce(ia);
+    await expect(http.corriger(7, 566, { format: "redaction", reponse: "…" })).rejects.toThrow(
+      "Correction IA incomplète : phase et lecon_atteinte sont obligatoires",
+    );
+    apiRequest.mockResolvedValueOnce({ ...ia, phase: "MIXTE", lecon_atteinte: 56 });
+    await expect(http.corriger(7, 566, { format: "redaction", reponse: "…" })).rejects.toThrow("Phase de correction non reconnu : MIXTE");
   });
 
   it("relaie le chatbot avec un historique borné comme le service IA", async () => {

@@ -59,7 +59,10 @@ describe("US43/US44 — réponse libre corrigée par l'IA", () => {
 
     const retour = await within(exercice).findByRole("region", { name: "Correction" });
     expect(retour).toHaveTextContent("Corrigé par le professeur IA");
-    expect(retour).toHaveTextContent("4 points à corriger");
+    // US157 — phase passive (leçon 23) : quatre erreurs dans le texte, seules les trois essentielles sont relevées
+    expect(retour).toHaveTextContent("Mode passif (leçon 23) : seules les erreurs essentielles sont relevées.");
+    expect(retour).toHaveTextContent("3 points à corriger");
+    expect(retour).not.toHaveTextContent("Version corrigée");
     const erreur = within(retour).getByText("j'ai allé").closest("li");
     expect(erreur).toHaveTextContent("je suis allé(e)");
     expect(erreur).toHaveTextContent("« Aller » se conjugue avec l'auxiliaire être");
@@ -68,6 +71,22 @@ describe("US43/US44 — réponse libre corrigée par l'IA", () => {
     // Le texte reste dans la zone pour être retravaillé
     expect(zone).toHaveValue("salut, samedi j'ai allé au cinéma mais il faut que je vais au marché");
     expect(zone).toHaveAttribute("readonly");
+  });
+
+  it("US157 — en phase active, relève toutes les erreurs et donne la version corrigée", async () => {
+    choisirScenarioParcoursMock("actif");
+    afficher(<LeconVue numero={56} />);
+    const exercice = await screen.findByRole("region", { name: /^Expression écrite/ });
+    fireEvent.change(within(exercice).getByRole("textbox"), {
+      target: { value: "salut, samedi j'ai allé au cinéma mais il faut que je vais au marché" },
+    });
+    fireEvent.click(within(exercice).getByRole("button", { name: "Envoyer au professeur IA" }));
+
+    const retour = await within(exercice).findByRole("region", { name: "Correction" });
+    expect(retour).toHaveTextContent("Mode actif (leçon 56) : votre texte est corrigé en détail.");
+    expect(retour).toHaveTextContent("4 points à corriger");
+    expect(within(retour).getByRole("heading", { name: "Version corrigée" })).toBeInTheDocument();
+    expect(retour).toHaveTextContent("Salut, samedi je suis allé(e) au cinéma mais il faut que j'aille au marché.");
   });
 
   it("garde la réponse et propose de la renvoyer si la correction échoue", async () => {
