@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Text, UniqueConstraint, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -99,6 +100,10 @@ class ParcoursExercice(Base):
     )
     numero_lecon: Mapped[int] = mapped_column(Integer)
     score_obtenu: Mapped[int | None] = mapped_column(Integer)
+    # US157 : dernière réponse libre et enveloppe du feedback IA validée (la correction suivante les remplace)
+    reponse_apprenant: Mapped[str | None] = mapped_column(Text)
+    feedback_ia: Mapped[dict | None] = mapped_column(JSONB)
+    date_reponse: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     parcours: Mapped[Parcours] = relationship(back_populates="parcours_exercices")
     exercice: Mapped[Exercice] = relationship(back_populates="parcours_exercices")
