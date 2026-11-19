@@ -80,10 +80,10 @@ export interface OptionsApiDiagnostic {
   /** GET /diagnostic/langues échoue (503). */
   languesEnErreur?: boolean;
   /**
-   * Première demande de résultat : « panne » (500 avec un détail technique qui ne doit pas s'afficher),
-   * « en_attente » (202, analyse LLM non terminée) ou « sans_reponse » (délai dépassé).
+   * Première demande de résultat : « panne » (500 avec un détail technique qui ne doit pas s'afficher)
+   * ou « sans_reponse » (délai dépassé).
    */
-  premiereTerminaison?: "panne" | "en_attente" | "sans_reponse";
+  premiereTerminaison?: "panne" | "sans_reponse";
   /** Ajoute un sujet d'expression écrite après les questions à choix. */
   avecRedaction?: boolean;
   /** Ajoute une question de compréhension orale (étape entre le QCM et l'expression écrite). */
@@ -257,10 +257,6 @@ export async function mockTestDiagnosticApi(
       }
       if (speciale === "panne") {
         await json(route, 500, { detail: DETAIL_TECHNIQUE });
-        return;
-      }
-      if (speciale === "en_attente") {
-        await json(route, 202, { id_tentative: Number(terminaison[1]), statut: "en_attente" });
         return;
       }
       const tentative = tentatives.get(Number(terminaison[1]));

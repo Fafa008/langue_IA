@@ -356,30 +356,6 @@ test.describe("États de l'analyse quand le LLM est lent ou indisponible", () =>
     await expect(page).toHaveURL(`${URL_TEST}/resultats`);
   });
 
-  test("résultat en attente : vérification manuelle puis automatique", async ({ page }) => {
-    await page.clock.install();
-    await ouvrir(page, "en", { premiereTerminaison: "en_attente" });
-    await demarrer(page);
-    await finaliser(page);
-
-    const attente = page.getByTestId("resultat-en-attente");
-    await expect(attente).toContainText("Résultat en attente");
-    await expect(attente).toContainText("vos réponses sont enregistrées");
-    await expect(attente.getByRole("button", { name: "Vérifier mon résultat" })).toBeEnabled();
-
-    // Sans action de l'apprenant, le résultat est redemandé au bout de 10 secondes
-    await page.clock.fastForward("00:11");
-    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
-  });
-
-  test("le bouton « Vérifier mon résultat » redemande le résultat tout de suite", async ({ page }) => {
-    await ouvrir(page, "en", { premiereTerminaison: "en_attente" });
-    await demarrer(page);
-    await finaliser(page);
-    await page.getByTestId("resultat-en-attente").getByRole("button", { name: "Vérifier mon résultat" }).click();
-    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
-  });
-
   test("une erreur sur une réponse écrite conserve le texte saisi", async ({ page }) => {
     await ouvrir(page, "en", { avecRedaction: true });
     let echec = true;

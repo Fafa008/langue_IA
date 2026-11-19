@@ -155,12 +155,9 @@ export interface ResultatTest {
 }
 
 /**
- * Issue de la fin du test : le résultat, ou « en attente » tant que le service d'analyse (LLM)
- * n'a pas fini d'évaluer les réponses écrites et orales.
+ * Issue de la fin du test : le résultat. Le backend répond toujours de façon synchrone (F-04 : pas de 202).
  */
-export type IssueTerminaison =
-  | { statut: "termine"; resultat: ResultatTest }
-  | { statut: "en_attente" };
+export type IssueTerminaison = { statut: "termine"; resultat: ResultatTest };
 
 export interface CompetenceResultat {
   competence: CompetenceTest;

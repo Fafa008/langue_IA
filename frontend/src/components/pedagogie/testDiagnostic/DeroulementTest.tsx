@@ -15,11 +15,6 @@ import AnalyseEnCours from "./AnalyseEnCours";
 import EnteteEtape from "./EnteteEtape";
 import ErreurReessayable from "./ErreurReessayable";
 import QuestionCard from "./QuestionCard";
-import ResultatEnAttente from "./ResultatEnAttente";
-
-/** Résultat en attente : on le redemande automatiquement à cet intervalle, 30 fois au plus (5 minutes). */
-const VERIFICATION_RESULTAT_SECONDES = 10;
-const VERIFICATIONS_AUTOMATIQUES_MAX = 30;
 
 /**
  * Page du test : les étapes s'enchaînent (QCM, compréhension orale, expression orale, expression écrite)
@@ -34,13 +29,8 @@ export default function DeroulementTest() {
   const secondesRestantes = useTempsRestant(etat.debut, DUREE_TEST_MINUTES);
   const tempsEcoule = secondesRestantes === 0;
   const finAutomatiqueLancee = useRef(false);
-  // Une fois le résultat « en attente », l'écran le reste pendant les vérifications suivantes
-  const [attenteSignalee, setAttenteSignalee] = useState(false);
-  const [verificationsAutomatiques, setVerificationsAutomatiques] = useState(0);
-  const verificationAutomatique = verificationsAutomatiques < VERIFICATIONS_AUTOMATIQUES_MAX;
   // Quitter la page en cours de test (lien, fermeture, rechargement) demande confirmation
   const sortie = useConfirmationSortie(!sansSession);
-  const { resultatEnAttente } = test;
   // Toujours la dernière version de terminer, sans réarmer les minuteurs à chaque rendu (le compte à rebours en provoque un par seconde)
   const terminerRef = useRef(test.terminer);
   terminerRef.current = test.terminer;
@@ -62,27 +52,12 @@ export default function DeroulementTest() {
     terminerRef.current();
   }, [tempsEcoule, sansSession]);
 
-  useEffect(() => {
-    if (resultatEnAttente) setAttenteSignalee(true);
-  }, [resultatEnAttente]);
-
-  // Résultat en attente : nouvelle demande automatique après quelques secondes, dans la limite fixée
-  useEffect(() => {
-    if (!resultatEnAttente || !verificationAutomatique) return;
-    const minuteur = setTimeout(() => {
-      setVerificationsAutomatiques((n) => n + 1);
-      terminerRef.current();
-    }, VERIFICATION_RESULTAT_SECONDES * 1000);
-    return () => clearTimeout(minuteur);
-  }, [resultatEnAttente, verificationAutomatique]);
-
   if (sansSession || !etat.courante || !etat.langue) return null;
 
   const etape = etapeDe(etat.courante.competence);
   const enRetour = etat.phase === "retour" && etat.retour !== null;
   const derniere = etat.numeroQuestion >= etat.totalQuestions;
   const occupe = test.reponseEnCours || test.terminaisonEnCours;
-  const enAttente = attenteSignalee && !test.erreurTerminaison;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -132,14 +107,7 @@ export default function DeroulementTest() {
         </div>
       )}
 
-      {enAttente ? (
-        <ResultatEnAttente
-          verificationEnCours={test.terminaisonEnCours}
-          onVerifier={test.terminer}
-          intervalleSecondes={verificationAutomatique ? VERIFICATION_RESULTAT_SECONDES : null}
-        />
-      ) : (
-        <>
+      <>
           <QuestionCard
             key={etat.courante.id}
             question={etat.courante}
@@ -220,8 +188,7 @@ export default function DeroulementTest() {
               </button>
             </div>
           )}
-        </>
-      )}
+      </>
     </div>
   );
 }
