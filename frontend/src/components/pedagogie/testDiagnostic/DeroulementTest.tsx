@@ -11,6 +11,7 @@ import { erreurReessayable, messageErreurDiagnostic } from "@/lib/erreursDiagnos
 import { DUREE_TEST_MINUTES, etapeDe, positionEtape } from "@/lib/etapesTest";
 import { ROUTES } from "@/lib/routes";
 import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnostic.store";
+import { ATTENTE_CLOTURE } from "@/lib/attentesDiagnostic";
 import AnalyseEnCours from "./AnalyseEnCours";
 import EnteteEtape from "./EnteteEtape";
 import ErreurReessayable from "./ErreurReessayable";
@@ -140,10 +141,7 @@ export default function DeroulementTest() {
 
           {test.terminaisonEnCours && (
             <div className="mt-4">
-              <AnalyseEnCours
-                titre="Analyse de vos réponses"
-                message="Nous calculons votre niveau à partir de l'ensemble de vos réponses."
-              />
+              <AnalyseEnCours titre={ATTENTE_CLOTURE.titre} message={ATTENTE_CLOTURE.message} />
             </div>
           )}
           {test.erreurTerminaison && !test.terminaisonEnCours && (
