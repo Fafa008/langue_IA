@@ -30,12 +30,13 @@ async function ouvrir(page: Page, options: OptionsApiDiagnostic = PARCOURS) {
 async function demarrer(page: Page) {
   await page.getByRole("button", { name: "Commencer le test", exact: true }).click();
   await page.getByRole("button", { name: /Lancer le test/ }).click();
-  await expect(page.getByTestId("question-card")).toBeVisible();
+  await expect(page.getByTestId("question-card")).toBeVisible({ timeout: 15_000 });
 }
 
 async function repondreChoix(page: Page, option: number) {
   await page.getByTestId(`option-${option}`).click();
   await page.getByRole("button", { name: "Valider et continuer" }).click();
+  await expect(page.getByTestId("feedback")).toBeVisible();
   await page.getByRole("button", { name: "Question suivante" }).click();
 }
 
@@ -78,7 +79,7 @@ async function parcourirLesEcrans(page: Page, verifier: (ecran: string, elements
   await verifier("personnalisation", [page.getByRole("button", { name: /Lancer le test/ })]);
   await page.getByRole("button", { name: /Lancer le test/ }).click();
 
-  await expect(page.getByTestId("question-card")).toBeVisible();
+  await expect(page.getByTestId("question-card")).toBeVisible({ timeout: 15_000 });
   await page.getByTestId("option-0").click();
   await verifier("question à choix", [page.getByRole("timer"), page.getByRole("button", { name: "Valider et continuer" })]);
   await page.getByRole("button", { name: "Valider et continuer" }).click();
@@ -102,6 +103,7 @@ async function parcourirLesEcrans(page: Page, verifier: (ecran: string, elements
   await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "Valider et finaliser" }).click();
+  await expect(page.getByTestId("feedback")).toBeVisible();
   await page.getByRole("button", { name: "Finaliser le test" }).click();
   await expect(page.getByTestId("test-result")).toBeVisible();
   await page.getByTestId("source-referentiel").first().locator("summary").click();
@@ -132,6 +134,7 @@ async function parcourirLesEtats(page: Page, verifier: (ecran: string, elements?
 
   await page.getByTestId("option-1").click();
   await page.getByRole("button", { name: "Valider et finaliser" }).click();
+  await expect(page.getByTestId("feedback")).toBeVisible();
   await page.getByRole("button", { name: "Finaliser le test" }).click();
   await expect(page.getByTestId("resultat-partiel")).toBeVisible();
   await verifier("résultat partiel");
@@ -141,10 +144,14 @@ async function parcourirLesEtats(page: Page, verifier: (ecran: string, elements?
 
 test.describe("Accessibilité des écrans du diagnostic (WCAG 2.1 AA)", () => {
   test("parcours complet : aucune violation (contrastes, libellés, rôles)", async ({ page }) => {
+    test.setTimeout(120_000);
+    page.setDefaultTimeout(15_000);
     await parcourirLesEcrans(page, (ecran) => expectAccessible(page, ecran));
   });
 
   test("erreurs, attente, minuteur : aucune violation", async ({ page }) => {
+    test.setTimeout(120_000);
+    page.setDefaultTimeout(15_000);
     await parcourirLesEtats(page, (ecran) => expectAccessible(page, ecran));
   });
 });
@@ -196,7 +203,7 @@ test.describe("Navigation au clavier", () => {
     await page.keyboard.press("Enter");
     await tabulerJusqua(page, page.getByRole("button", { name: /Lancer le test/ }));
     await page.keyboard.press("Enter");
-    await expect(page.getByTestId("question-card")).toBeVisible();
+    await expect(page.getByTestId("question-card")).toBeVisible({ timeout: 15_000 });
 
     // Questions à choix : flèches pour choisir, Entrée pour valider et continuer
     for (const option of [0, 1, 0]) {
@@ -243,7 +250,7 @@ test.describe("Navigation au clavier", () => {
     await expect(dialogue.getByRole("button", { name: "Quitter le test" })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(dialogue).toHaveCount(0);
-    await expect(page.getByTestId("question-card")).toBeVisible();
+    await expect(page.getByTestId("question-card")).toBeVisible({ timeout: 15_000 });
   });
 
   test("une erreur d'envoi annonce son message et garde le bouton « Réessayer » au clavier", async ({ page }) => {

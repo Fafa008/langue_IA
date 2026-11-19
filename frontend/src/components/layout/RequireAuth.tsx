@@ -11,6 +11,7 @@ import type { Role } from "@/types/utilisateur";
 interface RequireAuthProps {
   /** Rôles autorisés ; absent : tout utilisateur connecté. */
   roles?: Role[];
+  redirigerSiNonAuthentifie?: boolean;
   children: ReactNode;
 }
 
@@ -18,13 +19,13 @@ interface RequireAuthProps {
  * Réservé aux utilisateurs connectés (sinon redirection vers la connexion) et, si `roles` est donné,
  * aux rôles indiqués. Ce contrôle n'est qu'un confort d'affichage : l'API vérifie les droits.
  */
-export default function RequireAuth({ roles, children }: RequireAuthProps) {
+export default function RequireAuth({ roles, redirigerSiNonAuthentifie = true, children }: RequireAuthProps) {
   const router = useRouter();
   const { ready, isAuthenticated, utilisateur } = useSession();
 
   useEffect(() => {
-    if (ready && !isAuthenticated) router.replace(ROUTES.login);
-  }, [ready, isAuthenticated, router]);
+    if (redirigerSiNonAuthentifie && ready && !isAuthenticated) router.replace(ROUTES.login);
+  }, [redirigerSiNonAuthentifie, ready, isAuthenticated, router]);
 
   if (!isAuthenticated || !utilisateur) {
     return (

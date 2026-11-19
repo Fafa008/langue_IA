@@ -32,6 +32,7 @@ from app.services.diagnostic import (
 from app.services.diagnostic import (
     lister_questions as lister_questions_service,
 )
+from app.services.parcours import generer_parcours_pour_tentative
 from app.services.scoring import CodeErreurScoring, ErreurScoring, cadre_de_langue
 from app.services.scoring import terminer_tentative as terminer_tentative_service
 
@@ -224,6 +225,7 @@ def terminer_tentative(
     id_test = tentative.id_test
     db.close()
     analyse = analyser_tentative(id_test)
+    generer_parcours_pour_tentative(id_test)
 
     return ScoreDiagnosticOut(
         id_tentative=id_test,

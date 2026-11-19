@@ -1,6 +1,6 @@
 "use client";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { TAILLES_PAGE } from "@/lib/pagination";
 
 /** Critères communs à toutes les listes paginées. */
@@ -48,10 +48,16 @@ export function useFiltresUrl<C extends string>(criteres: Record<C, readonly str
     } as Filtres;
   }, [params, criteres]);
 
+  const filtresRef = useRef(filtres);
+  useEffect(() => {
+    filtresRef.current = filtres;
+  }, [filtres]);
+
   /** Changer un critère de recherche ramène à la première page. */
   const setFiltres = useCallback(
     (changes: Partial<Filtres>) => {
-      const next: Filtres = { ...filtres, page: 1, ...changes };
+      const next: Filtres = { ...filtresRef.current, page: 1, ...changes };
+      filtresRef.current = next;
       const query = new URLSearchParams();
       if (next.recherche) query.set("recherche", next.recherche);
       for (const cle of Object.keys(criteres) as C[]) {
@@ -62,7 +68,7 @@ export function useFiltresUrl<C extends string>(criteres: Record<C, readonly str
       const search = query.toString();
       router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
     },
-    [filtres, criteres, pathname, router],
+    [criteres, pathname, router],
   );
 
   return { filtres, setFiltres };
