@@ -1,5 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
-import { API_MOCK } from "@/lib/env";
+import { PARCOURS_MOCK } from "@/lib/env";
 import { parcoursPersonnaliseMock } from "@/mocks/parcours-personnalise.mock";
 import type {
   CorrectionExercice,
@@ -90,4 +90,4 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
   chatbot: async (message, historique) => (await parcoursPersonnaliseMock.chatbot(corpsChatbot(message, historique))).reponse,
 };
 
-export const parcoursPersonnaliseService = API_MOCK ? mockParcoursPersonnaliseService : httpParcoursPersonnaliseService;
+export const parcoursPersonnaliseService = PARCOURS_MOCK ? mockParcoursPersonnaliseService : httpParcoursPersonnaliseService;

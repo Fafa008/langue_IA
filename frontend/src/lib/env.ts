@@ -5,3 +5,10 @@ export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:800
 
 /** Vrai quand le frontend doit utiliser les données simulées de src/mocks au lieu de l'API. */
 export const API_MOCK = process.env.NEXT_PUBLIC_API_MOCK === "true";
+
+/**
+ * Vrai quand le parcours personnalisé utilise ses données simulées. Un build de démo garde l'API réelle pour le reste
+ * (NEXT_PUBLIC_API_MOCK=false) et simule seulement le parcours, tant que ses routes ne sont pas livrées (FE-D5, option B).
+ * L'écran affiche alors « Mode démonstration ».
+ */
+export const PARCOURS_MOCK = API_MOCK || process.env.NEXT_PUBLIC_PARCOURS_MOCK === "true";
