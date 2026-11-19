@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import Alert from "@/components/ui/Alert";
-import { useLanguesDiagnostic, useTestDiagnostic, useTestInterrompu } from "@/hooks/useTestDiagnostic";
+import { useLanguesDiagnostic, useTestDiagnostic } from "@/hooks/useTestDiagnostic";
 import { messageErreurDiagnostic } from "@/lib/erreursDiagnostic";
 import { API_MOCK } from "@/lib/env";
 import { libelleLangue } from "@/lib/languages";
@@ -14,14 +14,13 @@ import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnost
 import BoutonRetour from "./BoutonRetour";
 import ChoixLangueTest from "./ChoixLangueTest";
 import PersonalisationForm from "./PersonalisationForm";
-import TestInterrompu from "./TestInterrompu";
 
 const CONSIGNES = [
   `Le test dure ${DUREE_TEST_MINUTES} minutes et comporte 4 étapes : grammaire et lexique, compréhension orale, expression orale, expression écrite.`,
   "Répondez seul, sans dictionnaire ni traducteur. Prévoyez des écouteurs et un micro.",
   "Pour les questions à choix, une seule réponse est correcte.",
   "Chaque réponse est enregistrée dès que vous la validez : relisez-la avant de valider.",
-  "Restez sur la page : si vous la quittez, vous reprendrez le test là où vous en étiez.",
+  "Restez sur la page jusqu'à la fin du test : si vous la quittez, le test est interrompu et ne peut pas être repris.",
 ];
 
 /** Chiffre clé du test (« 10 questions »), « – » tant qu'aucune langue n'est choisie. */
@@ -45,8 +44,6 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
   const langues = useLanguesDiagnostic();
   const { etat } = test;
   const enCours = useTestDiagnosticStore(selectTestEnCours);
-  // Test commencé ailleurs (onglet fermé, autre appareil) : retrouvé sur le serveur
-  const interrompu = useTestInterrompu(!enCours && etat.phase === "intro");
   // Langue choisie et réellement disponible : sans elle, le test ne peut pas démarrer
   const langueChoisie = langues.data?.find((l) => l.code === etat.langue && l.disponible) ?? null;
 
@@ -125,32 +122,8 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
     </>
   );
 
-  // Un test interrompu se reprend ou s'abandonne avant d'en commencer un autre
-  if (etat.phase === "intro" && (interrompu.isPending || interrompu.data)) {
-    return (
-      <div className="mx-auto max-w-3xl">
-        {entete}
-        {interrompu.data ? (
-          <TestInterrompu
-            test={interrompu.data}
-            onReprendre={() => test.reprendre(interrompu.data!)}
-            onAbandonner={() => test.abandonnerTestInterrompu(interrompu.data!)}
-            repriseEnCours={test.repriseEnCours}
-            abandonEnCours={test.abandonEnCours}
-            erreur={test.erreurAbandon
-              ? messageErreurDiagnostic(test.erreurAbandon, "abandon")
-              : test.erreurTerminaison
-                ? messageErreurDiagnostic(test.erreurTerminaison, "analyse")
-                : test.resultatEnAttente
-                  ? "Votre résultat est en cours d'analyse. Réessayez dans quelques minutes."
-                  : null}
-          />
-        ) : (
-          <p role="status" className="card mt-6 animate-pulse text-content-secondary">Recherche d&apos;un test en cours…</p>
-        )}
-      </div>
-    );
-  }
+  // Décision D1 (démo) : pas de reprise ni d'abandon d'un test interrompu, donc aucun appel serveur
+  // de ce type depuis cet écran.
 
   return (
     <div className="mx-auto max-w-3xl">
