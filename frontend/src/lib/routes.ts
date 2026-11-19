@@ -29,6 +29,8 @@ export const ROUTES = {
     },
     /** Chat avec le professeur IA : page non livrée, affichée « À venir » dans le menu (FE-D4). */
     chat: `${ESPACE}/apprenant/chat`,
+    /** Ma progression : page fille de l'accueil, données simulées tant que US47 et US48 ne sont pas livrés (US51-FE). */
+    progression: `${ESPACE}/apprenant/progression`,
     ateliers: `${ESPACE}/apprenant/ateliers`,
     mesInscriptions: `${ESPACE}/apprenant/mes-inscriptions`,
     parametres: `${ESPACE}/apprenant/parametres`,
