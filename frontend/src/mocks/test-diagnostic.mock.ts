@@ -118,6 +118,25 @@ const DOMAINES_DE_LACUNE: Record<CompetenceTest, DomaineFaiblesse[]> = {
   oral: ["expression_orale"],
 };
 
+/**
+ * Mode de l'analyse simulée (F-07) : « complete » (défaut) renvoie la justification et le détail des points faibles ;
+ * « partielle » reproduit une analyse réelle incomplète : pas de justification, points faibles sans détail, phase présente.
+ * Choisi par NEXT_PUBLIC_ANALYSE_SIMULEE=partielle.
+ */
+export type ModeAnalyseSimulee = "complete" | "partielle";
+export const MODE_ANALYSE_SIMULEE: ModeAnalyseSimulee =
+  process.env.NEXT_PUBLIC_ANALYSE_SIMULEE === "partielle" ? "partielle" : "complete";
+
+/** Applique le mode d'analyse à un résultat complet, sans jamais inventer de donnée. */
+export function appliquerModeAnalyse(resultat: ResultatTest, mode: ModeAnalyseSimulee = MODE_ANALYSE_SIMULEE): ResultatTest {
+  if (mode === "complete") return resultat;
+  return {
+    ...resultat,
+    justification: undefined,
+    pointsFaibles: resultat.pointsFaibles?.map(({ domaine }) => ({ domaine })),
+  };
+}
+
 /** Résultat d'après les réponses données jusqu'ici (fin normale ou temps écoulé). */
 function calculerResultat(session: SessionMock): ResultatTest {
   const repondues = session.niveauxVises.length;
@@ -139,7 +158,7 @@ function calculerResultat(session: SessionMock): ResultatTest {
   const echelle = ECHELLES[cadre];
   const faiblesses = lacunes.flatMap((competence) => DOMAINES_DE_LACUNE[competence])
     .map((domaine) => ({ domaine, ...sourceDomaine(cadre, niveau, domaine) }));
-  return {
+  return appliquerModeAnalyse({
     niveau,
     score: session.score,
     // Les questions sans réponse (temps écoulé) comptent comme fausses
@@ -153,7 +172,7 @@ function calculerResultat(session: SessionMock): ResultatTest {
         + (faiblesses.length > 0 ? ", avec des points à consolider." : ", sans point faible marqué."),
       sources: [sourceNiveau(cadre, echelle, niveau), ...faiblesses.map(({ source }) => source)],
     },
-  };
+  });
 }
 
 export const testDiagnosticMockService = {
