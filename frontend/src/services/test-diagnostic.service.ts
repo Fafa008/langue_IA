@@ -267,9 +267,9 @@ export const httpTestDiagnosticService = {
       throw new Error("Identifiant de tentative invalide.");
     }
     const dto = await apiRequest<ReponseDto>(ENDPOINTS.diagnostic.reponse, {
+      // Pas de délai dédié : l'enregistrement ne déclenche aucun appel au service IA. L'analyse a lieu à la
+      // clôture (terminer), avec TIMEOUT_ANALYSE_MS (F-03).
       method: "POST",
-      // Une réponse écrite peut être évaluée par le LLM avant d'être confirmée
-      timeoutMs: reponse.type === "texte" ? TIMEOUT_ANALYSE_MS : undefined,
       body: {
         id_tentative: tentativeId,
         id_question: idQuestion,

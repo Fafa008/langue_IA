@@ -685,9 +685,13 @@ idempotente : une tentative déjà terminée renvoie son résultat.
 
 Délais côté frontend :
 
-- **60 secondes** pour cette route et pour `POST /diagnostic/reponse` d'une réponse `texte`, qui peut être évaluée
-  par le LLM ;
-- **15 secondes** pour les autres appels.
+- **60 secondes** pour cette route (clôture du test, qui déclenche l'analyse par le service IA) ;
+- **15 secondes** pour les autres appels, dont `POST /diagnostic/reponse` : l'enregistrement d'une réponse ne déclenche
+  aucun appel au service IA.
+
+Chaîne des délais, du plus court au plus long (test de garde `frontend/src/lib/__tests__/chaine-delais.test.ts`) :
+budget total du service IA (30 s) < correction d'exercice côté frontend (45 s) < délai du backend vers le service IA
+(55 s) < clôture du test côté frontend (60 s).
 
 Au-delà, la requête est abandonnée et l'apprenant voit un message clair et un bouton « Réessayer ». Ses réponses
 déjà saisies restent affichées.
