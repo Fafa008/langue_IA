@@ -40,6 +40,8 @@ export const ROUTES = {
     seances: `${ESPACE}/formateur/seances`,
     ateliers: `${ESPACE}/formateur/ateliers`,
     apprenants: `${ESPACE}/formateur/apprenants`,
+    /** Synthèse des erreurs récurrentes de la classe (US52-FE). */
+    syntheseErreurs: `${ESPACE}/formateur/synthese-erreurs`,
     parametres: `${ESPACE}/formateur/parametres`,
   },
   admin: {
