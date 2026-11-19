@@ -277,4 +277,12 @@ describe("service HTTP (prêt pour le backend)", () => {
     expect(options.body.historique).toHaveLength(HISTORIQUE_CHATBOT_MAX);
     expect(options.body.historique[0].contenu).toBe("m5");
   });
+
+  it("n'envoie au service IA que le rôle et le contenu : pas de corrections en marge (US74-FE)", async () => {
+    apiRequest.mockResolvedValueOnce({ reponse: "D'accord." });
+    const historique = [{ role: "apprenant" as const, contenu: "j'ai allé", corrections: [{ extrait: "j'ai allé", correction: "je suis allé(e)", explication: "x" }] }];
+    await http.chatbot("Salut", historique as never);
+    const [, options] = apiRequest.mock.calls[0];
+    expect(options.body.historique).toEqual([{ role: "apprenant", contenu: "j'ai allé" }]);
+  });
 });

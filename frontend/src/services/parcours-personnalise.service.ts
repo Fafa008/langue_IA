@@ -48,7 +48,7 @@ const corpsReponse = (reponse: ReponseExercice) =>
 
 const corpsChatbot = (message: string, historique: MessageChatbot[]): MessageChatbotDto => ({
   message,
-  historique: historique.slice(-HISTORIQUE_CHATBOT_MAX),
+  historique: historique.slice(-HISTORIQUE_CHATBOT_MAX).map(({ role, contenu }) => ({ role, contenu })),
 });
 
 export const httpParcoursPersonnaliseService: ParcoursPersonnaliseService = {
