@@ -51,7 +51,8 @@ test.describe("Accès au module Diagnostic", () => {
   for (const url of PAGES_DIAGNOSTIC) {
     test(`sans session, ${url} redirige vers la connexion`, async ({ page }) => {
       await page.goto(url);
-      await expect(page).toHaveURL("/login");
+      // La redirection est faite côté client, après le chargement de l'application : délai plus large (charge de la CI)
+      await expect(page).toHaveURL("/login", { timeout: 15_000 });
     });
 
     test(`un formateur n'a pas accès à ${url}`, async ({ page }) => {
