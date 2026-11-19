@@ -1,4 +1,4 @@
-import { estLienSur, informationsManquantes, lacunesDe, pointsFaiblesDe } from "@/lib/resultatDiagnostic";
+import { estLienSur, estRepereNonOfficiel, informationsManquantes, lacunesDe, pointsFaiblesDe } from "@/lib/resultatDiagnostic";
 import type { ResultatTest } from "@/types/test-diagnostic";
 
 const minimal: ResultatTest = { niveau: "B1", score: 55, total: 100, cadre: "CECRL", competences: [], lacunes: [] };
@@ -56,5 +56,12 @@ describe("résultat du diagnostic", () => {
     expect(estLienSur("data:text/html,<script>")).toBe(false);
     expect(estLienSur("pas une url")).toBe(false);
     expect(estLienSur(undefined)).toBe(false);
+  });
+});
+
+describe("FE-D2 — détection des repères non officiels", () => {
+  it("reconnaît le préfixe du repli synthétique, pas les identifiants officiels", () => {
+    expect(estRepereNonOfficiel({ id: "synthetique_fallback:en-a1-ecrit" })).toBe(true);
+    expect(estRepereNonOfficiel({ id: "cecrl-a1-ecrit-12" })).toBe(false);
   });
 });

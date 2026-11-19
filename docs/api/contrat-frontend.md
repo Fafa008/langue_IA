@@ -666,6 +666,11 @@ réponse **202** décrite plus bas reste un contrat futur : le backend ne l'éme
 | `justification.resume` | Synthèse du LLM | Sans résumé non vide, la justification entière est ignorée. |
 | `justification.sources[]` | Descripteurs du référentiel retrouvés par le RAG | `id` (entier ou chaîne), `referentiel` (`CECRL` ou `HSK`), `niveau`, `titre` et `extrait` sont obligatoires, sinon la source est écartée ; `id` en double écarté. `url` n'est rendue cliquable que si elle est en `http(s)`. |
 
+**Repères non officiels (décision D2)** : un repère dont `id` commence par `synthetique_fallback:` provient du repli
+synthétique du service IA (US150-B), et non d'un référentiel officiel. L'écran l'étiquette « Repère non officiel » et
+affiche « Repères non officiels » au-dessus des sources. Le préfixe est défini côté service IA
+(`PREFIXE_IDENTIFIANT_SYNTHETIQUE`) et côté frontend (`PREFIXE_REPERE_NON_OFFICIEL`) ; un test vérifie la détection.
+
 Les textes (`detail`, `resume`, `titre`, `extrait`) sont affichés tels quels, sans interprétation HTML.
 
 #### Analyse par le LLM : lenteur, indisponibilité, résultat en attente
