@@ -30,9 +30,10 @@ describe("navigation par rôle", () => {
     expect(parcours?.bientot).toBeUndefined();
   });
 
-  it("le professeur IA est affiché « À venir » dans le menu, sans lien (FE-D4, décision D6)", () => {
+  it("le professeur IA est accessible depuis le menu, avec sa page (US73-FE)", () => {
     const chat = NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.chat);
-    expect(chat).toMatchObject({ label: "Professeur IA", bientot: true, libelleEtat: "À venir" });
+    expect(chat).toMatchObject({ label: "Professeur IA" });
+    expect(chat?.bientot).toBeUndefined();
   });
 
   it("« Mon parcours » reste en évidence sur les pages des modules et des leçons", () => {
