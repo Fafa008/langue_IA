@@ -59,7 +59,7 @@ const FORMATEUR: NavItem[] = [
   { label: "Tableau de bord", href: ROUTES.formateur.dashboard, icon: House },
   { label: "Mes séances", href: ROUTES.formateur.seances, icon: Presentation, bientot: true },
   { label: "Ateliers", href: ROUTES.formateur.ateliers, icon: CalendarDays, bientot: true },
-  { label: "Mes apprenants", href: ROUTES.formateur.apprenants, icon: UsersRound, bientot: true },
+  { label: "Mes apprenants", href: ROUTES.formateur.apprenants, icon: UsersRound },
   { label: "Mon profil", href: ROUTES.profil, icon: UserRound },
   { label: "Paramètres", href: ROUTES.formateur.parametres, icon: Settings, bientot: true },
 ];
