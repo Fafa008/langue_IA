@@ -23,13 +23,22 @@ describe("résultat du diagnostic", () => {
   });
 
   it("liste les informations manquantes d'un résultat partiel, et aucune pour un résultat complet", () => {
-    expect(informationsManquantes(minimal)).toEqual(["competences", "points_faibles", "phase", "justification"]);
+    expect(informationsManquantes(minimal)).toEqual(["competences", "points_faibles", "phase"]);
     expect(informationsManquantes({
       ...minimal,
       competences: [{ competence: "grammaire", score: 3, total: 5 }],
       pointsFaibles: [],
       phaseAssimil: "activation",
       justification: { resume: "Conforme aux descripteurs B1.", sources: [] },
+    })).toEqual([]);
+  });
+
+  it("ne compte pas la justification comme information manquante (décision D5)", () => {
+    expect(informationsManquantes({
+      ...minimal,
+      competences: [{ competence: "grammaire", score: 3, total: 5 }],
+      pointsFaibles: [],
+      phaseAssimil: "activation",
     })).toEqual([]);
   });
 

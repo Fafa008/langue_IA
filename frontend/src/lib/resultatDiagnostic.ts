@@ -54,7 +54,11 @@ export function pointsFaiblesDe(resultat: ResultatTest): PointFaible[] | null {
   return resultat.lacunes.map((competence) => ({ domaine: DOMAINE_DE_COMPETENCE[competence] }));
 }
 
-export type InformationManquante = "competences" | "points_faibles" | "phase" | "justification";
+/**
+ * Décision D5 (F-01) : la justification n'est pas une information « manquante ». Quand l'analyse ne la fournit
+ * pas, la section n'est pas affichée (voir TestResult), au lieu d'annoncer un détail à venir.
+ */
+export type InformationManquante = "competences" | "points_faibles" | "phase";
 
 /** Parties du résultat que l'analyse n'a pas (encore) fournies : l'écran le dit au lieu de les inventer. */
 export function informationsManquantes(resultat: ResultatTest): InformationManquante[] {
@@ -62,7 +66,6 @@ export function informationsManquantes(resultat: ResultatTest): InformationManqu
   if (resultat.competences.length === 0) manquantes.push("competences");
   if (pointsFaiblesDe(resultat) === null) manquantes.push("points_faibles");
   if (!resultat.phaseAssimil) manquantes.push("phase");
-  if (!resultat.justification?.resume) manquantes.push("justification");
   return manquantes;
 }
 

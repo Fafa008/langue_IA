@@ -70,8 +70,16 @@ describe("TestResult", () => {
     expect(screen.getByTestId("result-level")).toHaveTextContent("B1");
     const partiel = screen.getByTestId("resultat-partiel");
     expect(partiel).toHaveTextContent("Résultat partiel");
-    expect(partiel).toHaveTextContent("le détail par compétence, les points faibles, la phase de la méthode Assimil, la justification du niveau");
+    expect(partiel).toHaveTextContent("le détail par compétence, les points faibles, la phase de la méthode Assimil");
+    expect(partiel).not.toHaveTextContent("justification");
     expect(screen.getByTestId("result-phase")).toHaveTextContent("Non déterminée");
+  });
+
+  it("décision D5 : sans justification, la section « Pourquoi ce niveau ? » n'est pas affichée", () => {
+    afficher({ niveau: "B1", score: 50, total: 100, cadre: "CECRL", competences: [], lacunes: [] });
+
+    expect(screen.queryByTestId("result-justification")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Pourquoi ce niveau/)).not.toBeInTheDocument();
   });
 
   it("propose de commencer le parcours ou de refaire le test", () => {
