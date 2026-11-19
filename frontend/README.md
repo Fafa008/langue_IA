@@ -58,6 +58,14 @@ echo "NEXT_PUBLIC_API_MOCK=false" >> .env.local
 
 Les variables `NEXT_PUBLIC_*` sont intégrées au moment du build : redémarrer `npm run dev` après un changement.
 
+### Règle : le navigateur ne parle jamais au service IA
+
+Le frontend n'appelle que le **backend** (`NEXT_PUBLIC_API_URL`). Il n'existe pas de variable `NEXT_PUBLIC_IA_URL` :
+toute valeur `NEXT_PUBLIC_*` est publique (elle se retrouve dans le bundle), le service IA n'a aucune
+authentification et son port n'est pas publié. Brancher le navigateur directement sur le service IA contournerait le
+scoring, la validation et la persistance du backend. Un test de garde (`src/lib/__tests__/garde-service-ia.test.ts`)
+échoue si cette variable réapparaît.
+
 ## Organisation du code
 
 ```

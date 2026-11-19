@@ -8,6 +8,12 @@ Tant qu'une route n'existe pas côté backend, le frontend utilise des données 
 - Ces conversions sont vérifiées par les tests unitaires [`services.test.ts`](../../frontend/src/services/__tests__/services.test.ts).
 - **Si une route ou un champ change, mettez à jour ce document, `endpoints.ts` et le service concerné dans la même PR.**
 
+## Règle d'architecture : le navigateur ne parle jamais au service IA
+
+Le frontend n'appelle que le backend. Le service IA (`ia-service`) n'est joignable que depuis le backend, sur le réseau
+interne, sans authentification propre. Aucune variable `NEXT_PUBLIC_IA_URL` n'existe ; un test de garde
+(`frontend/src/lib/__tests__/garde-service-ia.test.ts`) l'interdit.
+
 ## Règles générales
 
 | Sujet | Règle |
