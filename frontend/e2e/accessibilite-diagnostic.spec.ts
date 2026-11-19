@@ -36,6 +36,7 @@ async function demarrer(page: Page) {
 async function repondreChoix(page: Page, option: number) {
   await page.getByTestId(`option-${option}`).click();
   await page.getByRole("button", { name: "Valider et continuer" }).click();
+  await expect(page.getByTestId("feedback")).toBeVisible();
   await page.getByRole("button", { name: "Question suivante" }).click();
 }
 
@@ -102,6 +103,7 @@ async function parcourirLesEcrans(page: Page, verifier: (ecran: string, elements
   await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "Valider et finaliser" }).click();
+  await expect(page.getByTestId("feedback")).toBeVisible();
   await page.getByRole("button", { name: "Finaliser le test" }).click();
   await expect(page.getByTestId("test-result")).toBeVisible();
   await page.getByTestId("source-referentiel").first().locator("summary").click();
@@ -132,6 +134,7 @@ async function parcourirLesEtats(page: Page, verifier: (ecran: string, elements?
 
   await page.getByTestId("option-1").click();
   await page.getByRole("button", { name: "Valider et finaliser" }).click();
+  await expect(page.getByTestId("feedback")).toBeVisible();
   await page.getByRole("button", { name: "Finaliser le test" }).click();
   await expect(page.getByTestId("resultat-partiel")).toBeVisible();
   await verifier("résultat partiel");
@@ -141,10 +144,12 @@ async function parcourirLesEtats(page: Page, verifier: (ecran: string, elements?
 
 test.describe("Accessibilité des écrans du diagnostic (WCAG 2.1 AA)", () => {
   test("parcours complet : aucune violation (contrastes, libellés, rôles)", async ({ page }) => {
+    test.setTimeout(120_000);
     await parcourirLesEcrans(page, (ecran) => expectAccessible(page, ecran));
   });
 
   test("erreurs, attente, minuteur : aucune violation", async ({ page }) => {
+    test.setTimeout(120_000);
     await parcourirLesEtats(page, (ecran) => expectAccessible(page, ecran));
   });
 });

@@ -56,7 +56,7 @@ export default function DeroulementTest() {
   if (sansSession || !etat.courante || !etat.langue) return null;
 
   const etape = etapeDe(etat.courante.competence);
-  const enRetour = etat.phase === "retour" && etat.retour !== null;
+  const enRetour = etat.phase === "retour" && etat.retour !== null && !test.reponseEnCours;
   const derniere = etat.numeroQuestion >= etat.totalQuestions;
   const occupe = test.reponseEnCours || test.terminaisonEnCours;
 

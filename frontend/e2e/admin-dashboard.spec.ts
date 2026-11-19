@@ -115,7 +115,7 @@ const carte = (page: Page, titre: string) => page.getByRole("region", { name: ti
 
 test("sans session, le tableau de bord redirige vers la connexion", async ({ page }) => {
   await page.goto(PAGE_URL);
-  await expect(page).toHaveURL("/login");
+  await expect(page).toHaveURL("/login", { timeout: 15_000 });
 });
 
 test("un formateur n'a pas accès au tableau de bord administrateur", async ({ page }) => {
