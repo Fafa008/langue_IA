@@ -27,6 +27,8 @@ export const ROUTES = {
       module: (numero: number) => `${PARCOURS}/modules/${numero}`,
       lecon: (numero: number) => `${PARCOURS}/lecons/${numero}`,
     },
+    /** Chat avec le professeur IA : page non livrée, affichée « À venir » dans le menu (FE-D4). */
+    chat: `${ESPACE}/apprenant/chat`,
     ateliers: `${ESPACE}/apprenant/ateliers`,
     mesInscriptions: `${ESPACE}/apprenant/mes-inscriptions`,
     parametres: `${ESPACE}/apprenant/parametres`,

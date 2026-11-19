@@ -7,6 +7,7 @@ import {
   GraduationCap,
   House,
   LayoutDashboard,
+  MessageSquare,
   Presentation,
   Route,
   Settings,
@@ -21,8 +22,10 @@ export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** Page pas encore développée : affichée « Bientôt », sans lien (évite une 404). */
+  /** Page pas encore développée : affichée sans lien (évite une 404), avec « Bientôt » ou le libellé indiqué. */
   bientot?: true;
+  /** Libellé de l'état quand il n'est pas « Bientôt » (décision D6 : « À venir »). */
+  libelleEtat?: string;
   /** Autres pages où l'entrée est aussi mise en évidence (onglets d'une même page). */
   aussiActifSur?: string[];
   /** L'entrée reste en évidence sur les pages rangées sous son adresse (modules et leçons du parcours). */
@@ -45,6 +48,7 @@ const APPRENANT: NavItem[] = [
   { label: "Tableau de bord", href: ROUTES.apprenant.dashboard, icon: House },
   { label: "Test de positionnement", href: ROUTES.apprenant.testDiagnostic.demarrage, icon: ClipboardList },
   { label: "Mon parcours", href: ROUTES.apprenant.parcours.accueil, icon: Route, sousPages: true },
+  { label: "Professeur IA", href: ROUTES.apprenant.chat, icon: MessageSquare, bientot: true, libelleEtat: "À venir" },
   { label: "Ateliers", href: ROUTES.apprenant.ateliers, icon: CalendarDays, bientot: true },
   { label: "Mon profil", href: ROUTES.profil, icon: UserRound },
   { label: "Mes inscriptions", href: ROUTES.apprenant.mesInscriptions, icon: ClipboardList, bientot: true },
