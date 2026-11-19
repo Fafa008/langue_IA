@@ -6,7 +6,7 @@ uniquement son entrée typée et un ``ContexteExecution`` contenant le client LL
 
 import re
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Generic, TypeVar
 from uuid import UUID
 
@@ -34,6 +34,19 @@ class OutilsCommuns:
     horloge: Callable[[], float]
 
 
+@dataclass(slots=True)
+class SignalementRAG:
+    """Signalement interne d'une exécution, jamais sérialisé dans le contrat public.
+
+    ``version_corpus_effective`` permet à l'agent Diagnostic de remplacer l'étiquette du corpus réel par
+    ``synthetique_fallback`` ou ``A_VERIFIER`` quand aucun descripteur officiel n'a été utilisé.
+    """
+
+    provenance: str | None = None
+    statut_verification: str | None = None
+    version_corpus_effective: str | None = None
+
+
 @dataclass(frozen=True, slots=True)
 class ContexteExecution:
     """Contexte immuable d'une exécution d'agent."""
@@ -41,6 +54,7 @@ class ContexteExecution:
     request_id: UUID
     contexte: ContexteApprenant
     outils: OutilsCommuns
+    signalement: SignalementRAG = field(default_factory=SignalementRAG)
 
 
 @dataclass(frozen=True, slots=True)

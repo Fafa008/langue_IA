@@ -30,6 +30,12 @@ describe("navigation par rôle", () => {
     expect(parcours?.bientot).toBeUndefined();
   });
 
+  it("le professeur IA est accessible depuis le menu, avec sa page (US73-FE)", () => {
+    const chat = NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.chat);
+    expect(chat).toMatchObject({ label: "Professeur IA" });
+    expect(chat?.bientot).toBeUndefined();
+  });
+
   it("« Mon parcours » reste en évidence sur les pages des modules et des leçons", () => {
     const parcours = NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.parcours.accueil)!;
     expect(estActif(parcours, ROUTES.apprenant.parcours.module(2))).toBe(true);

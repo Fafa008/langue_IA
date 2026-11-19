@@ -24,7 +24,15 @@ from app.prompts.variables import (
     VariablesEvaluationDiagnostic,
     preuves_depuis_reponses,
 )
-from app.rag.base import DESCRIPTEURS_MAX, TEXTE_REQUETE_MAX, RequeteRAG
+from app.rag.base import (
+    DESCRIPTEURS_MAX,
+    PROVENANCE_OFFICIELLE,
+    PROVENANCE_SYNTHETIQUE,
+    STATUT_A_VERIFIER,
+    TEXTE_REQUETE_MAX,
+    RequeteRAG,
+)
+from app.rag.repli import est_descripteur_synthetique
 from app.schemas.base import ModeleStrict
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.diagnostic import DiagnosticIncoherent, PreuveReponse, ResultatDiagnostic
@@ -125,10 +133,23 @@ class DiagnosticAgent:
             raise ErreurCorpusIndisponible("Le récupérateur documentaire a échoué.") from exc
 
         descripteurs = self._valider_descripteurs(bruts, apprenant)
-        if not descripteurs:
+        if descripteurs and all(est_descripteur_synthetique(descripteur) for descripteur in descripteurs):
+            contexte.signalement.provenance = PROVENANCE_SYNTHETIQUE
+            contexte.signalement.version_corpus_effective = PROVENANCE_SYNTHETIQUE
             logger.warning(
-                "Aucun descripteur RAG disponible, estimation prudente attendue "
+                "Repli RAG synthetique utilise, estimation prudente attendue "
                 "(request_id=%s, agent=%s, code_langue=%s)",
+                contexte.request_id,
+                CODE_AGENT,
+                apprenant.code_langue,
+            )
+        elif descripteurs:
+            contexte.signalement.provenance = PROVENANCE_OFFICIELLE
+        else:
+            contexte.signalement.statut_verification = STATUT_A_VERIFIER
+            contexte.signalement.version_corpus_effective = STATUT_A_VERIFIER
+            logger.warning(
+                "Aucun descripteur RAG disponible, diagnostic A_VERIFIER " "(request_id=%s, agent=%s, code_langue=%s)",
                 contexte.request_id,
                 CODE_AGENT,
                 apprenant.code_langue,

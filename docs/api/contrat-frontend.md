@@ -8,6 +8,12 @@ Tant qu'une route n'existe pas côté backend, le frontend utilise des données 
 - Ces conversions sont vérifiées par les tests unitaires [`services.test.ts`](../../frontend/src/services/__tests__/services.test.ts).
 - **Si une route ou un champ change, mettez à jour ce document, `endpoints.ts` et le service concerné dans la même PR.**
 
+## Règle d'architecture : le navigateur ne parle jamais au service IA
+
+Le frontend n'appelle que le backend. Le service IA (`ia-service`) n'est joignable que depuis le backend, sur le réseau
+interne, sans authentification propre. Aucune variable `NEXT_PUBLIC_IA_URL` n'existe ; un test de garde
+(`frontend/src/lib/__tests__/garde-service-ia.test.ts`) l'interdit.
+
 ## Règles générales
 
 | Sujet | Règle |
@@ -660,6 +666,11 @@ réponse **202** décrite plus bas reste un contrat futur : le backend ne l'éme
 | `justification.resume` | Synthèse du LLM | Sans résumé non vide, la justification entière est ignorée. |
 | `justification.sources[]` | Descripteurs du référentiel retrouvés par le RAG | `id` (entier ou chaîne), `referentiel` (`CECRL` ou `HSK`), `niveau`, `titre` et `extrait` sont obligatoires, sinon la source est écartée ; `id` en double écarté. `url` n'est rendue cliquable que si elle est en `http(s)`. |
 
+**Repères non officiels (décision D2)** : un repère dont `id` commence par `synthetique_fallback:` provient du repli
+synthétique du service IA (US150-B), et non d'un référentiel officiel. L'écran l'étiquette « Repère non officiel » et
+affiche « Repères non officiels » au-dessus des sources. Le préfixe est défini côté service IA
+(`PREFIXE_IDENTIFIANT_SYNTHETIQUE`) et côté frontend (`PREFIXE_REPERE_NON_OFFICIEL`) ; un test vérifie la détection.
+
 Les textes (`detail`, `resume`, `titre`, `extrait`) sont affichés tels quels, sans interprétation HTML.
 
 #### Analyse par le LLM : lenteur, indisponibilité, résultat en attente
@@ -679,9 +690,13 @@ idempotente : une tentative déjà terminée renvoie son résultat.
 
 Délais côté frontend :
 
-- **60 secondes** pour cette route et pour `POST /diagnostic/reponse` d'une réponse `texte`, qui peut être évaluée
-  par le LLM ;
-- **15 secondes** pour les autres appels.
+- **60 secondes** pour cette route (clôture du test, qui déclenche l'analyse par le service IA) ;
+- **15 secondes** pour les autres appels, dont `POST /diagnostic/reponse` : l'enregistrement d'une réponse ne déclenche
+  aucun appel au service IA.
+
+Chaîne des délais, du plus court au plus long (test de garde `frontend/src/lib/__tests__/chaine-delais.test.ts`) :
+budget total du service IA (30 s) < correction d'exercice côté frontend (45 s) < délai du backend vers le service IA
+(55 s) < clôture du test côté frontend (60 s).
 
 Au-delà, la requête est abandonnée et l'apprenant voit un message clair et un bouton « Réessayer ». Ses réponses
 déjà saisies restent affichées.
@@ -925,6 +940,58 @@ Deux modes de correction (US43, US44) :
 - `explication` : la règle ou la raison de la bonne réponse (correction automatique), renvoyée dans les deux cas.
 - `points_forts`, `erreurs`, `conseil` : retour détaillé de l'IA (facultatifs, listes vides par défaut).
 - `mode_correction` inconnu : refusé par le frontend, comme les autres énumérations.
+
+#### Contrat v2 (US157) — retour de l'IA selon la leçon atteinte
+
+> **Proposition côté frontend, à aligner sur le schéma Pydantic de US157-IA** (service IA). Les champs ne font
+> qu'ajouter au contrat v1 : une correction `AUTOMATIQUE` est inchangée.
+
+Quand `mode_correction` vaut `IA`, la réponse contient en plus :
+
+| Champ | Type | Règle |
+|---|---|---|
+| `phase` | `PASSIVE` \| `ACTIVE` | **obligatoire** : phase du parcours au moment de la correction (`parcours.phase`, règle `services/phase_parcours.py`) |
+| `lecon_atteinte` | entier ≥ 1 | **obligatoire** : `parcours.lecon_atteinte` transmise au service IA dans le contexte |
+| `reformulation` | texte ou `null` | phase **active** seulement : la réponse de l'apprenant entièrement corrigée ; `null` en phase passive |
+
+```json
+{
+  "statut": "A_REVOIR", "score_obtenu": 40, "mode_correction": "IA",
+  "phase": "ACTIVE", "lecon_atteinte": 56,
+  "commentaire": "Votre texte doit être complété et corrigé.",
+  "points_forts": [], "erreurs": [{ "extrait": "j'ai allé", "correction": "je suis allé(e)", "explication": "…" }],
+  "reformulation": "Samedi, je suis allé(e) au cinéma.",
+  "conseil": "Comparez votre texte à la version corrigée, puis réécrivez-le sans la regarder."
+}
+```
+
+Ce que la phase change dans le retour (le **score**, lui, ne dépend que de la réponse) :
+
+| Phase | Leçons | `erreurs` | `reformulation` | Ton du `conseil` |
+|---|---|---|---|---|
+| `PASSIVE` | 1 à 49 | les **3 essentielles** au plus (grammaire avant forme) | `null` | relire, réécouter la leçon |
+| `ACTIVE` | 50 et plus | toutes les erreurs relevées | le texte corrigé | réécrire, produire |
+
+Le frontend affiche « Mode passif (leçon 23) : seules les erreurs essentielles sont relevées. » ou « Mode actif
+(leçon 56) : votre texte est corrigé en détail. », puis la « Version corrigée » quand elle est fournie. Une
+correction `IA` sans `phase` ou sans `lecon_atteinte`, ou avec une phase inconnue, est **refusée** (erreur de
+contrat) ; pour une correction `AUTOMATIQUE`, ces champs sont ignorés.
+
+**État backend (US157-BE)** — la route existe pour le format **`redaction`** (`backend/app/api/routes/parcours.py`) :
+contrôle d'accès (parcours de l'apprenant connecté, sinon 404 ; rôle autre qu'apprenant : 403), leçon atteinte
+(403), appel de `POST /correction/reponse-libre` du service IA avec `lecon_atteinte` dans le contexte, revalidation
+du feedback (leçon, phase, extraits présents dans la réponse), puis enregistrement de `score_obtenu`,
+`reponse_apprenant`, `feedback_ia` et `date_reponse` sur `parcours_exercice`. Rien n'est enregistré en cas d'échec.
+
+| Statut | Cas |
+|---|---|
+| 409 | exercice mal configuré (`contenu` illisible, `consigne` ou `enonce` manquant) |
+| 422 | `format` différent de celui de l'exercice, réponse vide, champ inconnu |
+| 501 | autres formats : correction déterministe à venir (US43-BE) ; conversation non acceptée par cette route |
+| 502 / 503 / 504 | feedback IA hors contrat ou incohérent / IA indisponible ou langue non prise en charge / délai dépassé |
+
+Pas encore fait : l'avancement de `lecon_atteinte` quand la leçon est terminée (progression, US48) et les routes de
+lecture du parcours (`GET /parcours/en-cours`, exercices, leçon).
 
 Le backend enregistre la réponse et `score_obtenu` (`parcours_exercice`), puis avance `lecon_atteinte` quand tous les
 exercices de la leçon atteinte ont une réponse. L'apprenant peut refaire un exercice : la dernière correction remplace

@@ -58,6 +58,31 @@ echo "NEXT_PUBLIC_API_MOCK=false" >> .env.local
 
 Les variables `NEXT_PUBLIC_*` sont intégrées au moment du build : redémarrer `npm run dev` après un changement.
 
+### Build de démo
+
+Le build de démo garde l'API réelle, sans comptes ni données simulées sauf le parcours, qui n'a pas encore de routes
+backend (décision B du plan de démo) :
+
+```bash
+NEXT_PUBLIC_API_MOCK=false NEXT_PUBLIC_PARCOURS_MOCK=true npm run build
+```
+
+- Le parcours est simulé et l'écran affiche « Mode démonstration : données simulées ».
+- Les comptes de démonstration du formulaire de connexion ne sont affichés que si `NEXT_PUBLIC_API_MOCK=true`.
+  Limite connue (FE-D5, acceptée) : les données de `src/mocks/comptes-demo.ts` restent dans le JavaScript du build de
+  démo, car les services mock sont importés statiquement. Ce sont les identifiants de démonstration du seed, jamais
+  des comptes réels. Les rendre conditionnels relève d'une PR séparée.
+- Cette exception à la règle « le navigateur ne parle qu'au backend » ne concerne que le parcours simulé ; le
+  navigateur n'appelle toujours pas le service IA.
+
+### Règle : le navigateur ne parle jamais au service IA
+
+Le frontend n'appelle que le **backend** (`NEXT_PUBLIC_API_URL`). Il n'existe pas de variable `NEXT_PUBLIC_IA_URL` :
+toute valeur `NEXT_PUBLIC_*` est publique (elle se retrouve dans le bundle), le service IA n'a aucune
+authentification et son port n'est pas publié. Brancher le navigateur directement sur le service IA contournerait le
+scoring, la validation et la persistance du backend. Un test de garde (`src/lib/__tests__/garde-service-ia.test.ts`)
+échoue si cette variable réapparaît.
+
 ## Organisation du code
 
 ```

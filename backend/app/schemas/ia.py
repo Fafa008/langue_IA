@@ -11,7 +11,7 @@ préliminaire, les réponses et le score déterministe. Le score et le niveau pu
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 CodeLangueIA = Literal["fr", "en", "zh", "it", "de"]
 ReferentielIA = Literal["CECRL", "HSK"]
@@ -36,11 +36,12 @@ class _ModeleIA(BaseModel):
 
 
 class ContexteApprenantIA(_ModeleIA):
-    """Contexte minimal attendu par l'agent Diagnostic."""
+    """Contexte minimal attendu par les agents ; ``lecon_atteinte`` (US157) sert à la correction des réponses libres."""
 
     code_langue: CodeLangueIA
     referentiel: ReferentielIA
     niveau_preliminaire: str = Field(min_length=1, max_length=20)
+    lecon_atteinte: int | None = Field(default=None, ge=1, le=10_000)
 
 
 class PreuveDiagnosticIA(_ModeleIA):
@@ -110,4 +111,76 @@ class ReponseDiagnosticIA(_ModeleIA):
     version_prompt: str = Field(min_length=1, max_length=128)
     statut: Literal["succes"] = "succes"
     resultat: ResultatDiagnosticIA
+    meta: MetaExecutionIA
+
+
+# --- US157 : correction d'une réponse libre, contrat v2 (``POST /correction/reponse-libre``) ---
+
+PhaseParcoursIA = Literal["PASSIVE", "ACTIVE"]
+ERREURS_MAX_PASSIVE = 3
+ERREURS_MAX_ACTIVE = 8
+
+
+class EntreeCorrectionIA(_ModeleIA):
+    """Réponse libre et exercice transmis à l'agent de correction (sans le corrigé ni l'identité)."""
+
+    format: Literal["redaction"] = "redaction"
+    consigne: str = Field(min_length=1, max_length=500)
+    enonce: str = Field(min_length=1, max_length=2000)
+    mots_minimum: int = Field(default=30, ge=1, le=500)
+    reponse: str = Field(min_length=1, max_length=5000)
+
+
+class RequeteCorrectionIA(_ModeleIA):
+    """Enveloppe envoyée à ``POST /correction/reponse-libre`` ; la leçon atteinte est obligatoire."""
+
+    request_id: UUID
+    version_agent: str | None = None
+    contexte: ContexteApprenantIA
+    entree: EntreeCorrectionIA
+
+    @model_validator(mode="after")
+    def exiger_lecon(self) -> "RequeteCorrectionIA":
+        if self.contexte.lecon_atteinte is None:
+            raise ValueError("La correction d'une réponse libre exige la leçon atteinte.")
+        return self
+
+
+class ErreurReleveeIA(_ModeleIA):
+    extrait: str = Field(min_length=1, max_length=120)
+    correction: str = Field(min_length=1, max_length=120)
+    explication: str = Field(min_length=1, max_length=240)
+
+
+class ResultatCorrectionIA(_ModeleIA):
+    """Feedback v2 : la forme du retour dépend de la phase (mêmes règles que le service IA, revalidées ici)."""
+
+    phase: PhaseParcoursIA
+    lecon_atteinte: int = Field(ge=1, le=10_000)
+    score: int = Field(ge=0, le=100)
+    commentaire: str = Field(min_length=1, max_length=300)
+    points_forts: list[str] = Field(default_factory=list, max_length=3)
+    erreurs: list[ErreurReleveeIA] = Field(default_factory=list, max_length=ERREURS_MAX_ACTIVE)
+    reformulation: str | None = Field(default=None, min_length=1, max_length=5000)
+    conseil: str | None = Field(default=None, min_length=1, max_length=240)
+
+    @model_validator(mode="after")
+    def verifier_forme_selon_phase(self) -> "ResultatCorrectionIA":
+        if self.phase == "PASSIVE":
+            if len(self.erreurs) > ERREURS_MAX_PASSIVE or self.reformulation is not None:
+                raise ValueError("Un feedback de phase passive relève 3 erreurs au plus, sans version corrigée.")
+        elif self.erreurs and self.reformulation is None:
+            raise ValueError("Un feedback de phase active accompagne ses erreurs d'une version corrigée.")
+        return self
+
+
+class ReponseCorrectionIA(_ModeleIA):
+    """Enveloppe de succès de l'agent de correction."""
+
+    request_id: UUID
+    agent: Literal["correction"]
+    version_agent: str = Field(min_length=1, max_length=32)
+    version_prompt: str = Field(min_length=1, max_length=128)
+    statut: Literal["succes"] = "succes"
+    resultat: ResultatCorrectionIA
     meta: MetaExecutionIA

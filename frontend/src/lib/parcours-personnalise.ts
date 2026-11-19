@@ -12,17 +12,19 @@ import type {
 /** Première leçon de la phase active (même règle que backend/app/services/phase_parcours.py). */
 export const PREMIERE_LECON_ACTIVE = 50;
 
-export const PHASES: Record<PhaseParcours, { libelle: string; periode: string; explication: string }> = {
+export const PHASES: Record<PhaseParcours, { libelle: string; periode: string; explication: string; retourIA: string }> = {
   PASSIVE: {
     libelle: "Mode passif",
     periode: `Leçons 1 à ${PREMIERE_LECON_ACTIVE - 1}`,
     explication: "Vous écoutez, lisez et répétez : vous vous imprégnez de la langue sans chercher à la produire.",
+    retourIA: "seules les erreurs essentielles sont relevées.",
   },
   ACTIVE: {
     libelle: "Mode actif",
     periode: `À partir de la leçon ${PREMIERE_LECON_ACTIVE}`,
     explication:
       "Vous produisez la langue vous-même en reprenant les leçons déjà vues ; une leçon sur sept est une révision.",
+    retourIA: "votre texte est corrigé en détail.",
   },
 };
 
@@ -120,6 +122,9 @@ export function messageErreurParcours(error: unknown, quoi: string): string {
     if (error.status === 401) return "Votre session a expiré. Reconnectez-vous.";
     if (error.status === 403) return error.detail ?? "Ce contenu n'est pas encore disponible.";
     if (error.status === 404) return "Ce contenu n'existe pas.";
+    // FE-D6 : le professeur IA est indisponible (503) ou trop lent (504), messages distincts sans détail technique
+    if (error.status === 503) return `${quoi} n'est pas disponible pour le moment. Réessayez dans un instant.`;
+    if (error.status === 504) return `${quoi} prend plus de temps que prévu. Réessayez dans un instant.`;
   }
   return `${quoi} n'a pas abouti. Réessayez dans un instant.`;
 }

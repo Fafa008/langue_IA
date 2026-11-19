@@ -117,7 +117,7 @@ describe("Exercices du parcours (US42)", () => {
     choisirScenarioParcoursMock("exercices-indisponibles");
     afficher();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Le chargement des exercices n'a pas abouti.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Le chargement des exercices n'est pas disponible pour le moment.");
     expect(screen.getByText("Leçon 23", { selector: "p" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Tous les exercices du parcours" })).not.toBeInTheDocument();
   });

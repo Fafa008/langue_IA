@@ -2,7 +2,18 @@
 
 from fastapi import APIRouter
 
-from app.api.routes import auth, diagnostic, formateurs, formules, pedagogie, profil, roles, statistiques, utilisateurs
+from app.api.routes import (
+    auth,
+    diagnostic,
+    formateurs,
+    formules,
+    parcours,
+    pedagogie,
+    profil,
+    roles,
+    statistiques,
+    utilisateurs,
+)
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router)
@@ -15,3 +26,4 @@ api_router.include_router(statistiques.router)
 api_router.include_router(pedagogie.router)
 api_router.include_router(diagnostic.router)
 api_router.include_router(formateurs.router)
+api_router.include_router(parcours.router)

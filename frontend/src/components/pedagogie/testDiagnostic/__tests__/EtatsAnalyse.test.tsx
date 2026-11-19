@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import AnalyseEnCours from "@/components/pedagogie/testDiagnostic/AnalyseEnCours";
 import ErreurReessayable from "@/components/pedagogie/testDiagnostic/ErreurReessayable";
-import ResultatEnAttente from "@/components/pedagogie/testDiagnostic/ResultatEnAttente";
 
 describe("états de l'analyse", () => {
   it("rassure l'apprenant quand l'analyse dure plus longtemps que d'habitude", () => {
@@ -26,20 +25,5 @@ describe("états de l'analyse", () => {
   it("sans nouvelle tentative possible, n'affiche que le message", () => {
     render(<ErreurReessayable message="Votre session a expiré." />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  });
-
-  it("indique un résultat en attente et bloque le bouton pendant la vérification", () => {
-    const { rerender } = render(<ResultatEnAttente verificationEnCours={false} onVerifier={jest.fn()} intervalleSecondes={10} />);
-    expect(screen.getByRole("heading", { name: "Résultat en attente" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("toutes les 10 secondes");
-
-    rerender(<ResultatEnAttente verificationEnCours onVerifier={jest.fn()} intervalleSecondes={10} />);
-    expect(screen.getByRole("button", { name: "Vérifier mon résultat" })).toBeDisabled();
-  });
-
-  it("une fois la vérification automatique arrêtée, invite à vérifier plus tard", () => {
-    render(<ResultatEnAttente verificationEnCours={false} onVerifier={jest.fn()} intervalleSecondes={null} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Revenez dans quelques minutes");
-    expect(screen.getByRole("button", { name: "Vérifier mon résultat" })).toBeEnabled();
   });
 });

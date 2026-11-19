@@ -4,7 +4,7 @@ import { Bot, Send, UserRound, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useChatbot } from "@/hooks/useParcoursPersonnalise";
 import { useReconnaissanceVocale } from "@/hooks/useReconnaissanceVocale";
-import { API_MOCK } from "@/lib/env";
+import { PARCOURS_MOCK } from "@/lib/env";
 import { messageErreurParcours } from "@/lib/parcours-personnalise";
 import { lireAVoixHaute, syntheseDisponible } from "@/lib/voix";
 import type { ContenuExercice, MessageChatbot, ReponseExercice } from "@/types/parcours-personnalise";
@@ -61,7 +61,7 @@ export default function ExerciceConversation({
       <p className="text-small text-content-secondary">
         Sujet : <strong className="text-content">{contenu.sujet}</strong> · {Math.min(echanges, contenu.echangesMinimum)}/
         {contenu.echangesMinimum} échanges
-        {API_MOCK && " · professeur IA simulé (démonstration)"}
+        {PARCOURS_MOCK && " · professeur IA simulé (démonstration)"}
       </p>
 
       <div role="log" aria-live="polite" aria-label="Conversation avec le professeur IA" className="mt-3 max-h-80 space-y-3 overflow-y-auto rounded-card bg-background p-3">

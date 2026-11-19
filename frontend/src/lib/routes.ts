@@ -27,6 +27,10 @@ export const ROUTES = {
       module: (numero: number) => `${PARCOURS}/modules/${numero}`,
       lecon: (numero: number) => `${PARCOURS}/lecons/${numero}`,
     },
+    /** Chat avec le professeur IA : page non livrée, affichée « À venir » dans le menu (FE-D4). */
+    chat: `${ESPACE}/apprenant/chat`,
+    /** Ma progression : page fille de l'accueil, données simulées tant que US47 et US48 ne sont pas livrés (US51-FE). */
+    progression: `${ESPACE}/apprenant/progression`,
     ateliers: `${ESPACE}/apprenant/ateliers`,
     mesInscriptions: `${ESPACE}/apprenant/mes-inscriptions`,
     parametres: `${ESPACE}/apprenant/parametres`,
@@ -36,6 +40,8 @@ export const ROUTES = {
     seances: `${ESPACE}/formateur/seances`,
     ateliers: `${ESPACE}/formateur/ateliers`,
     apprenants: `${ESPACE}/formateur/apprenants`,
+    /** Synthèse des erreurs récurrentes de la classe (US52-FE). */
+    syntheseErreurs: `${ESPACE}/formateur/synthese-erreurs`,
     parametres: `${ESPACE}/formateur/parametres`,
   },
   admin: {

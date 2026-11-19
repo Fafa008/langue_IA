@@ -149,7 +149,6 @@ export function useTestDiagnostic() {
 
   /*
    * Fin du test : le backend calcule le score, lance l'analyse IA best-effort et répond directement avec le résultat.
-   * Le statut « en_attente » n'existe que dans le mock ; côté API, `terminer` ne renvoie jamais ce statut.
    */
 
   const afficherResultat = () => router.push(ROUTES.apprenant.testDiagnostic.resultats);
@@ -158,7 +157,6 @@ export function useTestDiagnostic() {
     if (!etat.sessionId) return;
     terminaison.mutate(etat.sessionId, {
       onSuccess: (issue) => {
-        if (issue.statut === "en_attente") return; // Uniquement produit par le mock, jamais par le backend
         dispatch({ type: "terminer", resultat: issue.resultat });
         afficherResultat();
       },
@@ -190,7 +188,6 @@ export function useTestDiagnostic() {
     // Toutes les questions avaient une réponse : il ne reste qu'à calculer le résultat
     terminaison.mutate(test.idSession, {
       onSuccess: (issue) => {
-        if (issue.statut === "en_attente") return; // Uniquement produit par le mock, jamais par le backend
         oublierTestInterrompu();
         dispatch({ type: "reprendre", test, resultat: issue.resultat });
         afficherResultat();
@@ -254,7 +251,5 @@ export function useTestDiagnostic() {
     erreurReponse: reponse.error,
     terminaisonEnCours: terminaison.isPending,
     erreurTerminaison: terminaison.error,
-    /** Vrai uniquement en mode mock : le simulateur diffère le résultat pendant l'analyse LLM. */
-    resultatEnAttente: terminaison.data?.statut === "en_attente",
   };
 }

@@ -72,6 +72,9 @@ class ContexteApprenant(ModeleStrict):
     referentiel: Referentiel
     niveau_preliminaire: CodeNiveau
     memoire_pedagogique: MemoirePedagogique | None = None
+    # Contrat v2 (US157) : leçon atteinte du parcours (``parcours.lecon_atteinte``). Facultative pour le diagnostic,
+    # obligatoire pour la correction d'une réponse libre, dont le retour dépend de la phase passive ou active.
+    lecon_atteinte: int | None = Field(default=None, strict=True, ge=1, le=10_000)
 
     @model_validator(mode="after")
     def verifier_referentiel_et_niveau(self) -> "ContexteApprenant":

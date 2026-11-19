@@ -1,10 +1,13 @@
-import { ArrowRight, Bot, CheckCircle2, Cpu, Lightbulb, RotateCcw, ThumbsUp } from "lucide-react";
+import { ArrowRight, Bot, CheckCircle2, Cpu, Lightbulb, PenLine, RotateCcw, ThumbsUp } from "lucide-react";
 import Badge from "@/components/ui/Badge";
+import { PHASES } from "@/lib/parcours-personnalise";
 import type { CorrectionExercice } from "@/types/parcours-personnalise";
 
 /**
  * US44 — Retour affiché après une correction : verdict et score, qui a corrigé (automatique ou professeur IA),
  * bonne réponse et explication (QCM), points forts, erreurs relevées et conseil (réponse libre).
+ * US157 — un retour de l'IA dit selon quelle phase il a été rédigé (leçon atteinte) ; en phase active,
+ * il donne aussi le texte entièrement corrigé.
  */
 export default function RetourCorrection({ correction, onReessayer }: { correction: CorrectionExercice; onReessayer: () => void }) {
   const reussi = correction.statut === "REUSSI";
@@ -24,6 +27,12 @@ export default function RetourCorrection({ correction, onReessayer }: { correcti
           {ia ? "Corrigé par le professeur IA" : "Correction automatique"}
         </Badge>
       </div>
+
+      {ia && correction.phase && (
+        <p className="mt-1 text-small text-content-secondary">
+          {PHASES[correction.phase].libelle} (leçon {correction.leconAtteinte}) : {PHASES[correction.phase].retourIA}
+        </p>
+      )}
 
       <p className="mt-2 text-content">{correction.commentaire}</p>
 
@@ -64,6 +73,17 @@ export default function RetourCorrection({ correction, onReessayer }: { correcti
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {correction.reformulation && (
+        <div className="mt-3">
+          <h4 className="flex items-center gap-1.5 text-small font-semibold text-content">
+            <PenLine size={15} aria-hidden /> Version corrigée
+          </h4>
+          <blockquote className="mt-1 rounded-btn border-l-4 border-success/50 bg-surface p-2.5 text-small text-content">
+            {correction.reformulation}
+          </blockquote>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
-import { API_MOCK } from "@/lib/env";
+import { PARCOURS_MOCK } from "@/lib/env";
 import { parcoursPersonnaliseMock } from "@/mocks/parcours-personnalise.mock";
 import type {
   CorrectionExercice,
@@ -24,7 +24,7 @@ import {
 } from "./parcours-personnalise.mapper";
 
 /** Correction et chatbot passent par le LLM : délai plus long que les autres requêtes (budget IA de 30 s). */
-const DELAI_IA_MS = 45_000;
+export const DELAI_IA_MS = 45_000;
 /** Le service IA n'accepte que les 20 derniers tours de parole (ia-service/app/schemas/chatbot.py). */
 export const HISTORIQUE_CHATBOT_MAX = 20;
 
@@ -90,4 +90,4 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
   chatbot: async (message, historique) => (await parcoursPersonnaliseMock.chatbot(corpsChatbot(message, historique))).reponse,
 };
 
-export const parcoursPersonnaliseService = API_MOCK ? mockParcoursPersonnaliseService : httpParcoursPersonnaliseService;
+export const parcoursPersonnaliseService = PARCOURS_MOCK ? mockParcoursPersonnaliseService : httpParcoursPersonnaliseService;

@@ -6,16 +6,20 @@ journaux. Une panne du service IA n'est jamais une erreur pour l'apprenant : l'a
 """
 
 import logging
+from typing import TypeVar
 
 import httpx
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.core.config import get_settings
-from app.schemas.ia import ReponseDiagnosticIA, RequeteDiagnosticIA
+from app.schemas.ia import ReponseCorrectionIA, ReponseDiagnosticIA, RequeteCorrectionIA, RequeteDiagnosticIA
 
 logger = logging.getLogger(__name__)
 
 CHEMIN_EVALUATION = "/diagnostic/evaluer"
+CHEMIN_CORRECTION = "/correction/reponse-libre"
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class ErreurServiceIA(Exception):
@@ -30,15 +34,8 @@ class ErreurServiceIA(Exception):
         super().__init__(code)
 
 
-def evaluer_diagnostic(
-    requete: RequeteDiagnosticIA,
-    *,
-    transport: httpx.BaseTransport | None = None,
-) -> ReponseDiagnosticIA:
-    """Appeler l'agent Diagnostic et retourner son enveloppe validée.
-
-    ``transport`` sert uniquement aux tests (``httpx.MockTransport``) ; il reste ``None`` en production.
-    """
+def _poster(chemin: str, requete: BaseModel, modele: type[T], transport: httpx.BaseTransport | None) -> T:
+    """Appeler une route du service IA et valider son enveloppe de succès ; toute autre issue lève une erreur."""
     settings = get_settings()
     base = settings.ia_service_url.strip()
     if not base:
@@ -47,7 +44,7 @@ def evaluer_diagnostic(
     try:
         with httpx.Client(timeout=settings.ia_service_timeout_s, transport=transport) as client:
             reponse = client.post(
-                f"{base.rstrip('/')}{CHEMIN_EVALUATION}",
+                f"{base.rstrip('/')}{chemin}",
                 json=requete.model_dump(mode="json", exclude_none=True),
             )
     except httpx.TimeoutException:
@@ -59,6 +56,27 @@ def evaluer_diagnostic(
         raise ErreurServiceIA(f"http_{reponse.status_code}")
 
     try:
-        return ReponseDiagnosticIA.model_validate(reponse.json())
+        return modele.model_validate(reponse.json())
     except (ValueError, ValidationError):
         raise ErreurServiceIA("reponse_invalide") from None
+
+
+def evaluer_diagnostic(
+    requete: RequeteDiagnosticIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseDiagnosticIA:
+    """Appeler l'agent Diagnostic et retourner son enveloppe validée.
+
+    ``transport`` sert uniquement aux tests (``httpx.MockTransport``) ; il reste ``None`` en production.
+    """
+    return _poster(CHEMIN_EVALUATION, requete, ReponseDiagnosticIA, transport)
+
+
+def corriger_reponse_libre(
+    requete: RequeteCorrectionIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseCorrectionIA:
+    """Appeler l'agent de correction (US157) et retourner son feedback v2 validé."""
+    return _poster(CHEMIN_CORRECTION, requete, ReponseCorrectionIA, transport)

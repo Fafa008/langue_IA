@@ -37,7 +37,9 @@ async function rouvrirSansMemoireLocale(page: Page) {
   await page.goto(URL_TEST);
 }
 
-test.describe("Reprise d'un test interrompu", () => {
+// FE-D1 (décision D1 : reprise retirée pour la démo) : ces scénarios attendent une reprise que l'écran ne propose
+// plus tant que la route GET /diagnostic/tentatives/en-cours n'existe pas. Réactivés avec F-02 (lot dynamique).
+test.describe.skip("Reprise d'un test interrompu", () => {
   test("le test interrompu est identifié, puis repris avec ses réponses restaurées depuis le serveur", async ({ page }) => {
     await commencerEtRepondreUneFois(page);
     await rouvrirSansMemoireLocale(page);

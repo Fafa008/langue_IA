@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useExercicesParcours, useParcoursPersonnalise } from "@/hooks/useParcoursPersonnalise";
 import { useSession } from "@/hooks/useSession";
 import { ApiError } from "@/lib/api-client";
+import { PARCOURS_MOCK } from "@/lib/env";
 import { formatDateCourte } from "@/lib/date";
 import {
   leconsAvantPhaseActive,
@@ -93,6 +94,11 @@ function EnTete({ parcours }: { parcours: ParcoursPersonnalise }) {
   return (
     <section aria-labelledby="titre-parcours" className="rounded-card bg-primary p-6 text-white shadow-card md:p-8">
       <p className="text-small font-semibold uppercase tracking-widest text-white/75">Mon parcours</p>
+      {PARCOURS_MOCK && (
+        <p data-testid="mode-demonstration" className="mt-2 inline-block rounded-full bg-white/15 px-3 py-0.5 text-small font-semibold">
+          Mode démonstration : données simulées
+        </p>
+      )}
       <h1 id="titre-parcours" className="mt-2 text-[1.75rem] leading-tight text-white md:text-h2">
         Bonjour{prenom ? `, ${prenom}` : ""} !
       </h1>

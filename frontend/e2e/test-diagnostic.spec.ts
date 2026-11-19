@@ -51,7 +51,8 @@ test.describe("Accès au module Diagnostic", () => {
   for (const url of PAGES_DIAGNOSTIC) {
     test(`sans session, ${url} redirige vers la connexion`, async ({ page }) => {
       await page.goto(url);
-      await expect(page).toHaveURL("/login");
+      // La redirection est faite côté client, après le chargement de l'application : délai plus large (charge de la CI)
+      await expect(page).toHaveURL("/login", { timeout: 15_000 });
     });
 
     test(`un formateur n'a pas accès à ${url}`, async ({ page }) => {
@@ -356,30 +357,6 @@ test.describe("États de l'analyse quand le LLM est lent ou indisponible", () =>
     await expect(page).toHaveURL(`${URL_TEST}/resultats`);
   });
 
-  test("résultat en attente : vérification manuelle puis automatique", async ({ page }) => {
-    await page.clock.install();
-    await ouvrir(page, "en", { premiereTerminaison: "en_attente" });
-    await demarrer(page);
-    await finaliser(page);
-
-    const attente = page.getByTestId("resultat-en-attente");
-    await expect(attente).toContainText("Résultat en attente");
-    await expect(attente).toContainText("vos réponses sont enregistrées");
-    await expect(attente.getByRole("button", { name: "Vérifier mon résultat" })).toBeEnabled();
-
-    // Sans action de l'apprenant, le résultat est redemandé au bout de 10 secondes
-    await page.clock.fastForward("00:11");
-    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
-  });
-
-  test("le bouton « Vérifier mon résultat » redemande le résultat tout de suite", async ({ page }) => {
-    await ouvrir(page, "en", { premiereTerminaison: "en_attente" });
-    await demarrer(page);
-    await finaliser(page);
-    await page.getByTestId("resultat-en-attente").getByRole("button", { name: "Vérifier mon résultat" }).click();
-    await expect(page).toHaveURL(`${URL_TEST}/resultats`);
-  });
-
   test("une erreur sur une réponse écrite conserve le texte saisi", async ({ page }) => {
     await ouvrir(page, "en", { avecRedaction: true });
     let echec = true;
@@ -460,10 +437,11 @@ test.describe("Écran de résultats : niveau, phase Assimil, points faibles et j
     const partiel = page.getByTestId("resultat-partiel");
     await expect(partiel).toContainText("Résultat partiel");
     await expect(partiel).toContainText("la phase de la méthode Assimil");
-    await expect(partiel).toContainText("la justification du niveau");
+    // Décision D5 (F-01) : la justification absente n'est ni listée comme manquante, ni affichée
+    await expect(partiel).not.toContainText("justification");
     await expect(page.getByTestId("result-phase")).toContainText("Non déterminée");
     await expect(page.getByTestId("result-weaknesses")).toContainText("identifiés par l'analyse complète");
-    await expect(page.getByTestId("result-justification")).toContainText("sera disponible après l'analyse complète");
+    await expect(page.getByTestId("result-justification")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Commencer mon parcours" })).toBeVisible();
 
     await expectSansDebordement(page);

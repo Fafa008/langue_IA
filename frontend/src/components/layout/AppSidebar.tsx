@@ -22,7 +22,7 @@ export default function AppSidebar() {
     <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 shrink-0 flex-col self-start overflow-y-auto border-r border-border bg-surface/60 px-3 py-8 lg:flex">
       <nav aria-label="Espace personnel" className="flex flex-col gap-1.5">
         {items.map((item) => {
-          const { label, href, icon: Icon, bientot, sousPages } = item;
+          const { label, href, icon: Icon, bientot, libelleEtat, sousPages } = item;
           const active = estActif(item, pathname);
           const ouverte = Boolean(sousPages) && (sousMenuChoisi ?? active);
           if (bientot) {
@@ -30,7 +30,7 @@ export default function AppSidebar() {
               <span key={href} aria-disabled className="flex cursor-default items-center gap-4 rounded-btn px-3 py-3 font-medium text-content-secondary">
                 <Icon size={22} strokeWidth={1.75} className="shrink-0" aria-hidden />
                 <span className="truncate">{label}</span>
-                <span className="ml-auto shrink-0 rounded-full bg-background px-2 py-0.5 text-[0.6875rem] font-semibold">Bientôt</span>
+                <span className="ml-auto shrink-0 rounded-full bg-background px-2 py-0.5 text-[0.6875rem] font-semibold">{libelleEtat ?? "Bientôt"}</span>
               </span>
             );
           }

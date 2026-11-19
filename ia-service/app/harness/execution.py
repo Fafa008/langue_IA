@@ -17,11 +17,12 @@ from pydantic import ValidationError
 from app.core.codes_erreur import CodeErreur
 from app.core.erreurs import ErreurAgentInconnu
 from app.core.gestionnaire_erreurs import code_pour, reponse_erreur_pour_code
-from app.harness.agent import ContexteExecution, OutilsCommuns
+from app.harness.agent import ContexteExecution, OutilsCommuns, SignalementRAG
 from app.harness.registre import RegistreAgents
 from app.llm.base import FournisseurLLM
 from app.prompts import RegistrePrompts
 from app.rag.base import RecuperateurRAG
+from app.rag.repli import RecuperateurAvecRepli
 from app.rag.vide import RecuperateurVide
 from app.schemas.commun import (
     CODE_AGENT_PATTERN,
@@ -51,7 +52,7 @@ class Harness:
         self._registre = registre
         self._client_llm = client_llm
         self._registre_prompts = registre_prompts or RegistrePrompts()
-        self._recuperateur_rag = recuperateur_rag or RecuperateurVide()
+        self._recuperateur_rag = RecuperateurAvecRepli(recuperateur_rag or RecuperateurVide())
         self._horloge = horloge
 
     async def executer(
@@ -90,6 +91,7 @@ class Harness:
             request_id=requete.request_id,
             contexte=requete.contexte,
             outils=outils,
+            signalement=SignalementRAG(),
         )
         debut = self._horloge()
 
@@ -109,11 +111,12 @@ class Harness:
             return self._erreur(requete, agent_affiche, CodeErreur.LLM_REPONSE_INVALIDE)
 
         duree_ms = max(0, min(600_000, int(round((self._horloge() - debut) * 1000))))
+        version_corpus = contexte.signalement.version_corpus_effective or self._recuperateur_rag.version_corpus
         meta = MetaExecution(
             duree_ms=duree_ms,
             fournisseur=self._client_llm.nom,
             modele=self._client_llm.modele,
-            version_corpus=self._recuperateur_rag.version_corpus,
+            version_corpus=version_corpus,
             empreinte_prompt=definition.empreinte_prompt,
         )
         enveloppe = ReponseAgent[definition.schema_sortie]
