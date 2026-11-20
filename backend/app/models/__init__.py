@@ -12,7 +12,7 @@ from app.models.enums import (
     TypeExercice,
 )
 from app.models.facturation import Abonnement, Formule, formule_langue
-from app.models.parcours import Exercice, Parcours, ParcoursExercice
+from app.models.parcours import Exercice, Parcours, ParcoursExercice, ProgressionLecon
 from app.models.pedagogie import Langue, Niveau, langue_niveau
 from app.models.roles import Permission, RoleRBAC, role_permission
 from app.models.utilisateurs import (
@@ -37,6 +37,7 @@ __all__ = [
     "Parcours",
     "ParcoursExercice",
     "Permission",
+    "ProgressionLecon",
     "Question",
     "Reponse",
     "Role",

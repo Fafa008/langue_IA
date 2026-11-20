@@ -9,33 +9,17 @@ from app.models import (
     Niveau,
     Parcours,
     ParcoursExercice,
-    Question,
     StatutParcours,
     TypeExercice,
 )
 from tests.conftest import creer_utilisateur, entete
-
-
-def _question_a1(db: Session, code_langue: str = "en", enonce: str = "Smoke ___ test.") -> Question:
-    choix = ["is", "are", "am", "be"]
-    question = Question(
-        enonce=enonce,
-        competence="grammaire",
-        type_reponse="choix",
-        choix=choix,
-        reponse_correcte=choix[0],
-        langue=db.scalar(select(Langue).where(Langue.code == code_langue)),
-        niveau=db.scalar(select(Niveau).where(Niveau.code == "A1")),
-    )
-    db.add(question)
-    db.commit()
-    return question
+from tests.fabriques_parcours import creer_question_diagnostic
 
 
 class TestSmokeGenerationParcours:
     def test_termine_le_diagnostic_et_genere_un_parcours_coherent(self, client, db: Session):
         apprenant = creer_utilisateur(db, email="smoke.parcours@exemple.com")
-        question = _question_a1(db)
+        question = creer_question_diagnostic(db)
 
         creation = client.post(
             "/api/v1/diagnostic/tentatives",
@@ -79,7 +63,7 @@ class TestSmokeGenerationParcours:
 
     def test_generation_associe_les_exercices_disponibles_du_catalogue(self, client, db: Session):
         apprenant = creer_utilisateur(db, email="smoke.exercices@exemple.com")
-        question = _question_a1(db, enonce="Smoke ___ catalogue.")
+        question = creer_question_diagnostic(db, enonce="Smoke ___ catalogue.")
         langue = db.scalar(select(Langue).where(Langue.code == "en"))
         niveau_c2 = db.scalar(select(Niveau).where(Niveau.code == "C2"))
         exercice = Exercice(

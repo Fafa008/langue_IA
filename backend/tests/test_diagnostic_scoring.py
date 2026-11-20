@@ -124,7 +124,11 @@ class TestTerminerTentative:
         )
 
         assert response.status_code == 200
-        assert response.json() == {
+        corps = response.json()
+        # Le score et le niveau, puis l'analyse IA rattachée à la tentative à sa clôture (US-30 et analyse diagnostic)
+        assert {
+            key: corps[key] for key in ("id_tentative", "score", "max_score", "percentage", "level", "framework")
+        } == {
             "id_tentative": tentative.id_test,
             "score": 33.33,
             "max_score": 100,
@@ -132,6 +136,20 @@ class TestTerminerTentative:
             "level": "A2",
             "framework": "CECRL",
         }
+        assert set(corps) == {
+            "id_tentative",
+            "score",
+            "max_score",
+            "percentage",
+            "level",
+            "framework",
+            "competences",
+            "points_faibles",
+            "phase_assimil",
+        }
+        assert isinstance(corps["competences"], list)
+        assert isinstance(corps["points_faibles"], list)
+        assert corps["phase_assimil"] in {"impregnation", "activation"}
         db.refresh(tentative)
         assert tentative.statut == StatutDiagnostic.TERMINE
         assert tentative.score == Decimal("33.33")

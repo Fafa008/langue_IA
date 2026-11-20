@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Text, UniqueConstraint, func, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -58,7 +58,10 @@ class Parcours(Base):
 
 class Exercice(Base):
     __tablename__ = "exercice"
-    __table_args__ = (CheckConstraint("difficulte BETWEEN 1 AND 5", name="ck_exercice_difficulte_1_5"),)
+    __table_args__ = (
+        CheckConstraint("difficulte BETWEEN 1 AND 5", name="ck_exercice_difficulte_1_5"),
+        CheckConstraint("numero_lecon IS NULL OR numero_lecon >= 1", name="ck_exercice_numero_lecon_positif"),
+    )
 
     id_exercice: Mapped[int] = mapped_column(primary_key=True)
     type: Mapped[TypeExercice] = mapped_column(EnumEntier(TypeExercice))
@@ -66,6 +69,8 @@ class Exercice(Base):
     difficulte: Mapped[int] = mapped_column(Integer)
     id_langue: Mapped[int] = mapped_column(ForeignKey("langue.id_langue", name="fk_exercice_id_langue"))
     id_niveau: Mapped[int] = mapped_column(ForeignKey("niveau.id_niveau", name="fk_exercice_id_niveau"))
+    # Leçon à laquelle l'exercice est rattaché (US48). NULL : exercice du catalogue sans leçon fixée.
+    numero_lecon: Mapped[int | None] = mapped_column(Integer)
 
     langue: Mapped[Langue] = relationship()
     niveau: Mapped[Niveau] = relationship()
@@ -107,3 +112,31 @@ class ParcoursExercice(Base):
 
     parcours: Mapped[Parcours] = relationship(back_populates="parcours_exercices")
     exercice: Mapped[Exercice] = relationship(back_populates="parcours_exercices")
+
+
+class ProgressionLecon(Base):
+    """Progression sur une leçon (US48) : dernier et meilleur score de leçon, validation.
+
+    Le score de leçon est calculé par ``services/progression_lecon.py`` ; la validation se lit sur ``best_score``.
+    """
+
+    __tablename__ = "progression_lecon"
+    __table_args__ = (
+        CheckConstraint("numero_lecon >= 1", name="ck_progression_lecon_numero_lecon_positif"),
+        CheckConstraint(
+            "last_score IS NULL OR last_score BETWEEN 0 AND 100", name="ck_progression_lecon_last_score_0_100"
+        ),
+        CheckConstraint(
+            "best_score IS NULL OR best_score BETWEEN 0 AND 100", name="ck_progression_lecon_best_score_0_100"
+        ),
+        UniqueConstraint("id_parcours", "numero_lecon", name="uq_progression_lecon_parcours_lecon"),
+    )
+
+    id_progression: Mapped[int] = mapped_column(primary_key=True)
+    id_parcours: Mapped[int] = mapped_column(
+        ForeignKey("parcours.id_parcours", ondelete="CASCADE", name="fk_progression_lecon_id_parcours"),
+    )
+    numero_lecon: Mapped[int] = mapped_column(Integer)
+    last_score: Mapped[int | None] = mapped_column(Integer)
+    best_score: Mapped[int | None] = mapped_column(Integer)
+    is_validated: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))

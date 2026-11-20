@@ -586,11 +586,16 @@ arrondi à deux décimales. Une nouvelle requête sur une tentative terminée re
   "max_score": 100,
   "percentage": 72.0,
   "level": "B2",
-  "framework": "CECRL"
+  "framework": "CECRL",
+  "competences": [{ "competence": "grammaire", "score": 1, "total": 2 }],
+  "points_faibles": [],
+  "phase_assimil": "impregnation"
 }
 ```
 
-`score` et `percentage` sont identiques, sur 100. La grille de référence utilisée par le backend est :
+`score` et `percentage` sont identiques, sur 100. Les trois derniers champs (`competences`, `points_faibles`,
+`phase_assimil`) viennent de l'analyse IA de la tentative, faite à la clôture ; ils sont décrits plus bas, dans la section
+de l'analyse, et absents quand elle n'existe pas. La grille de référence utilisée par le backend est :
 
 | Pourcentage | CECRL | HSK |
 | --- | --- | --- |
@@ -833,11 +838,12 @@ d'un autre rôle), **422** langue inconnue ou liste vide.
 Pas de `DELETE` : un formateur est lié à ses ateliers (`Atelier.id_formateur`, `ON DELETE RESTRICT`), il est donc
 désactivé plutôt que supprimé. Un compte `INACTIF` est refusé à la connexion (**403**), comme pour tout utilisateur.
 
-## Parcours personnalisé (US41 à US44) — rôle `APPRENANT` — contrat frontend, routes à créer côté backend
+## Parcours personnalisé (US41 à US44) — rôle `APPRENANT` — contrat frontend
 
-Le frontend fonctionne aujourd'hui **sans backend** (`NEXT_PUBLIC_API_MOCK=true`, données de
-`frontend/src/mocks/parcours-personnalise.mock.ts`). Ce contrat décrit ce que le backend devra exposer pour le
-brancher ; aucune route n'existe encore. Conversion côté frontend : `frontend/src/services/parcours-personnalise.mapper.ts`.
+Les trois routes de lecture ci-dessous existent côté backend (`backend/app/api/routes/parcours.py`, logique dans
+`backend/app/services/lecture_parcours.py`). Le frontend garde ses données simulées tant que `NEXT_PUBLIC_API_MOCK`
+ou `NEXT_PUBLIC_PARCOURS_MOCK` est à `true` (`frontend/src/mocks/parcours-personnalise.mock.ts`). Conversion côté
+frontend : `frontend/src/services/parcours-personnalise.mapper.ts`.
 
 Écrans : « Mon parcours » (`/espace/apprenant/parcours`), un module (`/parcours/modules/{numero}`) et une leçon
 (`/parcours/lecons/{numero}`) ; la barre latérale liste les modules sous « Mon parcours ».
@@ -866,12 +872,20 @@ est refusée (message d'erreur) plutôt qu'interprétée ; la casse n'a pas d'im
   "cadre": "CECRL", "niveaux_cadre": ["A1", "A2", "B1", "B2", "C1", "C2"],
   "niveau_depart": "A2", "niveau_vise": "B1",
   "lecon_atteinte": 23, "phase": "PASSIVE", "est_lecon_de_revision": false,
-  "modules": [{ "numero": 1, "titre": "Premiers contacts", "description": "…", "premiere_lecon": 1, "derniere_lecon": 7 }]
+  "modules": [{ "numero": 1, "titre": "Premiers contacts", "description": "…", "premiere_lecon": 1, "derniere_lecon": 7 }],
+  "progressions": [{ "numero_lecon": 23, "last_score": 78, "best_score": 78, "is_validated": true }]
 }
 ```
 
 Statut d'un module ou d'une leçon, déduit côté frontend de `lecon_atteinte` : terminé avant, en cours, à venir après.
 **404** : aucun parcours (le frontend invite à passer le test de positionnement).
+
+`progressions` (US48) : une entrée par leçon ayant un score de leçon, triée par numéro. `last_score` = dernier score de
+leçon calculé, `best_score` = meilleur score atteint, `is_validated` = `best_score` ≥ 70 (règle du contrat « Avancement de
+la leçon »). Liste vide tant qu'aucune leçon n'est notée.
+
+> **État** : `modules` est renvoyé vide (`[]`) en attendant la décision sur le modèle des modules (table ou
+> configuration, titres et descriptions). Les autres champs sont en place. Le frontend ne lit pas encore `progressions`.
 
 ### `GET /parcours/{id_parcours}/exercices`
 
@@ -883,10 +897,15 @@ Une ligne par `parcours_exercice` jusqu'à la leçon atteinte (le backend ne cr�
 ```
 
 `statut` : `A_FAIRE` si `score_obtenu` est `null`, `REUSSI` si ≥ 50, `A_REVOIR` sinon (seuil à confirmer).
+`intitule` vient de la clé `intitule` du `contenu` de l'exercice (`null` si absente).
+**403** pour un rôle autre qu'apprenant ; **404** si le parcours n'appartient pas à l'apprenant connecté.
 
 ### `GET /parcours/{id_parcours}/lecons/{numero_lecon}`
 
-Mêmes lignes que ci-dessus pour une leçon, plus le `contenu` de chaque exercice (texte JSON de `exercice.contenu`) :
+Mêmes lignes que ci-dessus pour une leçon, plus le `contenu` de chaque exercice. Ce `contenu` ne garde que les champs
+`format`, `consigne`, `enonce`, `choix`, `question`, `audio_url`, `texte_audio`, `phrase`, `sujet`, `message_initial`,
+`echanges_minimum`, `mots_minimum` (liste blanche : la bonne réponse et l'explication n'y figurent jamais). **403** si la
+leçon n'est pas atteinte.
 
 ```json
 { "numero_lecon": 23, "est_lecon_de_revision": false, "code_langue": "fr",
@@ -919,6 +938,12 @@ Deux modes de correction (US43, US44) :
 |---|---|---|
 | `AUTOMATIQUE` | `choix`, `ecoute`, `texte`, `prononciation` | le backend, de façon **déterministe** (US43-BE) : réponse comparée aux réponses acceptées, sans tenir compte de la casse, des accents ni de la ponctuation ; même réponse, même résultat |
 | `IA` | `redaction`, `conversation` | le service IA, via le backend (prompt de correction à créer) |
+
+Correction `AUTOMATIQUE` (US43-BE, `backend/app/services/correction_automatique.py`) : aucun appel à l'IA. `score_obtenu`
+vaut **100** si la réponse est acceptée, **0** sinon ; `statut` en découle (`REUSSI` / `A_REVOIR`). `reponse_attendue`
+n'est renvoyée que si la réponse est fausse. `phase`, `lecon_atteinte` et `reformulation` sont `null`. Le `contenu` de
+l'exercice doit contenir `reponses`, une liste non vide de chaînes ; sinon **409**, rien n'est enregistré. Le backend
+enregistre la réponse, le score et la date sur `parcours_exercice` et vide `feedback_ia`.
 
 **200** :
 
@@ -987,15 +1012,41 @@ du feedback (leçon, phase, extraits présents dans la réponse), puis enregistr
 |---|---|
 | 409 | exercice mal configuré (`contenu` illisible, `consigne` ou `enonce` manquant) |
 | 422 | `format` différent de celui de l'exercice, réponse vide, champ inconnu |
-| 501 | autres formats : correction déterministe à venir (US43-BE) ; conversation non acceptée par cette route |
 | 502 / 503 / 504 | feedback IA hors contrat ou incohérent / IA indisponible ou langue non prise en charge / délai dépassé |
 
-Pas encore fait : l'avancement de `lecon_atteinte` quand la leçon est terminée (progression, US48) et les routes de
-lecture du parcours (`GET /parcours/en-cours`, exercices, leçon).
+Pas encore fait : les `modules` de `GET /parcours/en-cours` (modèle à décider).
 
-Le backend enregistre la réponse et `score_obtenu` (`parcours_exercice`), puis avance `lecon_atteinte` quand tous les
-exercices de la leçon atteinte ont une réponse. L'apprenant peut refaire un exercice : la dernière correction remplace
-la précédente. **502/503/504** (IA indisponible ou trop lente) : le frontend garde la réponse et propose de la renvoyer.
+Le backend enregistre la réponse et `score_obtenu` (`parcours_exercice`). L'apprenant peut refaire un exercice : la
+dernière correction remplace la précédente, et la correction automatique vide `feedback_ia`.
+
+> **Avancement de la leçon (US48, livré côté backend)** — règle retenue (décision produit) :
+>
+> | Rang de l'exercice dans la leçon | Poids |
+> |---|---:|
+> | 1 | 30 |
+> | 2 | 30 |
+> | 3 | 40 |
+>
+> Le poids dépend du **rang**, pas du format. **3 exercices par leçon** (QCM, réponse textuelle, écoute, prononciation,
+> conversation, rédaction). Chaque exercice est noté sur 100 ; score de leçon = Σ (score × poids / 100), arrondi à l'entier
+> le plus proche (moitié vers le haut). Seuls les rangs 1 à 3 comptent : un exercice de rang 4 ou plus n'a pas de poids.
+>
+> - Le score de leçon est recalculé **à chaque correction** d'un exercice de la leçon, dès que les rangs 1 à 3 ont un score.
+> - Stockage (`progression_lecon`, une ligne par parcours et leçon) : `last_score` (dernier score de leçon calculé),
+>   `best_score` (maximum atteint), `is_validated`. `attempt_count` est abandonné.
+> - **La leçon est validée quand `best_score` ≥ 70.** Une leçon validée le reste, même si une reprise donne un score plus bas.
+> - Seule la **leçon atteinte** peut être validée ; sa validation fait passer `lecon_atteinte` à la suivante, d'un pas.
+> - Le seuil de 50 reste celui d'un exercice « réussi » (statut) : il ne valide pas la leçon.
+>
+> **Rattachement des exercices aux leçons** : chaque exercice du catalogue porte un `numero_lecon` (NULL = non rattaché).
+> La génération rattache à la leçon de départ les exercices de cette leçon (ou sans leçon). À la validation de la leçon
+> N, l'apprenant passe à N+1 et ses exercices lui sont rattachés, du plus facile au plus difficile (le rang suit la
+> difficulté). Une leçon sans exercice ne peut pas être validée : il faut donc du contenu pour chaque leçon atteignable.
+> Le contenu de démonstration couvre les leçons 1 à 7 (anglais, A1), à relire par l'équipe pédagogique.
+>
+> La progression par leçon est exposée dans `GET /parcours/en-cours` (champ `progressions`).
+
+**502/503/504** (IA indisponible ou trop lente) : le frontend garde la réponse et propose de la renvoyer.
 
 ### `POST /chatbot/message` — relais du service IA (tâche B-10)
 
