@@ -316,7 +316,7 @@ def test_preserve_les_descripteurs_reels_sans_fausse_provenance() -> None:
     assert resultat.meta.version_corpus == "2026.11"
 
 
-def test_reperes_carcl_sont_etiquettes_comme_non_officiels() -> None:
+def test_reperes_carcl_sont_etiquettes_comme_non_officiels(caplog: pytest.LogCaptureFixture) -> None:
     descripteurs = [
         {
             "identifiant": "carcl:en:B1:exercice_qa:A1_QA_001",
@@ -332,10 +332,12 @@ def test_reperes_carcl_sont_etiquettes_comme_non_officiels() -> None:
     ]
     harness, client, _, _ = preparer(descripteurs=descripteurs)
 
-    resultat = executer(harness, requete())
+    with caplog.at_level("WARNING", logger="app.agents.diagnostic"):
+        resultat = executer(harness, requete())
 
     assert isinstance(resultat, ReponseAgent)
     assert resultat.meta.version_corpus == VERSION_CORPUS_EXPERIMENTAL
+    assert "Repères pédagogiques non officiels utilisés" in caplog.text
     rendus = corps_prompt(client)["descripteurs_rag"]
     assert [rendu["identifiant"] for rendu in rendus] == ["carcl:en:B1:exercice_qa:A1_QA_001"]
     assert all("non officiel" in rendu["contenu"] for rendu in rendus)

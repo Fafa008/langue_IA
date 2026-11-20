@@ -3,15 +3,19 @@
 Sans clé API ni réseau : le faux client LLM rejoue des sorties préparées, ou le répondeur de démonstration.
 """
 
+import asyncio
 import json
+import time
 from collections.abc import Iterator, Sequence
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from app.agents.correction import CODE_AGENT_CORRECTION, VERSION_AGENT_CORRECTION
+from app.agents.correction import CODE_AGENT_CORRECTION, VERSION_AGENT_CORRECTION, CorrectionAgent
 from app.core.erreurs import ErreurLlmTimeout
+from app.harness.agent import ContexteExecution, OutilsCommuns
 from app.harness.execution import Harness
 from app.llm import fabrique
 from app.llm.adaptateurs.factice import FakeLLMClient, ScenarioLLM
@@ -24,7 +28,7 @@ from app.llm.demonstration import (
 from app.main import app
 from app.prompts import RegistrePrompts
 from app.prompts.variables import DescripteurRAGPrompt, VariablesCorrectionReponseLibre
-from app.rag.base import RequeteRAG
+from app.rag.base import PROVENANCE_EXPERIMENTALE, VERSION_CORPUS_EXPERIMENTAL, RequeteRAG
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.correction import (
     CorrectionIncoherente,
@@ -288,6 +292,17 @@ DESCRIPTEUR_B1 = {
     "competence": "ecrit",
     "contenu": "Peut écrire un texte articulé simplement sur des sujets familiers.",
 }
+DESCRIPTEUR_CARCL = {
+    "identifiant": "carcl:en:B1:exercice_qa:A1_QA_001",
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau": "B1",
+    "competence": "ecrit",
+    "contenu": (
+        "[Exercice pédagogique non officiel — carcl-experimental-2026.1 — "
+        "pas un descripteur officiel du CECRL] Write about your family."
+    ),
+}
 
 
 @pytest.fixture
@@ -323,6 +338,7 @@ def test_post_corrige_selon_la_phase_avec_descripteurs(client_http: TestClient) 
     corps = reponse.json()
     assert corps["agent"] == "correction"
     assert corps["version_agent"] == VERSION_AGENT_CORRECTION
+    assert corps["meta"]["version_corpus"] == "test"  # repère officiel : aucune étiquette expérimentale
     assert corps["version_prompt"] == "correction/reponse-libre@1.0.0"
     assert corps["resultat"]["phase"] == "PASSIVE"
     assert corps["resultat"]["erreurs"] == [ERREUR_GO]
@@ -399,3 +415,43 @@ def test_repli_synthetique_trace_sans_journaliser_la_reponse(
     )
     assert "Repli RAG synthetique pour la correction" in caplog.text
     assert REPONSE not in caplog.text
+
+
+def test_reperes_carcl_ne_sont_pas_declares_officiels_dans_la_correction(
+    client_http: TestClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    client_llm = brancher(ScenarioLLM(reponse=feedback()), recuperateur=RecuperateurFixe([DESCRIPTEUR_CARCL]))
+    with caplog.at_level("WARNING", logger="app.agents.correction"):
+        reponse = client_http.post("/correction/reponse-libre", json=requete())
+
+    assert reponse.status_code == 200
+    assert reponse.json()["meta"]["version_corpus"] == VERSION_CORPUS_EXPERIMENTAL
+    assert donnees_prompt(client_llm.appels[0])["descripteurs_rag"] == [DESCRIPTEUR_CARCL]
+    assert "Repères pédagogiques non officiels pour la correction" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "descripteurs",
+    [[DESCRIPTEUR_CARCL], [DESCRIPTEUR_B1, DESCRIPTEUR_CARCL]],
+    ids=["carcl-seul", "carcl-melange-officiel"],
+)
+def test_signalement_interne_de_la_correction_est_experimental(descripteurs: list[dict[str, object]]) -> None:
+    """Même avec un repère officiel, la présence d'un `carcl:` interdit la provenance `officiel`."""
+    apprenant = ContexteApprenant.model_validate(contexte())
+    execution = ContexteExecution(
+        request_id=UUID(REQUEST_ID),
+        contexte=apprenant,
+        outils=OutilsCommuns(
+            client_llm=FakeLLMClient([ScenarioLLM(reponse=feedback())], modele="modele-test"),
+            registre_prompts=RegistrePrompts(),
+            recuperateur_rag=RecuperateurFixe(descripteurs),
+            horloge=time.monotonic,
+        ),
+    )
+
+    asyncio.run(
+        CorrectionAgent._recuperer_descripteurs(EntreeCorrection.model_validate(EXERCICE), apprenant, execution)
+    )
+
+    assert execution.signalement.provenance == PROVENANCE_EXPERIMENTALE
+    assert execution.signalement.version_corpus_effective == VERSION_CORPUS_EXPERIMENTAL

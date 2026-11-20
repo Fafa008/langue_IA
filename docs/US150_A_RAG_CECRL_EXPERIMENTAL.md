@@ -92,9 +92,11 @@ RAG_CORPUS_VERIFIER_EMPREINTE=true
 ```
 
 La valeur `version_corpus` exposée dans `MetaExecution` est alors `carcl-experimental-2026.1` (25 caractères, limite
-32). L'agent Diagnostic positionne aussi sa provenance interne sur `experimentale` dès qu'un identifiant `carcl:`
-est utilisé, au lieu de le classer à tort comme officiel. Le frontend étiquette désormais les deux préfixes non
-officiels (`synthetique_fallback:` et `carcl:`) dans `PREFIXES_REPERES_NON_OFFICIELS`.
+32). Les agents Diagnostic **et** Correction positionnent leur provenance interne sur `experimentale` dès qu'un
+identifiant `carcl:` est utilisé, au lieu de le classer à tort comme officiel ; la détection est partagée dans
+`app/rag/base.py` (`est_descripteur_experimental`). Un mélange `carcl:` + descripteur officiel est classé
+`experimentale`. Le frontend étiquette désormais les deux préfixes non officiels (`synthetique_fallback:` et
+`carcl:`) dans `PREFIXES_REPERES_NON_OFFICIELS`.
 
 ## 5. Limites pédagogiques
 
@@ -117,7 +119,10 @@ Fichiers :
   corrompu, recherches `en/fr/de/it`, requête sans résultat, corpus absent, fabrique expérimentale, configuration
   officielle sans autorisation, repli synthétique préservé, correspondance des sources retournées.
 - `ia-service/tests/test_agent_diagnostic.py` : un repère `carcl:` fait passer `meta.version_corpus` à
-  `carcl-experimental-2026.1` sans être qualifié d'officiel.
+  `carcl-experimental-2026.1`, sans être qualifié d'officiel, avec avertissement explicite dans les journaux.
+- `ia-service/tests/test_correction.py` : la correction classe elle aussi un repère `carcl:` (seul ou mêlé à un
+  descripteur officiel) en provenance `experimentale`, propage la version et journalise l'avertissement ; un
+  descripteur officiel seul ne déclenche pas cette étiquette.
 - `ia-service/tests/test_rag_fabrique.py` et `test_rag_local.py` : garde-fous de configuration et non-régression du
   récupérateur officiel.
 - `frontend/src/lib/__tests__/resultatDiagnostic.test.ts` : détection des deux préfixes non officiels.
@@ -131,20 +136,24 @@ python -m ruff check .
 python -m ruff format --check .
 ```
 
-Résultats observés dans le worktree :
+Résultats observés en CI (run `44794585684`, six contrôles au vert) :
 
-- `pytest --cov=app --cov-fail-under=70` : **686 tests passés**, couverture totale **96,39 %** (seuil 70 % respecté) ;
-- `ruff check .` : **All checks passed** ; `ruff format --check .` : **95 fichiers déjà formatés** ;
-- `npm run check` : typecheck et lint OK (2 avertissements préexistants non liés à cette US), **380 tests Jest passés** ;
-- `npm run build` : build de production Next.js réussi (24 pages générées) ;
-- Playwright (desktop) : après installation du navigateur manquant, le test ciblé `e2e/login.spec.ts` donne
-  **9 tests passés / 1 échec** (`connecte l'utilisateur, enregistre le JWT et redirige` : la redirection vers
-  `/espace/apprenant` n'arrive pas dans les 5 s alors que le test voisin de redirection sans « Se souvenir de moi »
-  passe). Cet échec est reproductible et concerne une zone non modifiée par cette US ; il doit être confirmé en CI.
-  La suite E2E complète n'a pas pu être menée à terme dans cet environnement.
+- Service IA : **684 tests passés, 2 ignorés**, couverture totale **96,39 %** (seuil 70 % respecté), ruff OK ;
+- Backend : **347 tests passés**, couverture **96,44 %**, ruff OK ;
+- Frontend : typecheck et lint OK, **380 tests Jest passés**, build de production réussi (24 pages générées) ;
+- Playwright : **370 tests passés, 16 ignorés, 0 échec** (dont les 10 scénarios de `e2e/login.spec.ts` sur desktop et
+  mobile). Un échec local reproductible de `connecte l'utilisateur, enregistre le JWT et redirige` (redirection
+  absente après 5 s) a été reproduit à l'identique sur la base `2aceb33`, sans ce changement : il est indépendant
+  de cette US et n'a pas été masqué ;
+- Docker : images construites, healthchecks `db`/`redis`/`backend`/`frontend` et santé de l'IA via le backend OK,
+  seed idempotent (`0 ajouté(s)`), images de développement construites.
 
-Docker n'étant pas disponible dans l'environnement de préparation, les cibles `make` correspondantes restent à
-rejouer en CI ; les commandes Python et npm ci-dessus ont été lancées directement dans le worktree.
+Après la correction de provenance appliquée à l'agent Correction, la suite locale passe à **687 tests passés,
+2 ignorés**, couverture **96,39 %**, ruff OK. Les trois tests supplémentaires ne figurent pas dans le run CI cité
+ci-dessus : la PR a été fusionnée avant cette correction, qui reste à intégrer séparément dans `develop`.
+
+Les commandes Python et npm ont aussi été lancées directement dans le worktree de préparation ; Docker n'y était pas
+disponible et a donc été validé en CI.
 
 ## 7. Différences avec le corpus officiel
 

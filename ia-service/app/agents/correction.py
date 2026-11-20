@@ -27,10 +27,13 @@ from app.prompts.registre import VERSION_CORRECTION_REPONSE_LIBRE
 from app.prompts.variables import DescripteurRAGPrompt, VariablesCorrectionReponseLibre
 from app.rag.base import (
     DESCRIPTEURS_MAX,
+    PROVENANCE_EXPERIMENTALE,
     PROVENANCE_OFFICIELLE,
     PROVENANCE_SYNTHETIQUE,
     TEXTE_REQUETE_MAX,
+    VERSION_CORPUS_EXPERIMENTAL,
     RequeteRAG,
+    est_descripteur_experimental,
 )
 from app.rag.repli import est_descripteur_synthetique
 from app.schemas.contexte import ContexteApprenant
@@ -119,6 +122,17 @@ class CorrectionAgent:
             contexte.signalement.version_corpus_effective = PROVENANCE_SYNTHETIQUE
             logger.info(
                 "Repli RAG synthetique pour la correction (request_id=%s, agent=%s, code_langue=%s)",
+                contexte.request_id,
+                CODE_AGENT_CORRECTION,
+                apprenant.code_langue,
+            )
+        elif descripteurs and any(est_descripteur_experimental(d) for d in descripteurs.values()):
+            # Un repère CARCL est un exercice pédagogique : jamais une preuve de niveau officielle.
+            contexte.signalement.provenance = PROVENANCE_EXPERIMENTALE
+            contexte.signalement.version_corpus_effective = VERSION_CORPUS_EXPERIMENTAL
+            logger.warning(
+                "Repères pédagogiques non officiels pour la correction, jugement prudent attendu "
+                "(request_id=%s, agent=%s, code_langue=%s)",
                 contexte.request_id,
                 CODE_AGENT_CORRECTION,
                 apprenant.code_langue,

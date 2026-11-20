@@ -43,6 +43,11 @@ PREFIXE_IDENTIFIANT_EXPERIMENTAL = "carcl:"
 VERSION_CORPUS_EXPERIMENTAL = "carcl-experimental-2026.1"
 
 
+def est_descripteur_experimental(descripteur: DescripteurRAGPrompt) -> bool:
+    """Indiquer si un repère provient du corpus CARCL et non du référentiel officiel."""
+    return descripteur.identifiant.startswith(PREFIXE_IDENTIFIANT_EXPERIMENTAL)
+
+
 class RequeteRAG(ModeleStrict):
     """Recherche documentaire déterministe, filtrée par les facettes du diagnostic.
 

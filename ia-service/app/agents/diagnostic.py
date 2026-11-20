@@ -26,7 +26,6 @@ from app.prompts.variables import (
 )
 from app.rag.base import (
     DESCRIPTEURS_MAX,
-    PREFIXE_IDENTIFIANT_EXPERIMENTAL,
     PROVENANCE_EXPERIMENTALE,
     PROVENANCE_OFFICIELLE,
     PROVENANCE_SYNTHETIQUE,
@@ -34,6 +33,7 @@ from app.rag.base import (
     TEXTE_REQUETE_MAX,
     VERSION_CORPUS_EXPERIMENTAL,
     RequeteRAG,
+    est_descripteur_experimental,
 )
 from app.rag.repli import est_descripteur_synthetique
 from app.schemas.base import ModeleStrict
@@ -47,11 +47,6 @@ CODE_AGENT = "diagnostic"
 VERSION_AGENT = "1.0.0"
 BUDGET_MS = 45_000
 SEUIL_ECART_IMPORTANT = 2
-
-
-def est_descripteur_experimental(descripteur: DescripteurRAGPrompt) -> bool:
-    """Indiquer si un repère provient du corpus CARCL et non du référentiel officiel."""
-    return descripteur.identifiant.startswith(PREFIXE_IDENTIFIANT_EXPERIMENTAL)
 
 
 class EntreeDiagnostic(ModeleStrict):

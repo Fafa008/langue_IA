@@ -15,6 +15,7 @@ from app.rag.base import (
     VERSION_CORPUS_EXPERIMENTAL,
     RecuperateurRAG,
     RequeteRAG,
+    est_descripteur_experimental,
 )
 from app.rag.config import ConfigRAG
 from app.rag.corpus import COMPETENCES_CORPUS, CorpusCecrl, DescripteurCorpus, ManifesteCorpus
@@ -50,5 +51,6 @@ __all__ = [
     "charger_corpus_experimental",
     "construire_recuperateur",
     "descripteurs_repli",
+    "est_descripteur_experimental",
     "est_descripteur_synthetique",
 ]
