@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models import Exercice, Langue, Niveau, Parcours, ParcoursExercice, Role, TypeExercice, Utilisateur
+from app.models import Niveau, ParcoursExercice, Role, Utilisateur
 from app.models import TestDiagnostic as Diagnostic
 from app.schemas.ia import (
     ContexteApprenantIA,
@@ -26,14 +26,9 @@ from app.schemas.ia import (
 from app.services import correction_exercice
 from app.services.ia import ErreurServiceIA, corriger_reponse_libre
 from tests.conftest import creer_utilisateur, entete
+from tests.fabriques_parcours import CONTENU_REDACTION, creer_parcours
 
 REPONSE = "yesterday I go to the market with my sister and we buy apples"
-CONTENU_REDACTION = {
-    "format": "redaction",
-    "consigne": "Write a short message to a friend.",
-    "enonce": "Tell your friend what you did yesterday.",
-    "mots_minimum": 10,
-}
 ERREUR_GO = {"extrait": "I go", "correction": "I went", "explication": "« Yesterday » appelle le prétérit."}
 ERREUR_BUY = {"extrait": "we buy", "correction": "we bought", "explication": "Même temps du passé."}
 
@@ -92,34 +87,6 @@ def faux_ia(monkeypatch: pytest.MonkeyPatch) -> FauxServiceIA:
     faux = FauxServiceIA()
     monkeypatch.setattr(correction_exercice, "corriger_reponse_libre", faux)
     return faux
-
-
-def creer_parcours(
-    db: Session,
-    apprenant: Utilisateur,
-    *,
-    lecon_atteinte: int = 23,
-    numero_lecon: int = 23,
-    contenu: object = CONTENU_REDACTION,
-    langue: str = "en",
-) -> tuple[int, int]:
-    """Un parcours de l'apprenant avec un exercice ; retourne ``(id_parcours, id_parcours_exercice)``."""
-    langue_ = db.scalar(select(Langue).where(Langue.code == langue))
-    niveau = db.scalar(select(Niveau).where(Niveau.code == "B1"))
-    assert langue_ is not None and niveau is not None
-    test = Diagnostic(apprenant=apprenant.apprenant, langue=langue_, niveau=niveau)
-    parcours = Parcours(test_diagnostic=test, langue=langue_, niveau_vise=niveau, lecon_atteinte=lecon_atteinte)
-    exercice = Exercice(
-        type=TypeExercice.GRAMMAIRE,
-        contenu=contenu if isinstance(contenu, str) else json.dumps(contenu),
-        difficulte=2,
-        langue=langue_,
-        niveau=niveau,
-    )
-    ligne = ParcoursExercice(parcours=parcours, exercice=exercice, numero_lecon=numero_lecon)
-    db.add_all([test, parcours, exercice, ligne])
-    db.commit()
-    return parcours.id_parcours, ligne.id_parcours_exercice
 
 
 @pytest.fixture
@@ -229,7 +196,6 @@ def test_acces_refuse_hors_de_son_parcours(client, db, apprenant, faux_ia) -> No
         ({"contenu": "pas du JSON"}, {}, 409),
         ({"contenu": {"format": "redaction", "consigne": "Écrivez."}}, {}, 409),
         ({}, {"format": "choix"}, 422),
-        ({"contenu": {"format": "choix", "consigne": "c", "enonce": "e", "choix": ["a"]}}, {"format": "choix"}, 501),
         ({}, {"reponse": "   "}, 422),
         ({}, {"reponse": "x", "note": 20}, 422),
     ],
@@ -238,7 +204,6 @@ def test_acces_refuse_hors_de_son_parcours(client, db, apprenant, faux_ia) -> No
         "contenu-illisible",
         "enonce-manquant",
         "format-different",
-        "qcm-us43-be",
         "reponse-vide",
         "champ-inconnu",
     ],

@@ -25,7 +25,8 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    // Les tests interceptent eux-mêmes les appels HTTP : pas de données simulées côté app
-    env: { NEXT_PUBLIC_API_MOCK: "false", NEXT_DIST_DIR: ".next-e2e" },
+    // Les tests interceptent eux-mêmes les appels HTTP : pas de données simulées côté app.
+    // NEXT_PUBLIC_PARCOURS_MOCK est forcé aussi : un frontend/.env.local local peut le mettre à true.
+    env: { NEXT_PUBLIC_API_MOCK: "false", NEXT_PUBLIC_PARCOURS_MOCK: "false", NEXT_DIST_DIR: ".next-e2e" },
   },
 });

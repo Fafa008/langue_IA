@@ -1,7 +1,9 @@
-"""Routes du parcours personnalisé (rôle APPRENANT) : correction d'une réponse libre par l'IA (US157-BE).
+"""Routes du parcours personnalisé (rôle APPRENANT) : lecture du parcours et correction (US41 à US44).
 
-Les autres routes du contrat (``GET /parcours/en-cours``, exercices, leçon) et la correction déterministe
-(US43-BE) restent à créer : voir docs/api/contrat-frontend.md, section « Parcours personnalisé ».
+Lecture : ``GET /parcours/en-cours``, ``GET /parcours/{id}/exercices``, ``GET /parcours/{id}/lecons/{n}``
+(logique dans ``services/lecture_parcours.py``). Correction : ``POST .../reponse``, réponses courtes sans IA
+(US43-BE, ``services/correction_automatique.py``) et réponse libre par l'IA (US157-BE). Voir
+docs/api/contrat-frontend.md.
 """
 
 from typing import Annotated
@@ -9,9 +11,24 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Path, status
 
 from app.api.deps import DbSession, UtilisateurConnecte
-from app.models import Role
-from app.schemas.parcours import CorrectionExerciceOut, ReponseExerciceIn
+from app.models import Role, Utilisateur
+from app.schemas.parcours import (
+    CorrectionExerciceOut,
+    ExerciceParcoursOut,
+    LeconParcoursOut,
+    ParcoursEnCoursOut,
+    ReponseExerciceIn,
+)
 from app.services.correction_exercice import CodeErreurCorrection, ErreurCorrection, corriger_exercice
+from app.services.lecture_parcours import (
+    LeconNonAtteinte,
+    exercices_du_parcours,
+    lecon_du_parcours,
+    parcours_en_cours,
+    progressions_du_parcours,
+    vers_parcours_en_cours,
+)
+from app.services.parcours import parcours_de_apprenant
 
 router = APIRouter(prefix="/parcours", tags=["parcours"])
 
@@ -29,10 +46,6 @@ _ERREURS_HTTP = {
     CodeErreurCorrection.FORMAT_DIFFERENT: (
         status.HTTP_422_UNPROCESSABLE_ENTITY,
         "Le format de la réponse ne correspond pas à celui de l'exercice.",
-    ),
-    CodeErreurCorrection.CORRECTION_AUTOMATIQUE_ABSENTE: (
-        status.HTTP_501_NOT_IMPLEMENTED,
-        "La correction automatique de ce format d'exercice n'est pas encore disponible.",
     ),
     CodeErreurCorrection.IA_NON_DISPONIBLE_POUR_LANGUE: (
         status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -53,6 +66,53 @@ _ERREURS_HTTP = {
 }
 
 
+def _exiger_apprenant(utilisateur: Utilisateur) -> None:
+    if utilisateur.role != Role.APPRENANT:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Seul un apprenant peut consulter ou faire son parcours.")
+
+
+@router.get("/en-cours", response_model=ParcoursEnCoursOut)
+def lire_parcours_en_cours(db: DbSession, utilisateur: UtilisateurConnecte) -> ParcoursEnCoursOut:
+    """Le parcours en cours de l'apprenant connecté ; 404 s'il n'a pas encore de parcours."""
+    _exiger_apprenant(utilisateur)
+    parcours = parcours_en_cours(db, utilisateur.id_user)
+    if parcours is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Aucun parcours en cours. Passez le test de positionnement.")
+    return vers_parcours_en_cours(parcours, progressions_du_parcours(db, parcours))
+
+
+@router.get("/{id_parcours}/exercices", response_model=list[ExerciceParcoursOut])
+def lire_exercices(
+    id_parcours: Annotated[int, Path(gt=0)], db: DbSession, utilisateur: UtilisateurConnecte
+) -> list[ExerciceParcoursOut]:
+    """Les exercices des leçons atteintes du parcours, avec leur statut."""
+    _exiger_apprenant(utilisateur)
+    parcours = parcours_de_apprenant(db, utilisateur.id_user, id_parcours)
+    if parcours is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Parcours introuvable.")
+    return exercices_du_parcours(db, parcours)
+
+
+@router.get("/{id_parcours}/lecons/{numero_lecon}", response_model=LeconParcoursOut)
+def lire_lecon(
+    id_parcours: Annotated[int, Path(gt=0)],
+    numero_lecon: Annotated[int, Path(gt=0)],
+    db: DbSession,
+    utilisateur: UtilisateurConnecte,
+) -> LeconParcoursOut:
+    """Une leçon atteinte et le contenu visible de ses exercices (sans la bonne réponse)."""
+    _exiger_apprenant(utilisateur)
+    parcours = parcours_de_apprenant(db, utilisateur.id_user, id_parcours)
+    if parcours is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Parcours introuvable.")
+    try:
+        return lecon_du_parcours(db, parcours, numero_lecon)
+    except LeconNonAtteinte:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Cette leçon n'est pas encore accessible : vous ne l'avez pas encore atteinte."
+        ) from None
+
+
 @router.post("/{id_parcours}/exercices/{id_parcours_exercice}/reponse", response_model=CorrectionExerciceOut)
 def corriger_reponse(
     id_parcours: Annotated[int, Path(gt=0)],
@@ -61,9 +121,8 @@ def corriger_reponse(
     db: DbSession,
     utilisateur: UtilisateurConnecte,
 ) -> CorrectionExerciceOut:
-    """Corriger la réponse à un exercice du parcours ; seule la rédaction (réponse libre) est prise en charge."""
-    if utilisateur.role != Role.APPRENANT:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Seul un apprenant peut répondre à un exercice de son parcours.")
+    """Corriger la réponse à un exercice du parcours : sans IA pour les réponses courtes, par l'IA pour la rédaction."""
+    _exiger_apprenant(utilisateur)
     id_user = utilisateur.id_user
     # Libérer la connexion PostgreSQL avant l'appel HTTP : le service IA peut prendre plusieurs dizaines de secondes.
     db.close()
