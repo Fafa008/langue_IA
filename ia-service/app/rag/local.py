@@ -9,72 +9,30 @@ Deux garanties rendent le résultat reproductible :
 - l'ordre de tri est total : score, compétence demandée, numéro de source, identifiant ;
 - une requête sans terme exploitable retourne une séquence vide — le prompt applique alors sa règle de prudence —
   plutôt qu'une sélection arbitraire de descripteurs.
+
+Le noyau BM25 est partagé avec le récupérateur expérimental via :mod:`app.rag.lexical` ; seul le chargement du
+corpus officiel et la projection vers le prompt restent propres à ce module.
 """
 
 from __future__ import annotations
 
-import math
-import re
-import unicodedata
-from collections import Counter
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable, Sequence
 
 from app.prompts.variables import DescripteurRAGPrompt
 from app.rag.base import RequeteRAG
 from app.rag.corpus import CorpusCecrl, DescripteurCorpus
-
-# Paramètres BM25 usuels : saturation modérée de la fréquence et normalisation par la longueur du document.
-K1 = 1.5
-B = 0.75
-LONGUEUR_JETON_MIN = 2
-
-_MOTIF_JETON = re.compile(r"[0-9a-z']+")
-_MOTS_VIDES = frozenset(
-    "a an and are as at be been being but by can do does for from had has have he her his i if in into is it its "
-    "me my no not of on one or our she so than that the their them then there these they this to up was we were "
-    "what when which who will with you your au aux avec ce ces comme dans de des du elle en est et eux il ils je "
-    "la le les leur lui ma mais mes mon ne nos notre nous on ou par pas pour que qui sa se ses son sur ta te tes "
-    "toi ton tu un une vos votre vous y".split()
+from app.rag.lexical import (
+    DocumentLexical,
+    StatistiquesLexicales,
+    calculer_scores,
+    construire_index,
+    jetons,  # ré-exporté : les tests historiques l'importent depuis ce module
 )
 
 # Lorsqu'un descripteur lexical est retenu, il est étiqueté avec la compétence de la requête : le contrat
 # ``Competence`` ne possède pas de valeur ``lexique``. L'ordre reprend la règle existante du domaine
 # (``COMPETENCES_DESCRIPTEUR_PAR_DOMAINE["vocabulaire"]``).
 _ORDRES_VOCABULAIRE: tuple[str, ...] = ("lecture", "ecrit", "oral")
-
-
-def jetons(texte: str) -> tuple[str, ...]:
-    """Découper un texte en jetons minuscules, sans accents ni mots vides.
-
-    L'analyse sans accents rapproche « compréhension » de « comprehension » et rend le classement stable entre un
-    corpus anglais et un corpus français.
-    """
-    decompose = unicodedata.normalize("NFKD", texte.lower())
-    sans_accents = "".join(caractere for caractere in decompose if not unicodedata.combining(caractere))
-    return tuple(
-        jeton
-        for jeton in _MOTIF_JETON.findall(sans_accents)
-        if len(jeton) >= LONGUEUR_JETON_MIN and jeton not in _MOTS_VIDES
-    )
-
-
-@dataclass(frozen=True, slots=True)
-class _Document:
-    """Descripteur indexé et ses statistiques lexicales précalculées."""
-
-    descripteur: DescripteurCorpus
-    frequences: Mapping[str, int]
-    longueur: int
-
-
-@dataclass(frozen=True, slots=True)
-class _Statistiques:
-    """Statistiques d'une langue : documents, fréquence documentaire et longueur moyenne."""
-
-    documents: tuple[_Document, ...]
-    frequence_documentaire: Mapping[str, int]
-    longueur_moyenne: float
 
 
 class RecuperateurLocal:
@@ -88,27 +46,17 @@ class RecuperateurLocal:
         self._statistiques = self._indexer(corpus.descripteurs)
 
     @staticmethod
-    def _indexer(descripteurs: Iterable[DescripteurCorpus]) -> dict[str, _Statistiques]:
+    def _indexer(
+        descripteurs: Iterable[DescripteurCorpus],
+    ) -> dict[str, StatistiquesLexicales[DescripteurCorpus]]:
         """Précalculer un index par langue : le filtrage par langue est le seul axe global de la requête."""
-        par_langue: dict[str, list[_Document]] = {}
-        for descripteur in descripteurs:
-            texte = f"{descripteur.echelle} {descripteur.contenu}"
-            frequences = Counter(jetons(texte))
-            document = _Document(descripteur=descripteur, frequences=frequences, longueur=sum(frequences.values()))
-            par_langue.setdefault(descripteur.code_langue, []).append(document)
-
-        statistiques: dict[str, _Statistiques] = {}
-        for langue, documents in par_langue.items():
-            frequence_documentaire = Counter[str]()
-            for document in documents:
-                frequence_documentaire.update(document.frequences.keys())
-            longueur_moyenne = sum(document.longueur for document in documents) / len(documents)
-            statistiques[langue] = _Statistiques(
-                documents=tuple(documents),
-                frequence_documentaire=frequence_documentaire,
-                longueur_moyenne=longueur_moyenne or 1.0,
-            )
-        return statistiques
+        return construire_index(
+            (
+                (descripteur.code_langue, f"{descripteur.echelle} {descripteur.contenu}", descripteur)
+                for descripteur in descripteurs
+            ),
+            identifiant=lambda descripteur: descripteur.identifiant,
+        )
 
     async def rechercher(self, requete: RequeteRAG) -> tuple[DescripteurRAGPrompt, ...]:
         """Retourner au plus ``requete.limite`` descripteurs, du plus pertinent au moins pertinent."""
@@ -124,17 +72,17 @@ class RecuperateurLocal:
         if not candidats:
             return ()
 
-        scores = self._scores(candidats, termes, statistiques)
+        scores = calculer_scores(candidats, termes, statistiques)
         retenus = sorted(
             (couple for couple in scores if couple[0] > 0),
             key=lambda couple: (
                 -couple[0],
-                self._ordre(couple[1].descripteur),
-                couple[1].descripteur.source_no,
-                couple[1].descripteur.identifiant,
+                self._ordre(couple[1].objet),
+                couple[1].objet.source_no,
+                couple[1].identifiant,
             ),
         )[: requete.limite]
-        return tuple(self._vers_prompt(document.descripteur, requete.competences) for _, document in retenus)
+        return tuple(self._vers_prompt(document.objet, requete.competences) for _, document in retenus)
 
     @staticmethod
     def _ordre(descripteur: DescripteurCorpus) -> str:
@@ -142,37 +90,18 @@ class RecuperateurLocal:
         return "zzz" if descripteur.competence == "lexique" else descripteur.competence
 
     @staticmethod
-    def _candidats(documents: Sequence[_Document], requete: RequeteRAG) -> tuple[_Document, ...]:
+    def _candidats(
+        documents: Sequence[DocumentLexical[DescripteurCorpus]],
+        requete: RequeteRAG,
+    ) -> tuple[DocumentLexical[DescripteurCorpus], ...]:
         """Filtrer par niveau et par compétence demandée, les échelles lexicales restant transverses."""
         demandees = set(requete.competences)
         return tuple(
             document
             for document in documents
-            if document.descripteur.niveau == requete.niveau
-            and (document.descripteur.competence in demandees or document.descripteur.competence == "lexique")
+            if document.objet.niveau == requete.niveau
+            and (document.objet.competence in demandees or document.objet.competence == "lexique")
         )
-
-    @staticmethod
-    def _scores(
-        candidats: Sequence[_Document],
-        termes: Sequence[str],
-        statistiques: _Statistiques,
-    ) -> list[tuple[float, _Document]]:
-        """Calculer le score BM25 de chaque candidat."""
-        nombre_documents = len(statistiques.documents)
-        scores: list[tuple[float, _Document]] = []
-        for document in candidats:
-            score = 0.0
-            for terme in set(termes):
-                frequence = document.frequences.get(terme, 0)
-                if frequence == 0:
-                    continue
-                documentaire = statistiques.frequence_documentaire.get(terme, 0)
-                idf = math.log(1 + (nombre_documents - documentaire + 0.5) / (documentaire + 0.5))
-                denominateur = frequence + K1 * (1 - B + B * document.longueur / statistiques.longueur_moyenne)
-                score += idf * frequence * (K1 + 1) / denominateur
-            scores.append((score, document))
-        return scores
 
     @staticmethod
     def _vers_prompt(

@@ -26,10 +26,13 @@ from app.prompts.variables import (
 )
 from app.rag.base import (
     DESCRIPTEURS_MAX,
+    PREFIXE_IDENTIFIANT_EXPERIMENTAL,
+    PROVENANCE_EXPERIMENTALE,
     PROVENANCE_OFFICIELLE,
     PROVENANCE_SYNTHETIQUE,
     STATUT_A_VERIFIER,
     TEXTE_REQUETE_MAX,
+    VERSION_CORPUS_EXPERIMENTAL,
     RequeteRAG,
 )
 from app.rag.repli import est_descripteur_synthetique
@@ -44,6 +47,11 @@ CODE_AGENT = "diagnostic"
 VERSION_AGENT = "1.0.0"
 BUDGET_MS = 45_000
 SEUIL_ECART_IMPORTANT = 2
+
+
+def est_descripteur_experimental(descripteur: DescripteurRAGPrompt) -> bool:
+    """Indiquer si un repère provient du corpus CARCL et non du référentiel officiel."""
+    return descripteur.identifiant.startswith(PREFIXE_IDENTIFIANT_EXPERIMENTAL)
 
 
 class EntreeDiagnostic(ModeleStrict):
@@ -138,6 +146,18 @@ class DiagnosticAgent:
             contexte.signalement.version_corpus_effective = PROVENANCE_SYNTHETIQUE
             logger.warning(
                 "Repli RAG synthetique utilise, estimation prudente attendue "
+                "(request_id=%s, agent=%s, code_langue=%s)",
+                contexte.request_id,
+                CODE_AGENT,
+                apprenant.code_langue,
+            )
+        elif descripteurs and any(est_descripteur_experimental(descripteur) for descripteur in descripteurs):
+            # Un repère CARCL reste un exercice pédagogique : le signaler comme officiel ferait d'un outil de
+            # démonstration une preuve de niveau. La version courte est bornée à 32 caractères par MetaExecution.
+            contexte.signalement.provenance = PROVENANCE_EXPERIMENTALE
+            contexte.signalement.version_corpus_effective = VERSION_CORPUS_EXPERIMENTAL
+            logger.warning(
+                "Repères pédagogiques non officiels utilisés, estimation prudente attendue "
                 "(request_id=%s, agent=%s, code_langue=%s)",
                 contexte.request_id,
                 CODE_AGENT,

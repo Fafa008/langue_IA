@@ -1,0 +1,153 @@
+{
+  "type": "exercices_pedagogiques_non_officiels",
+  "version": "carcl-experimental-2026.1",
+  "genere_le": "2026-11-20",
+  "description": "Exercices pédagogiques originaux alignés sur le CECRL, non officiels. Aucun PDF officiel, aucune licence et aucun auteur déclaré.",
+  "licence": null,
+  "auteur": null,
+  "non_officiel": true,
+  "fichiers": [
+    {
+      "chemin": "anglais/english_a1_dataset_200_QA_200_MCQ.json",
+      "octets": 232171,
+      "sha256": "e2f80518f1ba4221072a3829f7ef6665c8035c5b25c6c8452d8539bc6c8abc7d"
+    },
+    {
+      "chemin": "anglais/english_a2_dataset_200_QA_200_MCQ.json",
+      "octets": 241711,
+      "sha256": "f0438fd3e53e3617375ae5f709ac832411bb4f0902de4e8f21f7171b69b45c5e"
+    },
+    {
+      "chemin": "anglais/english_b1_dataset_200_QA_200_MCQ.json",
+      "octets": 254691,
+      "sha256": "bcba2d0b1e789e0c105c05dd7bd01cf0c0d6c34bad78286e31d428b053b815fc"
+    },
+    {
+      "chemin": "anglais/english_b2_dataset_200_QA_200_MCQ.json",
+      "octets": 268731,
+      "sha256": "8648707c1e3d5ed81ae4ee6b624e60b23eb52fd08df3059ec63ccb66af442b44"
+    },
+    {
+      "chemin": "anglais/english_c1_dataset_200_QA_200_MCQ.json",
+      "octets": 279721,
+      "sha256": "2ca49c67f4f07408460e4132975d103daa8fec8898431be4c66ad0b3f546e21c"
+    },
+    {
+      "chemin": "anglais/english_c2_dataset_200_QA_200_MCQ.json",
+      "octets": 303441,
+      "sha256": "55e41bd254f76b92c38c44829f8a7f72611c99a103b7c1d67dc88cad9e4b9294"
+    },
+    {
+      "chemin": "Deutsch/german_a1_dataset_200_QA_200_MCQ.json",
+      "octets": 230143,
+      "sha256": "11ed2d259687a8edcd3dde0feb30fec71b130a38f62ee6f3f6e8c1746d2adb97"
+    },
+    {
+      "chemin": "Deutsch/german_a2_dataset_200_QA_200_MCQ.json",
+      "octets": 237273,
+      "sha256": "dd13522f77149075f41643aaee0b953cc84298c167f9f21b54572b4c587610d8"
+    },
+    {
+      "chemin": "Deutsch/german_b1_dataset_200_QA_200_MCQ.json",
+      "octets": 253043,
+      "sha256": "f090a550460de722bc09605ef2a517f9c0822739ea85a66e1a636d7d32dcc206"
+    },
+    {
+      "chemin": "Deutsch/german_b2_dataset_200_QA_200_MCQ.json",
+      "octets": 266222,
+      "sha256": "6dce5c405eb2a14883a577476abb7327cba72bafdfaa565fa35cc024a652eb51"
+    },
+    {
+      "chemin": "Deutsch/german_c1_dataset_200_QA_200_MCQ.json",
+      "octets": 304348,
+      "sha256": "909a087019733a53c5fe5477c5be1810b78700b32edf050c882e672490d77ded"
+    },
+    {
+      "chemin": "Deutsch/german_c2_dataset_200_QA_200_MCQ.json",
+      "octets": 337943,
+      "sha256": "0237a52776be0a1cc7feedb7d40c6daf5c7e7f8abad842387b326f85b9dab274"
+    },
+    {
+      "chemin": "français/french_a1_dataset_200_QA_200_MCQ.json",
+      "octets": 210069,
+      "sha256": "f4f75afaffb2326f9714e21c5f473146abf57d1dfebdf9ca6b7f9ea7436d8022"
+    },
+    {
+      "chemin": "français/french_a2_dataset_200_QA_200_MCQ.json",
+      "octets": 214029,
+      "sha256": "739ec081e26a60754df7c954b12d1b6a3fae2eb18cdd64056ee957f0c1fbfbba"
+    },
+    {
+      "chemin": "français/french_b1_dataset_200_QA_200_MCQ.json",
+      "octets": 222889,
+      "sha256": "4dd8851beb7ccac19706c5f6b10f745c2bed8582e5518b50e89c399ff48a300d"
+    },
+    {
+      "chemin": "français/french_b2_dataset_200_QA_200_MCQ.json",
+      "octets": 231109,
+      "sha256": "df14cc7f2611a52254a4c694ffe97ffb7dbf4e2e930d9ab569266f1ef38c4ad8"
+    },
+    {
+      "chemin": "français/french_c1_dataset_200_QA_200_MCQ.json",
+      "octets": 240809,
+      "sha256": "cd903e9b11eb8ed658969fc5345b041365a134fe550115611831a50288cfe8a8"
+    },
+    {
+      "chemin": "français/french_c2_dataset_200_QA_200_MCQ.json",
+      "octets": 263669,
+      "sha256": "779fd46f46d4e8ebedc39c9110bd66262a05005e9a7b65ed536f4575553f4c91"
+    },
+    {
+      "chemin": "italian/italian_a1_dataset_200_QA_200_MCQ.json",
+      "octets": 243269,
+      "sha256": "2db61ae22b183f13d11434070c2b2b97920a64bdb2a7a941cebaea654de91328"
+    },
+    {
+      "chemin": "italian/italian_a2_dataset_200_QA_200_MCQ.json",
+      "octets": 252129,
+      "sha256": "a528e240362ccfd31f7bdc386b8748c7bf9646227b601e5d6bacd5c8c03e84bd"
+    },
+    {
+      "chemin": "italian/italian_b1_dataset_200_QA_200_MCQ.json",
+      "octets": 260889,
+      "sha256": "91ad160f1179a9aecff92d524bfaf1859e2aaf2e58f55c6c22cde354d066c1db"
+    },
+    {
+      "chemin": "italian/italian_b2_dataset_200_QA_200_MCQ.json",
+      "octets": 268509,
+      "sha256": "b4c141518c6c4411a918381f2cc723dcceb90c8e2740888b5f1e16acc06aec87"
+    },
+    {
+      "chemin": "italian/italian_c1_dataset_200_QA_200_MCQ.json",
+      "octets": 278239,
+      "sha256": "5846c1f10920a3fa21724b562124154bfef0609377cdf4768059a89f78fd152b"
+    },
+    {
+      "chemin": "italian/italian_c2_dataset_200_QA_200_MCQ.json",
+      "octets": 309439,
+      "sha256": "2160e80bfc8fa9ab947286c2b75477d0328e83105b4829461c51b0d4f849515e"
+    }
+  ],
+  "comptages": {
+    "total": 8640,
+    "par_langue": {
+      "de": 1530,
+      "en": 2400,
+      "fr": 2400,
+      "it": 2310
+    },
+    "par_niveau": {
+      "A1": 1455,
+      "A2": 1445,
+      "B1": 1445,
+      "B2": 1425,
+      "C1": 1415,
+      "C2": 1455
+    },
+    "par_nature": {
+      "exercice_qa": 4710,
+      "exercice_qcm": 3930
+    }
+  },
+  "empreinte_corpus_sha256": "a3de888dbf534d6ad34a01188519130fd74fc26dbdf37eb32596c5072115a396"
+}
