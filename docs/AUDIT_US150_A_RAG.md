@@ -31,6 +31,18 @@ Ce qui fonctionne réellement (preuves exécutées ; §8) : chargement d'un corp
 
 Ce qui ne fonctionne pas : récupération de descripteurs officiels CECRL, récupération HSK, recherche sémantique, fusion hybride, citation de sources par descripteur, visibilité de l'état du corpus dans `/health`, rechargement d'index.
 
+> **Vérification complémentaire sur le checkout principal (20/11/2026)** — le worktree d'audit, issu de `origin/develop`, ne contient que 29 fichiers de corpus, mais le checkout principal de travail en contient **522 localement** : `ia-service/corpus/HSK/` (10 PDF + 479 MP3, ≈ 1,09 Go, niveaux `1`, `2`, `3`, `4A`, `4B`) et `ia-service/corpus/CECRL/` (4 PDF + 28 JSON). Ces fichiers de sources sont **ignorés par Git** (`git status --ignored -- ia-service/corpus`), donc absents du worktree, du dépôt et de l'image Docker. Le verdict reste inchangé, vérification faite sur le checkout principal :
+>
+> ```text
+> RAG_CORPUS_ACTIF (Compose effectif) = "false" ; RAG_CORPUS_CHEMIN = /app/corpus/cecrl
+> CorpusCecrl.charger(corpus/CECRL) → ErreurCorpusIndisponible : descripteurs.jsonl illisible
+> construire_recuperateur(CECRL)    → RecuperateurVide (nom='aucun', version_corpus=None)
+> construire_recuperateur(HSK)      → RecuperateurVide (même journal d'erreur)
+> Get-ChildItem ia-service -Filter *.jsonl → seulement les 2 JSONL de prompts (aucun segments.jsonl / audio_index.jsonl)
+> ```
+>
+> Autrement dit : les **sources brutes HSK existent sur la machine**, mais aucun artefact normalisé n'en a été dérivé et aucun chargeur ne sait les lire ; « absence de corpus HSK » dans les sections suivantes signifie « absence dans le worktree audité et dans ce que le service peut charger », pas « absence physique sur le poste ».
+
 ---
 
 ## 2. Inventaire des composants existants
@@ -114,7 +126,7 @@ Ils ne sont pas exploitables tels quels pour le diagnostic : schémas incompatib
 
 ## 4. État du corpus HSK
 
-**Aucune donnée HSK n'est présente dans le worktree.** Vérifications exécutées :
+**Aucune donnée HSK n'est présente dans le worktree audité** (voir la vérification complémentaire en §1 pour les 489 fichiers sources ignorés du checkout principal). Vérifications exécutées sur le worktree :
 
 ```text
 Test-Path ia-service/corpus/HSK                         → False
