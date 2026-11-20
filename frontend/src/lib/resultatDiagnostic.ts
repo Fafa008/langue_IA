@@ -55,14 +55,19 @@ export function pointsFaiblesDe(resultat: ResultatTest): PointFaible[] | null {
 }
 
 /**
- * Préfixe des identifiants de repères du repli synthétique (ia-service, app/rag/base.py : PREFIXE_IDENTIFIANT_SYNTHETIQUE).
- * Un repère qui commence par ce préfixe n'est pas extrait d'un référentiel officiel : l'écran le dit (décision D2).
+ * Préfixes des identifiants de repères non officiels définis par le service IA (app/rag/base.py) :
+ * - `synthetique_fallback:` : repli synthétique US150-B ;
+ * - `carcl:` : exercices pédagogiques du corpus expérimental CARCL (US150-A).
+ *
+ * Un repère qui commence par l'un de ces préfixes n'est pas extrait d'un référentiel officiel : l'écran le dit
+ * (décision D2). `PREFIXE_REPERE_NON_OFFICIEL` reste exporté pour les usages historiques.
  */
-export const PREFIXE_REPERE_NON_OFFICIEL = "synthetique_fallback:";
+export const PREFIXES_REPERES_NON_OFFICIELS = ["synthetique_fallback:", "carcl:"] as const;
+export const PREFIXE_REPERE_NON_OFFICIEL = PREFIXES_REPERES_NON_OFFICIELS[0];
 
-/** Vrai pour un repère du repli synthétique, à étiqueter « repères non officiels ». */
+/** Vrai pour un repère non officiel (repli synthétique ou corpus expérimental), à étiqueter comme tel. */
 export function estRepereNonOfficiel(source: { id: string }): boolean {
-  return source.id.startsWith(PREFIXE_REPERE_NON_OFFICIEL);
+  return PREFIXES_REPERES_NON_OFFICIELS.some((prefixe) => source.id.startsWith(prefixe));
 }
 
 /**

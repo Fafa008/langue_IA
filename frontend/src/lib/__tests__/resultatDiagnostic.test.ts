@@ -60,8 +60,9 @@ describe("résultat du diagnostic", () => {
 });
 
 describe("FE-D2 — détection des repères non officiels", () => {
-  it("reconnaît le préfixe du repli synthétique, pas les identifiants officiels", () => {
+  it("reconnaît les préfixes non officiels, pas les identifiants officiels", () => {
     expect(estRepereNonOfficiel({ id: "synthetique_fallback:en-a1-ecrit" })).toBe(true);
+    expect(estRepereNonOfficiel({ id: "carcl:en:A1:exercice_qa:A1_QA_001" })).toBe(true);
     expect(estRepereNonOfficiel({ id: "cecrl-a1-ecrit-12" })).toBe(false);
   });
 });

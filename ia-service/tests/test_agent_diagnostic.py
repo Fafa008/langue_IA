@@ -23,7 +23,7 @@ from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm.adaptateurs.factice import FakeLLMClient, ScenarioLLM
 from app.prompts import RegistrePrompts
-from app.rag import RecuperateurVide, RequeteRAG
+from app.rag import VERSION_CORPUS_EXPERIMENTAL, RecuperateurVide, RequeteRAG
 from app.schemas.commun import CodeErreur, ReponseAgent, ReponseErreur, RequeteAgent
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.diagnostic import PhaseAssimil, ResultatDiagnostic
@@ -314,6 +314,31 @@ def test_preserve_les_descripteurs_reels_sans_fausse_provenance() -> None:
     ]
     assert not any(descripteur["identifiant"].startswith("synthetique_fallback:") for descripteur in descripteurs)
     assert resultat.meta.version_corpus == "2026.11"
+
+
+def test_reperes_carcl_sont_etiquettes_comme_non_officiels() -> None:
+    descripteurs = [
+        {
+            "identifiant": "carcl:en:B1:exercice_qa:A1_QA_001",
+            "code_langue": "en",
+            "referentiel": "CECRL",
+            "niveau": "B1",
+            "competence": "ecrit",
+            "contenu": (
+                "[Exercice pédagogique non officiel — carcl-experimental-2026.1 — "
+                "pas un descripteur officiel du CECRL] Write about your family."
+            ),
+        }
+    ]
+    harness, client, _, _ = preparer(descripteurs=descripteurs)
+
+    resultat = executer(harness, requete())
+
+    assert isinstance(resultat, ReponseAgent)
+    assert resultat.meta.version_corpus == VERSION_CORPUS_EXPERIMENTAL
+    rendus = corps_prompt(client)["descripteurs_rag"]
+    assert [rendu["identifiant"] for rendu in rendus] == ["carcl:en:B1:exercice_qa:A1_QA_001"]
+    assert all("non officiel" in rendu["contenu"] for rendu in rendus)
 
 
 def test_repli_si_rag_desactive() -> None:
