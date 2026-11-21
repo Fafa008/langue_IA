@@ -20,24 +20,24 @@ Aucune tâche ClickUp n'a été modifiée. Les identifiants, noms exacts, statut
 | P1-1 | — | — | fait localement (`8a04142`) | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : jeton interne et fermeture du port` |
 | P1-2 | — | — | fait localement (`60eb7e2`) | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : quota par apprenant` |
 | P1-3 | `123t3hw0f45` | `[Sprint 5] PRE-S5-01 – Validation de l'expert IA des prompts du chat et du mode thème` | consigne provisoire, validation à venir | Fafa | `feature/US67-api-chatbot` | `[US-67] API chatbot : validation des prompts` |
-| P1-4 | `123t3hw0f49` | `[Sprint 5] PRE-S5-05 – Confirmer que la route du jeu de rôle (US67) est appelable depuis le sprint 4` | to do | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : appel confirmé` |
-| P1-5 | `123t3hw0f50` | `[Sprint 5] DEV-ENV – Environnement de recette du chat` | to do | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : environnement de recette` |
-| P2-1 / P2-2 | `123t3hw0f4p` | `[Sprint 5] US74-IA – Prompt de correction et schéma du bloc corrections[] (revue de l'expert IA)` | to do | Fafa | `feature/US74-corrections` | `[US-74] Corrections en marge : consigne et schéma` |
-| P2-3 | — | — | À créer | Expert IA | `feature/US74-corrections` | `[US-74] Corrections en marge : réponse de démonstration` |
-| P2-4 | `123t3hw0f38` | `[Sprint 4] US67-QA – Test de fumée de la route chatbot` | to do | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : tests de l'agent` |
-| P3-1 | `123t3hw0f37` | `[Sprint 4] US67-BE – Route /chatbot/message, validation et timeout` | to do | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : route backend` |
-| P3-2 | `123t3hw0f4q` | `[Sprint 5] US74-BE – Relais entre le chat et le Service IA, validation du bloc corrections[]` | to do | — | `feature/US74-corrections` | `[US-74] Corrections en marge : relais backend` |
-| P3-3 | — | — | À créer | Backend | `feature/US72-interface-chat` | `[US-72] Interface de chat : historique de session` |
-| P3-4 | — | — | À créer | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : contrôle du quota` |
+| P1-4 | `123t3hw0f49` | `[Sprint 5] PRE-S5-05 – Confirmer que la route du jeu de rôle (US67) est appelable depuis le sprint 4` | fait localement (`b409bda`) | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : appel confirmé` |
+| P1-5 | `123t3hw0f50` | `[Sprint 5] DEV-ENV – Environnement de recette du chat` | en attente de Docker | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : environnement de recette` |
+| P2-1 / P2-2 | `123t3hw0f4p` | `[Sprint 5] US74-IA – Prompt de correction et schéma du bloc corrections[] (revue de l'expert IA)` | fait localement (`cfd9088`), relecture expert IA à venir | Fafa | `feature/US74-corrections` | `[US-74] Corrections en marge : consigne et schéma` |
+| P2-3 | — | — | fait localement (`59c7be5`) | Expert IA | `feature/US74-corrections` | `[US-74] Corrections en marge : réponse de démonstration` |
+| P2-4 | `123t3hw0f38` | `[Sprint 4] US67-QA – Test de fumée de la route chatbot` | fait localement (`b409bda`) | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : tests de l'agent` |
+| P3-1 | `123t3hw0f37` | `[Sprint 4] US67-BE – Route /chatbot/message, validation et timeout` | fait localement (`b409bda`) | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : route backend` |
+| P3-2 | `123t3hw0f4q` | `[Sprint 5] US74-BE – Relais entre le chat et le Service IA, validation du bloc corrections[]` | fait localement (`b409bda`) | — | `feature/US74-corrections` | `[US-74] Corrections en marge : relais backend` |
+| P3-3 | — | — | fait localement (`b409bda`) | Backend | `feature/US72-interface-chat` | `[US-72] Interface de chat : historique de session` |
+| P3-4 | — | — | fait localement (`60eb7e2`, `b409bda`) | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : contrôle du quota` |
 | P3-5 | `123t3hw0f4m` | `[Sprint 5] US68-BE – Enregistrement de chaque échange dans la table de journal` | to do | — | `feature/US68-journal-echange` | `[US-68] Journal des échanges : table et enregistrement` |
 | P3-5 | `123t3hw0f4h` | `[Sprint 5] US75-BE – Tables de traçabilité des appels IA et référentiel des scénarios` | to do | — | `feature/US75-tracabilite` | `[US-75] Traçabilité des appels IA` |
 | P3-6 | `123t3hw0f4j` | `[Sprint 5] US132-BE – Filtre d'anonymisation avant appel et journaux (règles déterministes)` | to do | — | `feature/US132-anonymisation` | `[US-132] Anonymisation avant appel` |
 | P3-7 | `123t3hw0f5m` | `[Sprint 6] US161-BE – Variable DEMO_MODE et cache des réponses IA (hash entrée + version du prompt)` | to do | — | `feature/US161-mode-demo` | `[US-161] Mode démo : réponses du chatbot` |
-| P4-1 | `123t3hw0f4r` | `[Sprint 5] US72-FE – Interface de chat : texte et historique de la session` | to do | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : envoi réel` |
-| P4-2 | `123t3hw0f4t` | `[Sprint 5] US74-FE – Affichage des corrections en marge, sans couper la conversation` | to do | — | `feature/US74-corrections` | `[US-74] Corrections en marge : affichage` |
+| P4-1 | `123t3hw0f4r` | `[Sprint 5] US72-FE – Interface de chat : texte et historique de la session` | fait localement (`1ac842c`) | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : envoi réel` |
+| P4-2 | `123t3hw0f4t` | `[Sprint 5] US74-FE – Affichage des corrections en marge, sans couper la conversation` | fait localement (`1ac842c`) | — | `feature/US74-corrections` | `[US-74] Corrections en marge : affichage` |
 | P4-3 | `123t3hw0f4u` | `[Sprint 5] US73-FE – Liste déroulante : scénario et langue (sacrifiable)` | to do | — | `feature/US73-scenario-langue` | `[US-73] Choix du scénario et de la langue` |
-| P4-4 | — | — | À créer | Frontend | `feature/US72-interface-chat` | `[US-72] Interface de chat : avertissement RG11` |
-| P4-5 | — | — | À créer | Frontend | `feature/US72-interface-chat` | `[US-72] Interface de chat : retrait du mock` |
+| P4-4 | — | — | fait localement (`442042d`) | Frontend | `feature/US72-interface-chat` | `[US-72] Interface de chat : avertissement RG11` |
+| P4-5 | — | — | fait localement (`1ac842c`) | Frontend | `feature/US72-interface-chat` | `[US-72] Interface de chat : retrait du mock` |
 | P5-1 | — | — | À créer | Backend / QA | `feature/US67-api-chatbot` | `[US-67] API chatbot : test d'intégration du relais` |
 | P5-2 | `123t3hw0f52` | `[Sprint 5] QA-E2E – Test de bout en bout du chat, du journal et du refus avant la leçon 50` | to do | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : E2E` |
 | P5-3 | `123t3hw0f51` | `[Sprint 5] QA-LAT – Mesure de la latence du chat (moins de 2 secondes)` | to do | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : mesure de latence` |
@@ -152,13 +152,13 @@ Points restant à cadrer :
 
 ## 5. Incohérences à signaler
 
-- `123t3hvzezx` est « complete » alors que seule la route IA existe ; aucune route backend (`backend/app/api/router.py:18-29`).
+- `123t3hvzezx` est « complete » dans l'export alors que seule la route IA existait ; route backend implémentée localement (`b409bda`), non encore fusionnée.
 - Doublon US75 : `123t3hw0f4h` (S5) et `123t3hvzezy` (S6, priorité basse).
 - Parent `123t3hw0f4d` et tâche `123t3hw0f4u` redondants.
 - `123t3hw0f4q` nommée « US74-BE » alors qu'elle couvre tout le relais chat.
-- Port 8001 déjà non publié dans Compose/CI, mais `.env.example` reste obsolète.
-- Sortie IA actuelle `{"reponse": ...}` (`chatbot/conversation@1.0.0`) : aucune correction en marge.
-- Réponse de démonstration absente (`ia-service/app/llm/demonstration.py`), chat frontend encore mocké (`frontend/src/services/endpoints.ts:48-49`).
+- Port 8001 déjà non publié dans Compose/CI : `.env.example` et Compose corrigés localement (`8a04142`).
+- Sortie IA `{"reponse": ...}` (`chatbot/conversation@1.0.0`) sans corrections : contrat 1.1.0 et démonstration implémentés localement (`cfd9088`, `59c7be5`).
+- Chat frontend encore mocké dans l'export : retrait local et affichage des corrections implémentés (`1ac842c`), avertissement RG11 ajouté (`442042d`).
 - Latence < 2 s jamais mesurée ; ne pas la présenter comme acquise.
 - `CONTRIBUTING.md` n'autorise que `feature/`, `bugfix/`, `hotfix/` : pas de branche documentation standard.
 
