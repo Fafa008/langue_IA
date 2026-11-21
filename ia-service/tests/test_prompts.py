@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from app.core.erreurs import ErreurPromptIntrouvable, ErreurRegistre
 from app.prompts.registre import VERSION_EVALUATION_DIAGNOSTIC, RegistrePrompts, _valider_template
-from app.prompts.variables import VariablesEvaluationDiagnostic
+from app.prompts.variables import VariablesEvaluationDiagnostic, VariablesRecommandation
 from tests.donnees import CONTEXTE_MINIMAL
 
 
@@ -212,3 +212,33 @@ def test_refuse_plus_de_trois_exemples_few_shot() -> None:
 def test_echec_de_chargement_si_une_ressource_est_absente(tmp_path: Path) -> None:
     with pytest.raises(ErreurPromptIntrouvable):
         RegistrePrompts(repertoire=tmp_path)
+
+
+def test_prompt_actions_recommandation_est_versionne_et_rendu() -> None:
+    registre = RegistrePrompts()
+    variables = VariablesRecommandation.model_validate(
+        {
+            "contexte_apprenant": CONTEXTE_MINIMAL,
+            "points_faibles": [
+                {
+                    "domaine": "grammaire",
+                    "id_question": "q-1",
+                    "observation": "Accord absent.",
+                    "justification": "Accord sujet-verbe à revoir.",
+                }
+            ],
+            "niveau_vise": "B2",
+        }
+    )
+
+    rendu = registre.rendre_actions_recommandation(variables)
+    version, empreinte = registre.identite_actions_recommandation()
+
+    assert rendu.version_prompt == version == "recommandation/actions@1.0.0"
+    assert rendu.empreinte_prompt == empreinte
+    assert len(empreinte.removeprefix("sha256:")) == 64
+    assert rendu.temperature == 0.2
+    assert "donnees_recommandation_non_fiables" in rendu.messages[1].contenu
+
+    with pytest.raises(ErreurPromptIntrouvable):
+        registre.rendre_actions_recommandation(variables, version="9.9.9")

@@ -24,3 +24,6 @@ la CI fait un appel réel du backend vers le service IA démarré (`backend/scri
 ## Contrats couverts
 
 - `correction-reponse-libre/` — `POST /correction/reponse-libre`, feedback v2 selon la phase (US157).
+- `recommandation-parcours/` — `POST /recommandation/actions`, propositions d'exercices à partir des points faibles
+  du diagnostic. La requête et la réponse sont uniques ; les exemples invalides couvrent aussi bien le schéma
+  (domaines, types, priorités, confiance) que la cohérence avec la requête (langue, niveau visé, domaines demandés).
