@@ -21,14 +21,14 @@ Aucune tâche ClickUp n'a été modifiée. Les identifiants, noms exacts, statut
 | P1-2 | — | — | fait localement (`60eb7e2`) | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : quota par apprenant` |
 | P1-3 | `123t3hw0f45` | `[Sprint 5] PRE-S5-01 – Validation de l'expert IA des prompts du chat et du mode thème` | consigne provisoire, validation à venir | Fafa | `feature/US67-api-chatbot` | `[US-67] API chatbot : validation des prompts` |
 | P1-4 | `123t3hw0f49` | `[Sprint 5] PRE-S5-05 – Confirmer que la route du jeu de rôle (US67) est appelable depuis le sprint 4` | fait localement (`b409bda`) | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : appel confirmé` |
-| P1-5 | `123t3hw0f50` | `[Sprint 5] DEV-ENV – Environnement de recette du chat` | config Compose validée, lancement bloqué par Docker | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : environnement de recette` |
-| P2-1 / P2-2 | `123t3hw0f4p` | `[Sprint 5] US74-IA – Prompt de correction et schéma du bloc corrections[] (revue de l'expert IA)` | fait localement (`cfd9088`), relecture expert IA à venir | Fafa | `feature/US74-corrections` | `[US-74] Corrections en marge : consigne et schéma` |
+| P1-5 | `123t3hw0f50` | `[Sprint 5] DEV-ENV – Environnement de recette du chat` | Docker disponible, contrôles locaux verts ; recette complète à rejouer | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : environnement de recette` |
+| P2-1 / P2-2 | `123t3hw0f4p` | `[Sprint 5] US74-IA – Prompt de correction et schéma du bloc corrections[] (revue de l'expert IA)` | fait localement (`cfd9088`, `59c7be5`, `e8e0b20`), relecture expert IA à venir | Fafa | `feature/US74-corrections` | `[US-74] Corrections en marge : consigne et schéma` |
 | P2-3 | — | — | fait localement (`59c7be5`) | Expert IA | `feature/US74-corrections` | `[US-74] Corrections en marge : réponse de démonstration` |
 | P2-4 | `123t3hw0f38` | `[Sprint 4] US67-QA – Test de fumée de la route chatbot` | fait localement (`b409bda`) | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : tests de l'agent` |
 | P3-1 | `123t3hw0f37` | `[Sprint 4] US67-BE – Route /chatbot/message, validation et timeout` | fait localement (`b409bda`) | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : route backend` |
-| P3-2 | `123t3hw0f4q` | `[Sprint 5] US74-BE – Relais entre le chat et le Service IA, validation du bloc corrections[]` | fait localement (`b409bda`) | — | `feature/US74-corrections` | `[US-74] Corrections en marge : relais backend` |
+| P3-2 | `123t3hw0f4q` | `[Sprint 5] US74-BE – Relais entre le chat et le Service IA, validation du bloc corrections[]` | fait localement (`b409bda`, `2624b56`) | — | `feature/US74-corrections` | `[US-74] Corrections en marge : relais backend` |
 | P3-3 | — | — | fait localement (`b409bda`) | Backend | `feature/US72-interface-chat` | `[US-72] Interface de chat : historique de session` |
-| P3-4 | — | — | fait localement (`60eb7e2`, `b409bda`) | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : contrôle du quota` |
+| P3-4 | — | — | fait localement (`60eb7e2`, `b409bda`, `2624b56`) | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : contrôle du quota` |
 | P3-5 | `123t3hw0f4m` | `[Sprint 5] US68-BE – Enregistrement de chaque échange dans la table de journal` | to do | — | `feature/US68-journal-echange` | `[US-68] Journal des échanges : table et enregistrement` |
 | P3-5 | `123t3hw0f4h` | `[Sprint 5] US75-BE – Tables de traçabilité des appels IA et référentiel des scénarios` | to do | — | `feature/US75-tracabilite` | `[US-75] Traçabilité des appels IA` |
 | P3-6 | `123t3hw0f4j` | `[Sprint 5] US132-BE – Filtre d'anonymisation avant appel et journaux (règles déterministes)` | to do | — | `feature/US132-anonymisation` | `[US-132] Anonymisation avant appel` |
@@ -39,7 +39,7 @@ Aucune tâche ClickUp n'a été modifiée. Les identifiants, noms exacts, statut
 | P4-4 | — | — | fait localement (`442042d`) | Frontend | `feature/US72-interface-chat` | `[US-72] Interface de chat : avertissement RG11` |
 | P4-5 | — | — | fait localement (`1ac842c`) | Frontend | `feature/US72-interface-chat` | `[US-72] Interface de chat : retrait du mock` |
 | P5-1 | — | — | À créer | Backend / QA | `feature/US67-api-chatbot` | `[US-67] API chatbot : test d'intégration du relais` |
-| P5-2 | `123t3hw0f52` | `[Sprint 5] QA-E2E – Test de bout en bout du chat, du journal et du refus avant la leçon 50` | partiel : envoi et corrections (`d331098`) ; journal et refus avant leçon 50 à couvrir | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : E2E` |
+| P5-2 | `123t3hw0f52` | `[Sprint 5] QA-E2E – Test de bout en bout du chat, du journal et du refus avant la leçon 50` | partiel : cible `e2e/chat.spec.ts` verte en desktop/mobile (`d331098`) ; suite complète interrompue, journal et refus avant leçon 50 à couvrir | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : E2E` |
 | P5-3 | `123t3hw0f51` | `[Sprint 5] QA-LAT – Mesure de la latence du chat (moins de 2 secondes)` | to do | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : mesure de latence` |
 | P5-4 | `123t3hw0f4k` | `[Sprint 5] US132-QA – Tests de phrases piégées à chaque PR` | to do | — | `feature/US132-anonymisation` | `[US-132] Anonymisation : phrases piégées` |
 | P5-5 | `123t3hw0f4n` | `[Sprint 5] US68-QA – Test : le journal ne contient aucune donnée personnelle` | to do | — | `feature/US68-journal-echange` | `[US-68] Journal des échanges : test RG11` |
@@ -100,6 +100,10 @@ Chaque branche part de `develop`, titre `[US-XX] Description courte`, template d
 - `feature/US161-mode-demo` → `[US-161] Mode démo : réponses pré-enregistrées du chat`
 
 Tests à faire passer pour chaque PR : `make test`, `make test-ia` (`pytest --cov=app`, seuil 70 %), `ruff check .`, `ruff format --check .`, `npm run check`, `npm run test:e2e`, `npm run build`, CI docker incluse.
+
+Contrôles locaux rejoués après l'ouverture de Docker : backend `ruff`/`pytest` verts (365 tests, 96 %), IA `ruff`/`pytest` verts (96,38 %), frontend `npm run check` (381 tests Jest) et `npm run build` verts, cible E2E du chat 2/2 en desktop et mobile. La suite E2E complète reste interrompue par `ChildProcess.kill`, sans lien avec le chat.
+
+Le contrôle IA a été lancé avec un environnement Compose neutre et le dépôt monté en `/work` : le `.env` local injecte des variables `GEMINI_*`/`RAG_*` vides qui écrasent les alias Pydantic attendus par les tests, et le montage par défaut en `/app` fait remonter `RACINE_DEPOT` à `/`.
 
 ---
 
