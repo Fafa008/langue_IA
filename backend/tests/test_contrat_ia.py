@@ -11,11 +11,18 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.ia import ReponseCorrectionIA, RequeteCorrectionIA
+from app.schemas.ia import (
+    ReponseCorrectionIA,
+    ReponseRecommandationIA,
+    RequeteCorrectionIA,
+    RequeteRecommandationIA,
+)
 from app.services.correction_exercice import verifier_feedback
+from app.services.recommandation import verifier_recommandation
 
 # En CI : <dépôt>/contrats ; dans le conteneur de développement : /contrats, monté en lecture seule.
 CONTRATS = Path(__file__).resolve().parents[2] / "contrats" / "ia" / "correction-reponse-libre"
+CONTRATS_RECOMMANDATION = Path(__file__).resolve().parents[2] / "contrats" / "ia" / "recommandation-parcours"
 
 
 def lire(nom: str) -> dict:
@@ -56,3 +63,41 @@ def test_refuse_ce_que_le_service_ia_refuse(nom: str) -> None:
     except ValidationError:
         return
     assert not verifier_feedback(enveloppe.resultat, requete), f"{nom} est accepté par le backend"
+
+
+# --- REC-00 : contrat partagé de la recommandation de parcours ---
+
+INVALIDES_RECOMMANDATION = sorted(p.name for p in (CONTRATS_RECOMMANDATION / "invalides").glob("*.json"))
+
+
+def lire_recommandation(nom: str) -> dict:
+    chemin = CONTRATS_RECOMMANDATION / nom
+    if not chemin.is_file():
+        pytest.fail(f"Exemple de contrat introuvable : {chemin} (dossier contrats/ monté ?)")
+    return json.loads(chemin.read_text(encoding="utf-8"))
+
+
+def test_les_exemples_recommandation_sont_presents() -> None:
+    assert len(INVALIDES_RECOMMANDATION) >= 5, f"Exemples invalides introuvables dans {CONTRATS_RECOMMANDATION}"
+
+
+def test_produit_exactement_la_requete_recommandation_de_reference() -> None:
+    reference = lire_recommandation("requete.json")
+    requete = RequeteRecommandationIA.model_validate(reference)
+    assert requete.model_dump(mode="json", exclude_none=True) == reference
+
+
+def test_accepte_la_reponse_recommandation_du_service_ia() -> None:
+    enveloppe = ReponseRecommandationIA.model_validate(lire_recommandation("reponse.json"))
+    requete = RequeteRecommandationIA.model_validate(lire_recommandation("requete.json"))
+    assert verifier_recommandation(enveloppe.resultat, requete)
+
+
+@pytest.mark.parametrize("nom", INVALIDES_RECOMMANDATION)
+def test_refuse_les_recommandations_refusees_par_le_service_ia(nom: str) -> None:
+    requete = RequeteRecommandationIA.model_validate(lire_recommandation("requete.json"))
+    try:
+        enveloppe = ReponseRecommandationIA.model_validate(lire_recommandation(f"invalides/{nom}"))
+    except ValidationError:
+        return
+    assert not verifier_recommandation(enveloppe.resultat, requete), f"{nom} est accepté par le backend"

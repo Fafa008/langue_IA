@@ -12,12 +12,20 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import get_settings
-from app.schemas.ia import ReponseCorrectionIA, ReponseDiagnosticIA, RequeteCorrectionIA, RequeteDiagnosticIA
+from app.schemas.ia import (
+    ReponseCorrectionIA,
+    ReponseDiagnosticIA,
+    ReponseRecommandationIA,
+    RequeteCorrectionIA,
+    RequeteDiagnosticIA,
+    RequeteRecommandationIA,
+)
 
 logger = logging.getLogger(__name__)
 
 CHEMIN_EVALUATION = "/diagnostic/evaluer"
 CHEMIN_CORRECTION = "/correction/reponse-libre"
+CHEMIN_RECOMMANDATION = "/recommandation/actions"
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -80,3 +88,12 @@ def corriger_reponse_libre(
 ) -> ReponseCorrectionIA:
     """Appeler l'agent de correction (US157) et retourner son feedback v2 validé."""
     return _poster(CHEMIN_CORRECTION, requete, ReponseCorrectionIA, transport)
+
+
+def recommander_actions(
+    requete: RequeteRecommandationIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseRecommandationIA:
+    """Appeler l'agent Recommandation (REC-02) et retourner sa proposition validée."""
+    return _poster(CHEMIN_RECOMMANDATION, requete, ReponseRecommandationIA, transport)

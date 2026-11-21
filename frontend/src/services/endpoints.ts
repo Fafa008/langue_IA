@@ -44,6 +44,8 @@ export const ENDPOINTS = {
     lecon: (idParcours: number, numeroLecon: number) => `${API}/parcours/${idParcours}/lecons/${numeroLecon}`,
     reponse: (idParcours: number, idParcoursExercice: number) =>
       `${API}/parcours/${idParcours}/exercices/${idParcoursExercice}/reponse`,
+    /** Recommandations pédagogiques (REC-03) : appel explicite, idempotent, jamais d'erreur visible. */
+    recommandations: (idParcours: number) => `${API}/parcours/${idParcours}/recommandations`,
   },
   /** Professeur IA : relais backend authentifié de POST /chatbot/message du service IA (tâche B-10, à créer). */
   chatbotMessage: `${API}/chatbot/message`,

@@ -13,6 +13,7 @@ import type {
   MessageChatbotDto,
   ModuleParcoursDto,
   ParcoursPersonnaliseDto,
+  RecommandationParcoursDto,
   ReponseChatbotDto,
 } from "@/services/parcours-personnalise.mapper";
 import type { ReponseExercice } from "@/types/parcours-personnalise";
@@ -167,10 +168,40 @@ function exerciceMock(lecon: number, rang: number): ExerciceMock {
 let scenario: ScenarioParcoursMock = (scenarioConfigure as ScenarioParcoursMock | undefined) ?? "passif";
 let leconAtteinte = 0;
 const scores = new Map<number, number>();
+/** Recommandation « persistée » le temps de la session de démonstration, comme dans parcours.recommandation_ia. */
+let recommandationDemo: RecommandationParcoursDto | null = null;
+
+function enveloppeRecommandation(): RecommandationParcoursDto {
+  return {
+    statut: "COMPLET",
+    code_langue: "fr",
+    referentiel: "CECRL",
+    niveau_cible: "B1",
+    recommandations: [
+      {
+        domaine: "grammaire",
+        type_exercice: "GRAMMAIRE",
+        action: "Refaire un exercice sur le passé composé des verbes irréguliers.",
+        justification: "Les formes au passé composé sont encore hésitantes dans vos réponses.",
+        priorite: 1,
+      },
+      {
+        domaine: "vocabulaire",
+        type_exercice: "VOCABULAIRE",
+        action: "Réviser le vocabulaire des déplacements et des directions.",
+        justification: "Quelques mots du champ lexical du trajet manquent.",
+        priorite: 2,
+      },
+    ],
+    resume: "Deux actions courtes : conjugaison puis vocabulaire des déplacements.",
+    confiance: 0.78,
+  };
+}
 
 function initialiser() {
   leconAtteinte = scenario === "actif" ? 56 : 23;
   scores.clear();
+  recommandationDemo = null;
   for (let lecon = 1; lecon <= leconAtteinte; lecon++) {
     for (let rang = 0; rang < RANGS.length; rang++) {
       const id = lecon * 10 + rang + 1;
@@ -318,6 +349,7 @@ export const parcoursPersonnaliseMock = {
         premiere_lecon: i * LECONS_PAR_MODULE + 1,
         derniere_lecon: (i + 1) * LECONS_PAR_MODULE,
       })),
+      recommandation: recommandationDemo,
     };
   },
 
@@ -395,6 +427,14 @@ export const parcoursPersonnaliseMock = {
     if (lecon === leconAtteinte && tousFaits && leconAtteinte < DERNIERE_LECON) leconAtteinte += 1;
 
     return { statut: statutDe(correction.score_obtenu), ...correction };
+  },
+
+  /** Recommandations simulées : même enveloppe que le backend, conservée jusqu'au changement de scénario. */
+  async recommandations(idParcours: number): Promise<RecommandationParcoursDto> {
+    await repondre();
+    if (idParcours !== ID_PARCOURS) throw new ApiError(404, "Parcours introuvable");
+    recommandationDemo = enveloppeRecommandation();
+    return recommandationDemo;
   },
 
   /** Professeur IA simulé : réagit puis relance avec une question liée au sujet de la conversation. */

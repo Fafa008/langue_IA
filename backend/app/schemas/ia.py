@@ -16,6 +16,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 CodeLangueIA = Literal["fr", "en", "zh", "it", "de"]
 ReferentielIA = Literal["CECRL", "HSK"]
+NIVEAUX_IA: dict[str, tuple[str, ...]] = {
+    "CECRL": ("A1", "A2", "B1", "B2", "C1", "C2"),
+    "HSK": ("HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"),
+}
 CompetenceIA = Literal["grammaire", "lecture", "ecoute", "ecrit", "oral"]
 DomaineFaiblesseIA = Literal[
     "grammaire",
@@ -189,4 +193,91 @@ class ReponseCorrectionIA(_ModeleIA):
     version_prompt: str = Field(min_length=1, max_length=128)
     statut: Literal["succes"] = "succes"
     resultat: ResultatCorrectionIA
+    meta: MetaExecutionIA
+
+
+# --- REC-00 : recommandation de parcours (``POST /recommandation/actions``) ---
+
+TypeExerciceRecommandationIA = Literal["GRAMMAIRE", "VOCABULAIRE", "COMPREHENSION", "ECOUTE", "ORAL"]
+
+# Miroir de ``ia-service/app/schemas/recommandation.py::TYPE_PAR_DOMAINE`` ; ``expression_ecrite`` est absent
+# volontairement : aucun type d'exercice ne lui est associé dans le backend (services/parcours.py).
+TYPE_EXERCICE_PAR_DOMAINE_IA: dict[str, str] = {
+    "grammaire": "GRAMMAIRE",
+    "vocabulaire": "VOCABULAIRE",
+    "comprehension_ecrite": "COMPREHENSION",
+    "comprehension_orale": "ECOUTE",
+    "expression_orale": "ORAL",
+}
+
+
+class EntreeRecommandationIA(_ModeleIA):
+    """Points faibles du diagnostic et niveau visé, tels que le backend les transmet à l'agent."""
+
+    points_faibles: list[PointFaibleIA] = Field(min_length=1, max_length=5)
+    niveau_vise: str = Field(min_length=1, max_length=20)
+
+
+class RequeteRecommandationIA(_ModeleIA):
+    """Enveloppe envoyée à ``POST /recommandation/actions``."""
+
+    request_id: UUID
+    version_agent: str | None = None
+    contexte: ContexteApprenantIA
+    entree: EntreeRecommandationIA
+
+
+class ActionRecommandeeIA(_ModeleIA):
+    """Une action proposée par l'agent ; le type d'exercice découle du domaine."""
+
+    domaine: DomaineFaiblesseIA
+    type_exercice: TypeExerciceRecommandationIA
+    action: str = Field(min_length=1, max_length=240)
+    justification: str = Field(min_length=1, max_length=240)
+    priorite: int = Field(ge=1, le=5)
+
+    @model_validator(mode="after")
+    def verifier_type_et_domaine(self) -> "ActionRecommandeeIA":
+        attendu = TYPE_EXERCICE_PAR_DOMAINE_IA.get(self.domaine)
+        if attendu is None or self.type_exercice != attendu:
+            raise ValueError(f"Le domaine « {self.domaine} » impose le type {attendu}.")
+        return self
+
+
+class ResultatRecommandationIA(_ModeleIA):
+    """Proposition validée ; le backend reste seul décisionnaire de son intégration au parcours."""
+
+    code_langue: CodeLangueIA
+    referentiel: ReferentielIA
+    niveau_cible: str = Field(min_length=1, max_length=20)
+    recommandations: list[ActionRecommandeeIA] = Field(default_factory=list, max_length=5)
+    resume: str = Field(min_length=1, max_length=240)
+    confiance: float = Field(ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def verifier_coherence_interne(self) -> "ResultatRecommandationIA":
+        """Mêmes règles que le service IA : référentiel, niveau, unicité, priorités et confiance."""
+        if self.referentiel != ("HSK" if self.code_langue == "zh" else "CECRL"):
+            raise ValueError("Le référentiel ne correspond pas à la langue.")
+        if self.niveau_cible not in NIVEAUX_IA[self.referentiel]:
+            raise ValueError("Le niveau cible n'appartient pas au référentiel.")
+        domaines = [action.domaine for action in self.recommandations]
+        if len(domaines) != len(set(domaines)):
+            raise ValueError("Un domaine ne peut apparaître qu'une fois.")
+        if sorted(action.priorite for action in self.recommandations) != list(range(1, len(domaines) + 1)):
+            raise ValueError("Les priorités doivent être contiguës, de 1 au nombre de recommandations.")
+        if self.confiance == 0.0 and self.recommandations:
+            raise ValueError("Une confiance nulle ne peut pas accompagner de recommandation.")
+        return self
+
+
+class ReponseRecommandationIA(_ModeleIA):
+    """Enveloppe de succès de l'agent Recommandation."""
+
+    request_id: UUID
+    agent: Literal["recommandation"]
+    version_agent: str = Field(min_length=1, max_length=32)
+    version_prompt: str = Field(min_length=1, max_length=128)
+    statut: Literal["succes"] = "succes"
+    resultat: ResultatRecommandationIA
     meta: MetaExecutionIA

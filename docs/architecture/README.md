@@ -61,7 +61,7 @@ graph LR
 | --- | --- | --- | --- | --- |
 | Frontend | `frontend/` | Next.js 14, React 18, TypeScript, Tailwind, Zustand, React Query | 3000 | interface apprenant / formateur / admin |
 | Backend | `backend/` | FastAPI, SQLAlchemy 2, Pydantic 2, Alembic, PostgreSQL | 8000 | API métier, auth, persistance, scoring |
-| Service IA | `ia-service/` | FastAPI, Pydantic, clients LLM, Harness | 8001 | agents IA (diagnostic, chatbot) |
+| Service IA | `ia-service/` | FastAPI, Pydantic, clients LLM, Harness | interne | agents IA (diagnostic, chatbot, correction, recommandation) — sans port hôte |
 | Base | `docker-compose.yml` | PostgreSQL 16 Alpine | interne | données |
 | Cache | `docker-compose.yml` | Redis 7 Alpine | interne | réservé |
 
