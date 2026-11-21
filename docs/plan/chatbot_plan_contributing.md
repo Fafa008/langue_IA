@@ -112,12 +112,25 @@ Tests à faire passer pour chaque PR : `make test`, `make test-ia` (`pytest --co
 5. `[Chatbot] Avertissement sur l'envoi de l'historique`
 6. `[Chatbot] Retrait du mock du chat`
 7. `[Chatbot] Test d'intégration du relais`
-8. Décisions D1 à D6 et valeurs manquantes : quota (nombre d'échanges ou minutes) et durée de conservation de l'historique.
+8. Décisions D1 à D6 validées ; valeurs fixées : quota de 20 échanges et rétention jusqu'à la fin de session.
 9. Le fichier `ClickUp_Import_Chatbot_Taches_a_creer.csv` annoncé en `docs/Revue_Conception_et_Planification_Chatbot_v2.md:207` est absent du dépôt.
 
 ---
 
-## 4. Décisions en attente
+## 4. Décisions
+
+Décisions validées :
+
+1. D1 : l'agent Chatbot renvoie `corrections[]` (≤ 3), validé par schéma.
+2. D2 : historique côté backend, borné à 20 tours, supprimé en fin de session.
+3. D3 : journal sans texte brut (horodatage, scénario, durée, modèle, version, nombre de corrections).
+4. D4 : scénario choisi par l'apprenant, niveau issu du diagnostic.
+5. D5 : mode thème séparé et optionnel.
+6. D6 : bilan de session optionnel.
+7. Quota : 20 échanges par apprenant.
+8. Rétention de l'historique : suppression en fin de session uniquement.
+
+Points restant à cadrer :
 
 1. D1 : corrections dans l'agent Chatbot (`corrections[]`, ≤ 3) recommandé.
 2. D2 : historique côté backend, borné à 20 tours, supprimé en fin de session.
@@ -125,8 +138,8 @@ Tests à faire passer pour chaque PR : `make test`, `make test-ia` (`pytest --co
 4. D4 : scénario choisi par l'apprenant, niveau issu du diagnostic.
 5. D5 : mode thème séparé et optionnel.
 6. D6 : bilan de session optionnel.
-7. Valeur exacte du quota.
-8. Durée de conservation de l'historique.
+7. Valeur exacte du quota : 20 échanges par apprenant (validé).
+8. Durée de conservation de l'historique : fin de session (validé).
 9. Jeton interne : secret partagé `IA_SERVICE_TOKEN`, en-tête `X-IA-Token`, comparaison `hmac.compare_digest`, valeur réelle hors dépôt.
 10. Anonymisation conservatrice : masquage e-mails/téléphones, avertissement factuel avant le premier message, validation relecture.
 11. Branche du document de plan : option A retenue, `docs/plan-chatbot`, exception au CONTRIBUTING documentée dans la PR.
