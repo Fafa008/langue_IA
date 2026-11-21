@@ -95,13 +95,22 @@ export interface CorrectionExerciceDto {
   reformulation?: string | null;
 }
 
-/** POST /chatbot/message (relais backend du service IA, tâche B-10) : mêmes champs que ia-service. */
+/** POST /chatbot/message : contrat frontend du relais backend (docs/api/contrat-frontend.md). */
 export interface MessageChatbotDto {
   message: string;
+  identifiant_session: string;
   historique: { role: "apprenant" | "assistant"; contenu: string }[];
+}
+export interface CorrectionChatbotDto {
+  extrait: string;
+  correction: string;
+  explication: string;
 }
 export interface ReponseChatbotDto {
   reponse: string;
+  corrections?: CorrectionChatbotDto[];
+  quota_restant?: number;
+  version_prompt?: string;
 }
 
 const STATUTS_PARCOURS: StatutParcours[] = ["EN_COURS", "TERMINE", "ABANDONNE"];

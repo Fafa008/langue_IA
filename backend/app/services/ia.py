@@ -12,12 +12,20 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import get_settings
-from app.schemas.ia import ReponseCorrectionIA, ReponseDiagnosticIA, RequeteCorrectionIA, RequeteDiagnosticIA
+from app.schemas.ia import (
+    ReponseChatbotIA,
+    ReponseCorrectionIA,
+    ReponseDiagnosticIA,
+    RequeteChatbotIA,
+    RequeteCorrectionIA,
+    RequeteDiagnosticIA,
+)
 
 logger = logging.getLogger(__name__)
 
 CHEMIN_EVALUATION = "/diagnostic/evaluer"
 CHEMIN_CORRECTION = "/correction/reponse-libre"
+CHEMIN_CHATBOT = "/chatbot/message"
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -86,3 +94,12 @@ def corriger_reponse_libre(
 ) -> ReponseCorrectionIA:
     """Appeler l'agent de correction (US157) et retourner son feedback v2 validé."""
     return _poster(CHEMIN_CORRECTION, requete, ReponseCorrectionIA, transport)
+
+
+def envoyer_message_chatbot(
+    requete: RequeteChatbotIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseChatbotIA:
+    """Appeler l'agent Chatbot et retourner son enveloppe validée, corrections en marge comprises."""
+    return _poster(CHEMIN_CHATBOT, requete, ReponseChatbotIA, transport)

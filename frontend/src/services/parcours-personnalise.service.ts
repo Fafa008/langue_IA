@@ -46,8 +46,14 @@ const parLecon = (a: ExerciceParcours, b: ExerciceParcours) =>
 const corpsReponse = (reponse: ReponseExercice) =>
   reponse.format === "conversation" ? { format: reponse.format, messages: reponse.messages } : reponse;
 
+const identifiantSessionChatbot =
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 const corpsChatbot = (message: string, historique: MessageChatbot[]): MessageChatbotDto => ({
   message,
+  identifiant_session: identifiantSessionChatbot,
   historique: historique.slice(-HISTORIQUE_CHATBOT_MAX).map(({ role, contenu }) => ({ role, contenu })),
 });
 
@@ -71,7 +77,7 @@ export const httpParcoursPersonnaliseService: ParcoursPersonnaliseService = {
     return toCorrectionExercice(dto);
   },
   async chatbot(message, historique) {
-    const dto = await apiRequest<ReponseChatbotDto>(ENDPOINTS.chatbotMessage, {
+    const dto = await apiRequest<ReponseChatbotDto>(ENDPOINTS.chatbot.message, {
       method: "POST",
       body: corpsChatbot(message, historique),
       timeoutMs: DELAI_IA_MS,
