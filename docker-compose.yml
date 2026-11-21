@@ -21,6 +21,7 @@ x-python-env: &python-env
   REDIS_PORT: "6379"
   IA_SERVICE_URL: http://ia-service:8001
   IA_SERVICE_TOKEN: ${IA_SERVICE_TOKEN:-}
+  CHATBOT_QUOTA_ECHANGES: ${CHATBOT_QUOTA_ECHANGES:-20}
   BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
 
 services:

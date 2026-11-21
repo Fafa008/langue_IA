@@ -3,7 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 SECRETS_PAR_DEFAUT = {"changeme", "changeme_super_secret_key_here"}
@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     ia_service_url: str = ""
     ia_service_timeout_s: float = 55.0
     ia_service_token: str = ""
+    chatbot_quota_echanges: int = Field(default=20, ge=1)
 
     # E-mails : sans SMTP_HOST (ou avec les valeurs d'exemple), le message est écrit dans les journaux
     smtp_host: str = ""
