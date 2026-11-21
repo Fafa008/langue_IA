@@ -38,7 +38,7 @@ Aucune tâche ClickUp n'a été modifiée. Les identifiants, noms exacts, statut
 | P4-3 | `123t3hw0f4u` | `[Sprint 5] US73-FE – Liste déroulante : scénario et langue (sacrifiable)` | to do | — | `feature/US73-scenario-langue` | `[US-73] Choix du scénario et de la langue` |
 | P4-4 | — | — | fait localement (`442042d`) | Frontend | `feature/US72-interface-chat` | `[US-72] Interface de chat : avertissement RG11` |
 | P4-5 | — | — | fait localement (`1ac842c`) | Frontend | `feature/US72-interface-chat` | `[US-72] Interface de chat : retrait du mock` |
-| P5-1 | — | — | À créer | Backend / QA | `feature/US67-api-chatbot` | `[US-67] API chatbot : test d'intégration du relais` |
+| P5-1 | — | — | fait localement (`c329f9b`) : test HTTP simulé du relais vers le service IA | Backend / QA | `feature/US67-api-chatbot` | `[US-67] API chatbot : test d'intégration du relais` |
 | P5-2 | `123t3hw0f52` | `[Sprint 5] QA-E2E – Test de bout en bout du chat, du journal et du refus avant la leçon 50` | partiel : cible `e2e/chat.spec.ts` verte en desktop/mobile (`d331098`) ; suite complète (388 tests) interrompue après 7 tests avec 2 échecs hors chat dans `accessibilite-diagnostic.spec.ts`, journal et refus avant leçon 50 à couvrir | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : E2E` |
 | P5-3 | `123t3hw0f51` | `[Sprint 5] QA-LAT – Mesure de la latence du chat (moins de 2 secondes)` | fait localement : 5 appels HTTP 200, moyenne 0,406 s, maximum 0,609 s | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : mesure de latence` |
 | P5-4 | `123t3hw0f4k` | `[Sprint 5] US132-QA – Tests de phrases piégées à chaque PR` | to do | — | `feature/US132-anonymisation` | `[US-132] Anonymisation : phrases piégées` |
@@ -101,7 +101,7 @@ Chaque branche part de `develop`, titre `[US-XX] Description courte`, template d
 
 Tests à faire passer pour chaque PR : `make test`, `make test-ia` (`pytest --cov=app`, seuil 70 %), `ruff check .`, `ruff format --check .`, `npm run check`, `npm run test:e2e`, `npm run build`, CI docker incluse.
 
-Contrôles locaux rejoués après l'ouverture de Docker : backend `ruff`/`pytest` verts (365 tests, 96 %), IA `ruff`/`pytest` verts (96,38 %), frontend `npm run check` (381 tests Jest) et `npm run build` verts, cible E2E du chat 2/2 en desktop et mobile.
+Contrôles locaux rejoués après l'ouverture de Docker : backend `ruff`/`pytest` verts (366 tests, 96,41 %), IA `ruff`/`pytest` verts (96,38 %), frontend `npm run check` (381 tests Jest) et `npm run build` verts, cible E2E du chat 2/2 en desktop et mobile.
 
 Le job Docker CI a aussi été rejoué localement : après un `down --volumes` nécessaire à cause d'une révision Alembic héritée d'une autre branche, la stack complète est healthy ; health backend/IA/frontend OK, port 8001 non exposé, formule Simple et seed de démonstration OK, `verifier_contrat_ia` conforme, second `app.seed` idempotent, images de développement buildées.
 
@@ -110,6 +110,8 @@ La suite E2E complète a été retentée avec un seul worker et un serveur Next 
 Le contrôle IA a été lancé avec un environnement Compose neutre et le dépôt monté en `/work` : le `.env` local injecte des variables `GEMINI_*`/`RAG_*` vides qui écrasent les alias Pydantic attendus par les tests, et le montage par défaut en `/app` fait remonter `RACINE_DEPOT` à `/`.
 
 La latence du chat a été mesurée sur la stack dev, avec un parcours minimal créé pour le compte démo et les fichiers IA de `feature/US74-corrections` empruntés temporairement au worktree (scénario factice `demonstration` de cette branche-ci ne sachant pas encore répondre au chatbot). Cinq appels consécutifs à `POST /api/v1/chatbot/message` ont renvoyé HTTP 200, avec `version_prompt=chatbot/conversation@1.1.0` et un quota décroissant de 19 à 15 : 0,609 s, 0,594 s, 0,272 s, 0,263 s et 0,293 s. Moyenne 0,406 s, maximum 0,609 s, donc objectif < 2 s respecté. Les fichiers IA empruntés ont été restaurés immédiatement après la mesure ; aucun commit ni changement de branche de code n'a été fait pour cette mesure.
+
+Le test d'intégration du relais (`backend/tests/test_chatbot.py`, `c329f9b`) traverse désormais la route backend, le client HTTP `app.services.ia`, un `httpx.MockTransport` et la validation de l'enveloppe IA. Il vérifie le chemin `/chatbot/message`, le contexte `en`/`CECRL`/`B1`, le message transmis, l'historique vide et la persistance des deux tours en base. Suite backend complète verte : 366 tests, couverture 96,41 %.
 
 ---
 
