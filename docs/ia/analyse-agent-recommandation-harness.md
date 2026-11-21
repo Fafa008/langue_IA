@@ -3,7 +3,9 @@
 **Date :** 21 novembre 2026
 **Base :** `develop` (HEAD `92b118cec435f3165ad4a18174b08d02d1f33fe3`, fusion de PR #94)
 **Statut global :** **implémenté, testé et fusionné**, en deux livraisons successives : PR #93 (contrat + service IA, commit `8b103b6`, fusion `586ac82`) puis PR #94 (intégration backend/frontend, commit `61058ed`, fusion `92b118c`), toutes deux dans `develop` le 21 novembre 2026. La chaîne complète est désormais opérationnelle pour l’apprenant : l’agent IA propose, le backend décide, valide et persiste, le frontend affiche. Aucune fusion n’a été effectuée par l’assistant sans accord explicite ; PR #94 a été fusionnée par le propriétaire du dépôt.
-**Périmètre :** `ia-service` produit une **proposition sans état** ; le backend est le seul propriétaire de la décision, du scoring et de PostgreSQL ; le frontend ne fait que consommer l’API. Le code exécutable et `contrats/ia/recommandation-parcours/` sont les sources de vérité — la version antérieure de ce document (18 novembre, HEAD `86c529f`) décrivait un état « à implémenter » et n’est plus valable.
+**Périmètre :** `ia-service` produit une **proposition sans état** ; le backend est le seul propriétaire de la décision, du scoring et de PostgreSQL ; le frontend ne fait que consommer l'API. Le code exécutable et `contrats/ia/recommandation-parcours/` sont les sources de vérité — la version antérieure de ce document (18 novembre, HEAD `86c529f`) décrivait un état « à implémenter » et n'est plus valable.
+
+> Pour une **documentation générale de l'agent** (rôle, contrat d'entrée/sortie, règles, API, dégradation, utilisation), voir [`agent-recommandation.md`](agent-recommandation.md).
 
 ---
 
