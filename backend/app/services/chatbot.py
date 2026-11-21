@@ -17,6 +17,7 @@ from app.schemas.chatbot import ChatbotMessageIn, ChatbotMessageOut, ChatbotSess
 from app.schemas.ia import (
     ContexteApprenantIA,
     EntreeChatbotIA,
+    MessageHistoriqueChatbotIA,
     RequeteChatbotIA,
     ResultatChatbotIA,
 )
@@ -102,7 +103,10 @@ def envoyer_message(id_user: int, corps: ChatbotMessageIn) -> ChatbotMessageOut:
     requete = RequeteChatbotIA(
         request_id=uuid4(),
         contexte=contexte,
-        entree=EntreeChatbotIA(message=corps.message, historique=historique),
+        entree=EntreeChatbotIA(
+            message=corps.message,
+            historique=[MessageHistoriqueChatbotIA(role=tour.role, contenu=tour.contenu) for tour in historique],
+        ),
     )
     try:
         enveloppe = envoyer_message_chatbot(requete)

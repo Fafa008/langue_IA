@@ -23,9 +23,9 @@ def test_consommer_echange_cree_puis_incremente(db: Session, quota_par_defaut: N
     assert apprenant is not None
 
     premier = consommer_echange(db, id_apprenant=apprenant.id_user, identifiant_session="session-a")
-    deuxieme = consommer_echange(db, id_apprenant=apprenant.id_user, identifiant_session="session-a")
-
     assert premier.nombre_echanges == 1
+
+    deuxieme = consommer_echange(db, id_apprenant=apprenant.id_user, identifiant_session="session-a")
     assert deuxieme.nombre_echanges == 2
     assert len(db.scalars(select(QuotaChatbot)).all()) == 1
 

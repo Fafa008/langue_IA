@@ -67,9 +67,7 @@ def test_message_retourne_reponse_et_corrections(
         ),
     )
 
-    reponse = client.post(
-        "/api/v1/chatbot/message", headers=entete(apprenant_avec_parcours), json=corps_chat()
-    )
+    reponse = client.post("/api/v1/chatbot/message", headers=entete(apprenant_avec_parcours), json=corps_chat())
 
     assert reponse.status_code == 200
     corps = reponse.json()
@@ -86,9 +84,7 @@ def test_journal_sans_texte_brut(
     secret = "mon-message-prive"
     monkeypatch.setattr("app.services.chatbot.envoyer_message_chatbot", lambda requete: enveloppe())
 
-    reponse = client.post(
-        "/api/v1/chatbot/message", headers=entete(apprenant_avec_parcours), json=corps_chat(secret)
-    )
+    reponse = client.post("/api/v1/chatbot/message", headers=entete(apprenant_avec_parcours), json=corps_chat(secret))
 
     assert reponse.status_code == 200
     journaux = db.scalars(select(JournalChatbot)).all()

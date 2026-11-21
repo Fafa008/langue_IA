@@ -24,9 +24,7 @@ def lire(db: Session, *, id_apprenant: int, identifiant_session: str) -> list[Me
     return [MessageHistoriqueChatbotIn(role=m.role, contenu=m.contenu) for m in messages]
 
 
-def ajouter_tours(
-    db: Session, *, id_apprenant: int, identifiant_session: str, tours: list[tuple[str, str]]
-) -> None:
+def ajouter_tours(db: Session, *, id_apprenant: int, identifiant_session: str, tours: list[tuple[str, str]]) -> None:
     """Ajouter les tours produits puis conserver les 20 plus récents."""
     for role, contenu in tours:
         db.add(
