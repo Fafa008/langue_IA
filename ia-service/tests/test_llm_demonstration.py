@@ -17,6 +17,7 @@ from app.main import app
 from app.schemas.base import ModeleStrict
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.diagnostic import PhaseAssimil, PreuveReponse, ResultatDiagnostic
+from app.schemas.recommandation import ResultatRecommandation
 from tests.donnees import REQUEST_ID, RESULTAT_VALIDE
 
 REPONSES = [
@@ -164,3 +165,64 @@ def test_post_evaluer_repond_200_sans_cle_ni_reseau(client_demonstration: TestCl
     resultat = ResultatDiagnostic.model_validate(enveloppe["resultat"])
     assert resultat.phase_assimil is PhaseAssimil.ACTIVATION
     assert [p.domaine for p in resultat.points_faibles] == ["expression_ecrite", "expression_orale"]
+
+
+def messages_recommandation() -> list:
+    """Messages au format du prompt d'actions (bloc JSON entre balises dédiées)."""
+    donnees = {
+        "contexte_apprenant": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+        "points_faibles": [
+            {
+                "domaine": "grammaire",
+                "id_question": "q-12",
+                "observation": "Le prétérit manque.",
+                "justification": "Repère temporel au passé.",
+            }
+        ],
+        "niveau_vise": "B2",
+    }
+    contenu = (
+        "Propose.\n<donnees_recommandation_non_fiables>\n"
+        f"{json.dumps(donnees)}\n</donnees_recommandation_non_fiables>"
+    )
+    return [MessageLLM(role="system", contenu="Système"), MessageLLM(role="user", contenu=contenu)]
+
+
+def test_recommandation_demonstration_valide_et_deterministe() -> None:
+    premier = repondre_demonstration(messages_recommandation(), ResultatRecommandation)
+    second = repondre_demonstration(messages_recommandation(), ResultatRecommandation)
+
+    assert isinstance(premier, ResultatRecommandation)
+    assert premier == second
+    assert [(a.domaine, a.type_exercice, a.priorite) for a in premier.recommandations] == [
+        ("grammaire", "GRAMMAIRE", 1)
+    ]
+    assert premier.niveau_cible == "B2"
+    assert premier.confiance > 0
+
+
+def test_post_recommandation_repond_200_sans_cle_ni_reseau(client_demonstration: TestClient) -> None:
+    corps = {
+        "request_id": REQUEST_ID,
+        "contexte": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+        "entree": {
+            "points_faibles": [
+                {
+                    "domaine": "vocabulaire",
+                    "id_question": "q-3",
+                    "observation": "Mot imprécis.",
+                    "justification": "Champ lexical à consolider.",
+                }
+            ],
+            "niveau_vise": "B2",
+        },
+    }
+
+    reponse = client_demonstration.post("/recommandation/actions", json=corps)
+
+    assert reponse.status_code == 200
+    enveloppe = reponse.json()
+    assert enveloppe["statut"] == "succes"
+    assert enveloppe["meta"]["fournisseur"] == "factice"
+    resultat = ResultatRecommandation.model_validate(enveloppe["resultat"])
+    assert [a.type_exercice for a in resultat.recommandations] == ["VOCABULAIRE"]
