@@ -18,11 +18,26 @@ from app.main import app
 from app.prompts import RegistrePrompts
 from app.prompts.registre import VERSION_EVALUATION_DIAGNOSTIC
 from app.prompts.variables import VariablesConversationChatbot
-from app.schemas.chatbot import HISTORIQUE_CHATBOT_MAX, MESSAGE_CHATBOT_MAX, EntreeChatbot, ResultatChatbot
+from app.schemas.chatbot import (
+    CORRECTIONS_CHATBOT_MAX,
+    HISTORIQUE_CHATBOT_MAX,
+    MESSAGE_CHATBOT_MAX,
+    EntreeChatbot,
+    ResultatChatbot,
+)
 from app.schemas.commun import ReponseAgent, ReponseErreur, RequeteAgent
 from tests.donnees import CONTEXTE_MINIMAL, MEMOIRE_PEDAGOGIQUE, REQUEST_ID
 
-REPONSE_MODELE = {"reponse": "Bonne question ! On dit « I have been studying English for two years »."}
+REPONSE_MODELE = {
+    "reponse": "Bonne question ! On dit « I have been studying English for two years ».",
+    "corrections": [
+        {
+            "extrait": "How long I study",
+            "correction": "How long have I been studying",
+            "explication": "Pour une action commencée dans le passé et encore vraie, utilisez le present perfect continu.",
+        }
+    ],
+}
 
 
 def requete(**entree: object) -> dict[str, object]:
@@ -85,6 +100,29 @@ def test_resultat_vide_refuse() -> None:
         ResultatChatbot.model_validate({"reponse": " "})
 
 
+def test_resultat_sans_corrections_est_valide() -> None:
+    resultat = ResultatChatbot.model_validate({"reponse": "Très bien !"})
+
+    assert resultat.corrections == []
+
+
+def test_resultat_refuse_plus_de_trois_corrections() -> None:
+    corrections = [
+        {"extrait": f"mot{i}", "correction": f"mot{i}-corrige", "explication": "Explication brève."}
+        for i in range(CORRECTIONS_CHATBOT_MAX + 1)
+    ]
+
+    with pytest.raises(ValidationError):
+        ResultatChatbot.model_validate({"reponse": "Très bien !", "corrections": corrections})
+
+
+def test_correction_hors_contrat_refusee() -> None:
+    with pytest.raises(ValidationError):
+        ResultatChatbot.model_validate(
+            {"reponse": "Très bien !", "corrections": [{"extrait": "", "correction": "mot", "explication": "..."}]}
+        )
+
+
 # Prompt versionné
 
 
@@ -98,13 +136,15 @@ def test_rend_le_prompt_de_conversation_versionne() -> None:
     rendu = RegistrePrompts().rendre_conversation_chatbot(variables)
 
     assert [message.role for message in rendu.messages] == ["system", "user"]
-    assert rendu.version_prompt == "chatbot/conversation@1.0.0"
+    assert rendu.version_prompt == "chatbot/conversation@1.1.0"
     assert rendu.empreinte_prompt.startswith("sha256:")
     assert (
         rendu.empreinte_prompt
         != RegistrePrompts().definition("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC)[1]
     )
     assert rendu.temperature == 0.5
+    assert "corrections" in rendu.messages[0].contenu
+    assert "au plus trois corrections" in rendu.messages[0].contenu
     corps = donnees_prompt(rendu.messages[1].contenu)
     assert corps["message"] == "How are you?"
     assert [tour["role"] for tour in corps["historique"]] == ["apprenant", "assistant"]
@@ -146,9 +186,11 @@ def test_agent_chatbot_via_le_harness() -> None:
 
     assert isinstance(reponse, ReponseAgent)
     assert reponse.agent == "chatbot"
+    assert VERSION_AGENT_CHATBOT == "1.1.0"
     assert reponse.version_agent == VERSION_AGENT_CHATBOT
-    assert reponse.version_prompt == "chatbot/conversation@1.0.0"
+    assert reponse.version_prompt == "chatbot/conversation@1.1.0"
     assert reponse.resultat.reponse == REPONSE_MODELE["reponse"]
+    assert [c.extrait for c in reponse.resultat.corrections] == ["How long I study"]
     assert reponse.meta.modele == "modele-test"
     # Le modèle reçoit le prompt système puis le bloc de données contenant le message.
     (messages,) = client_llm.appels
@@ -189,7 +231,7 @@ def test_post_message_retourne_la_reponse_du_modele(client_http: TestClient) -> 
     assert corps["statut"] == "succes"
     assert corps["request_id"] == REQUEST_ID
     assert corps["agent"] == "chatbot"
-    assert corps["version_prompt"] == "chatbot/conversation@1.0.0"
+    assert corps["version_prompt"] == "chatbot/conversation@1.1.0"
     assert corps["resultat"] == REPONSE_MODELE
     assert corps["meta"]["fournisseur"] == "factice"
     assert corps["meta"]["modele"] == "modele-test"
