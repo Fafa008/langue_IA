@@ -3,7 +3,7 @@ import ChatView from "@/components/apprenant/chat/ChatView";
 import { mockFetch } from "@/test/fetch-mock";
 import { afficher } from "@/test/rendu-avec-query";
 
-// US73-FE : choix du scénario et de la langue, libellé de contexte, aucun appel hors démo simulée.
+// US72/US73-FE : choix du scénario et de la langue, avertissement RG11, chat réel hors démo simulée.
 // Lu à la demande (et non à l'import) : le service du parcours lit ce drapeau au chargement de son module.
 jest.mock("@/mocks/delay", () => ({ delay: () => Promise.resolve() }));
 jest.mock("@/lib/env", () => ({
@@ -43,13 +43,20 @@ describe("US73-FE — page du chat : scénario et langue", () => {
     expect(screen.getByText("Bonjour, je peux vous aider à trouver votre chemin.")).toBeInTheDocument();
   });
 
-  it("hors démo simulée : aucune conversation, aucun appel réseau", () => {
+  it("hors démo simulée : la conversation réelle est proposée sans appel réseau à l'ouverture", () => {
     (globalThis as { __parcoursSimule?: boolean }).__parcoursSimule = false;
     const fetchMock = mockFetch({ body: {} });
     afficher(<ChatView />);
-    expect(screen.getByRole("status")).toHaveTextContent("Le chat avec le professeur IA sera disponible prochainement.");
-    expect(screen.queryByRole("log")).not.toBeInTheDocument();
+    expect(screen.getByRole("log")).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("affiche un avertissement factuel sur les données avant le premier message", () => {
+    afficher(<ChatView />);
+    const avertissement = screen.getByTestId("avertissement-chat-rg11");
+    expect(avertissement).toHaveTextContent("20 derniers tours");
+    expect(avertissement).toHaveTextContent("aucune donnée personnelle");
+    expect(avertissement).toHaveTextContent("aucun texte brut");
   });
 
   it("en démo simulée, la conversation est proposée sans bouton d'évaluation", () => {

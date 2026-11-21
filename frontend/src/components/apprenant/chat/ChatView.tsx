@@ -46,6 +46,12 @@ export default function ChatView() {
         Contexte : <strong className="text-content">{scenario.libelle}</strong> · {libelleLangueChoisie}
       </p>
 
+      <p role="note" data-testid="avertissement-chat-rg11" className="rounded-card border border-warning/50 bg-warning/5 p-3 text-small text-content">
+        Avant votre premier message : vos échanges et les 20 derniers tours sont transmis au service IA pour produire une
+        réponse. N’y saisissez aucune donnée personnelle (adresse e-mail, numéro de téléphone, etc.). L’historique est
+        supprimé en fin de session ; le journal ne conserve aucun texte brut.
+      </p>
+
       <section className="card" aria-label="Conversation">
         {/* La clé réinitialise la conversation à chaque changement de scénario ou de langue */}
         <ExerciceConversation
