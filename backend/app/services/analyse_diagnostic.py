@@ -10,6 +10,7 @@ Garde-fous P0 :
 - langue hors du référentiel IA (``fr, en, zh, it, de``) ou niveau hors référentiel : aucun appel ;
 - aucune réponse exploitable : aucun appel ;
 - compétence de question inconnue : la réponse est ignorée plutôt que traduite arbitrairement ;
+- énoncé de question transmis seulement comme contexte pédagogique pour la recherche documentaire ;
 - deuxième clôture : l'analyse déjà persistée est réutilisée, sans nouvel appel facturé.
 """
 
@@ -42,6 +43,7 @@ NIVEAUX_IA = {
     "HSK": ("HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"),
 }
 CONTENU_REPONSE_MAX = 5000
+ENONCE_MAX = 2000
 
 # Clés normalisées (minuscules, sans accents) vers les cinq compétences attendues par le service IA.
 _ALIAS_COMPETENCES = {
@@ -80,6 +82,7 @@ class _Ligne:
     type_reponse: str
     reponse: str
     correcte: str | None
+    enonce: str | None
 
 
 def _normaliser_competence(valeur: str) -> str | None:
@@ -99,13 +102,24 @@ def _charger_lignes(db: Session, id_tentative: int) -> list[_Ligne]:
             Question.type_reponse.label("type_reponse"),
             Reponse.reponse_fournie.label("reponse"),
             Question.reponse_correcte.label("correcte"),
+            Question.enonce.label("enonce"),
         )
         .select_from(Reponse)
         .join(Question, Question.id_question == Reponse.id_question)
         .where(Reponse.id_tentative == id_tentative)
         .order_by(Question.id_question)
     ).mappings()
-    return [_Ligne(**ligne) for ligne in lignes]
+    return [
+        _Ligne(
+            id_question=ligne["id_question"],
+            competence=ligne["competence"],
+            type_reponse=ligne["type_reponse"],
+            reponse=ligne["reponse"],
+            correcte=ligne["correcte"],
+            enonce=(ligne["enonce"] or "").strip()[:ENONCE_MAX] or None,
+        )
+        for ligne in lignes
+    ]
 
 
 def _calculer_competences(lignes: list[_Ligne]) -> list[CompetenceResultatOut]:
@@ -159,6 +173,7 @@ def _preparer(tentative: TestDiagnostic, lignes: list[_Ligne]) -> RequeteDiagnos
                 competence=competence,
                 type_reponse=ligne.type_reponse,
                 contenu=ligne.reponse[:CONTENU_REPONSE_MAX] or " ",
+                enonce=ligne.enonce,
             )
         )
 

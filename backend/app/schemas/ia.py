@@ -5,7 +5,8 @@ Le backend ne partage pas les modèles du service IA : il redéfinit ici le stri
 ``ia-service`` et lui permet de refuser une réponse hors contrat au lieu de la relayer au frontend.
 
 Aucune donnée identifiante n'est transmise : le service IA reçoit la langue, le référentiel, le niveau
-préliminaire, les réponses et le score déterministe. Le score et le niveau publics restent calculés par le backend.
+préliminaire, les énoncés nécessaires à la recherche documentaire, les réponses et le score déterministe.
+Le score et le niveau publics restent calculés par le backend.
 """
 
 from typing import Literal
@@ -45,12 +46,17 @@ class ContexteApprenantIA(_ModeleIA):
 
 
 class PreuveDiagnosticIA(_ModeleIA):
-    """Réponse transmise à l'agent ; le corrigé et l'identité de l'apprenant restent côté backend."""
+    """Réponse transmise à l'agent ; le corrigé et l'identité de l'apprenant restent côté backend.
+
+    ``enonce`` est un contexte pédagogique facultatif, utilisé par le service IA pour construire sa requête
+    documentaire. Il ne contient ni corrigé ni donnée personnelle ; son absence reste valide.
+    """
 
     id_question: str = Field(min_length=1, max_length=64)
     competence: CompetenceIA
     type_reponse: TypeReponseIA
     contenu: str = Field(min_length=1, max_length=5000)
+    enonce: str | None = Field(default=None, max_length=2000)
 
 
 class EntreeDiagnosticIA(_ModeleIA):

@@ -11,6 +11,7 @@ impose une estimation prudente ; l'agent ne fabrique jamais de descripteur ni de
 """
 
 import logging
+from collections.abc import Sequence
 
 from pydantic import Field, ValidationError, field_validator
 
@@ -52,6 +53,22 @@ SEUIL_ECART_IMPORTANT = 2
 def est_descripteur_experimental(descripteur: DescripteurRAGPrompt) -> bool:
     """Indiquer si un repère provient du corpus CARCL et non du référentiel officiel."""
     return descripteur.identifiant.startswith(PREFIXE_IDENTIFIANT_EXPERIMENTAL)
+
+
+def texte_requete_depuis_preuves(reponses: Sequence[ReponseDiagnosticPrompt]) -> str:
+    """Assembler le contexte pédagogique et la production de l'apprenant pour la recherche documentaire.
+
+    Un énoncé manquant ou vide est ignoré sans invention : la réponse seule reste transmise. La longueur est
+    bornée par le contrat ``RequeteRAG`` ; les filtres de langue, niveau et compétence sont portés par les autres
+    champs de la requête et ne sont pas répétés dans ce texte.
+    """
+    morceaux: list[str] = []
+    for reponse in reponses:
+        enonce = (reponse.enonce or "").strip()
+        if enonce:
+            morceaux.append(enonce)
+        morceaux.append(reponse.contenu)
+    return "\n".join(morceaux)[:TEXTE_REQUETE_MAX]
 
 
 class EntreeDiagnostic(ModeleStrict):
@@ -123,7 +140,7 @@ class DiagnosticAgent:
     ) -> tuple[DescripteurRAGPrompt, ...]:
         """Interroger le port RAG puis ne garder que des descripteurs sûrs et bornés."""
         apprenant = contexte.contexte
-        texte = "\n".join(reponse.contenu for reponse in entree.reponses)[:TEXTE_REQUETE_MAX]
+        texte = texte_requete_depuis_preuves(entree.reponses)
         requete = RequeteRAG(
             code_langue=apprenant.code_langue,
             referentiel=apprenant.referentiel,
