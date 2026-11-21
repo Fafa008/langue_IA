@@ -1,8 +1,8 @@
 # Agent Recommandation — déroulement, architecture, état, résultats et validation dans le Harness
 
 **Date :** 21 novembre 2026
-**Base :** `develop` (HEAD `586ac82c0813c38cb45e087dc797fc48ada60705`, fusion de PR #93)
-**Statut global :** **implémenté et testé**, en deux livraisons successives : PR #93 (contrat + service IA, commit `8b103b6`) **fusionnée dans `develop`** le 21 novembre 2026 (fusion `586ac82`) puis l’intégration backend/frontend décrite ici, encore en préparation. Aucune autre fusion n’est effectuée sans accord explicite.
+**Base :** `develop` (HEAD `92b118cec435f3165ad4a18174b08d02d1f33fe3`, fusion de PR #94)
+**Statut global :** **implémenté, testé et fusionné**, en deux livraisons successives : PR #93 (contrat + service IA, commit `8b103b6`, fusion `586ac82`) puis PR #94 (intégration backend/frontend, commit `61058ed`, fusion `92b118c`), toutes deux dans `develop` le 21 novembre 2026. La chaîne complète est désormais opérationnelle pour l’apprenant : l’agent IA propose, le backend décide, valide et persiste, le frontend affiche. Aucune fusion n’a été effectuée par l’assistant sans accord explicite ; PR #94 a été fusionnée par le propriétaire du dépôt.
 **Périmètre :** `ia-service` produit une **proposition sans état** ; le backend est le seul propriétaire de la décision, du scoring et de PostgreSQL ; le frontend ne fait que consommer l’API. Le code exécutable et `contrats/ia/recommandation-parcours/` sont les sources de vérité — la version antérieure de ce document (18 novembre, HEAD `86c529f`) décrivait un état « à implémenter » et n’est plus valable.
 
 ---
@@ -195,6 +195,8 @@ Le job Docker complet de la CI (healthchecks, seed idempotent, images dev) doit 
 
 **Bilan du run complet du 21 novembre 2026 :** la suite backend passe `ruff` et `ruff format --check` et atteint 95,87 % de couverture, mais quatre tests de `tests/test_utilisateurs.py` échouent en setup (`relation "roles" does not exist`, puis doublon de `permissions`) : ces erreurs d'état de la base de test sont sans lien avec le chemin recommandation et restent à rejouer isolément. La suite E2E complète (390 tests, 2 workers) a aussi montré des échecs sur des specs non liées (`accessibilite-diagnostic.spec.ts`, `admin-dashboard.spec.ts`) ; les deux scénarios E2E dédiés à la recommandation étaient verts en exécution ciblée. Le démon Docker étant arrêté après le redémarrage de la session, le re-jeu isolé de ces cas n'a pas pu être lancé ici.
 
+**Validation de la CI sur PR #94 (commit `61058ed`) :** les six checks GitHub Actions sont tous `success`, y compris `Backend (ruff, pytest)`, `Frontend (tests E2E Playwright)` et `Docker (build et démarrage de la stack)`. La CI n'a donc pas reproduit les échecs locaux observés plus haut (état de la base de test et specs E2E non liées) : ces derniers sont propres à l'environnement local et ne bloquent pas la livraison.
+
 ### 4.4 Ce que la validation garantit
 
 - Toute requête passe par deux validations Pydantic (API IA puis Harness) et une troisième côté backend.
@@ -210,9 +212,9 @@ Le job Docker complet de la CI (healthchecks, seed idempotent, images dev) doit 
 | Livraison | Contenu | Cible | État |
 | --- | --- | --- | --- |
 | PR #93 | Contrat partagé, schémas, prompt, agent, route IA, répondeur factice, tests IA | `develop` | **Fusionnée** le 21 novembre 2026 (fusion `586ac82`, 2 reviewers IA). |
-| PR 2 | Relais et revalidation backend, migration, route authentifiée, exposition frontend, docs | `develop` | En préparation (non ouverte) ; la dépendance sur #93 est levée par sa fusion, mais aucune fusion sans accord explicite. |
+| PR #94 | Relais et revalidation backend, migration, route authentifiée, exposition frontend, docs | `develop` | **Fusionnée** le 21 novembre 2026 (fusion `92b118c`, commit `61058ed`), par le propriétaire du dépôt. |
 
-La PR 2 mentionnait explicitement sa dépendance sur #93 : les exemples de `contrats/ia/recommandation-parcours/` et la route `POST /recommandation/actions` viennent de la première, désormais présents sur `develop`.
+La PR #94 dépendait de #93 : les exemples de `contrats/ia/recommandation-parcours/` et la route `POST /recommandation/actions` viennent de la première, désormais présents sur `develop`. Les six checks de la CI sur le commit `61058ed` sont tous au vert : Backend (ruff, pytest), Service IA, Frontend (typage/lint/Jest/build), Frontend (E2E Playwright), Docker (build et démarrage de la stack) et GitGuardian (`No secrets detected ✅`).
 
 ### Ce qui reste hors périmètre
 
