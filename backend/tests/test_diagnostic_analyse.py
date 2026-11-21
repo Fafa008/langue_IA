@@ -86,12 +86,18 @@ def _creer_question(
     competence: str = "grammaire",
     reponse_correcte: str = "is",
     type_reponse: str = "choix",
+    enonce: str | None = None,
+    choix: list[str] | None = None,
 ) -> Question:
+    if enonce is None:
+        enonce = "She ___ a student." if type_reponse == "choix" else "Présentez-vous en anglais."
+    if choix is None and type_reponse == "choix":
+        choix = ["is", "are"]
     question = Question(
-        enonce="She ___ a student." if type_reponse == "choix" else "Présentez-vous en anglais.",
+        enonce=enonce,
         competence=competence,
         type_reponse=type_reponse,
-        choix=["is", "are"] if type_reponse == "choix" else None,
+        choix=choix,
         reponse_correcte=reponse_correcte if type_reponse == "choix" else None,
         langue=langue,
         niveau=niveau,
@@ -164,14 +170,69 @@ def test_persiste_l_analyse_et_expose_les_champs_publics(client, db: Session, ia
     assert requete.contexte.niveau_preliminaire == "A1"
     assert requete.entree.score_preliminaire == 66.67
     assert [reponse.id_question for reponse in requete.entree.reponses] == [str(q.id_question) for q in questions]
-    # Seule la réponse de l'apprenant est transmise : jamais la clé de correction, y compris pour une réponse libre.
+    # Seule la réponse de l'apprenant est transmise comme production : jamais la clé de correction.
     assert [reponse.contenu for reponse in requete.entree.reponses] == ["is", "are", "is", "My name is Rova."]
+    assert [reponse.enonce for reponse in requete.entree.reponses] == [
+        "She ___ a student.",
+        "She ___ a student.",
+        "She ___ a student.",
+        "Présentez-vous en anglais.",
+    ]
     assert "reponse_correcte" not in requete.model_dump_json()
 
     db.refresh(tentative)
     assert tentative.analyse_ia is not None
     assert tentative.analyse_ia["request_id"] == str(requete.request_id)
     assert tentative.analyse_ia["resultat"]["niveau_estime"] == "C2"
+
+
+def test_transmet_les_enonces_avec_les_reponses_courtes(client, db: Session, ia: FauxServiceIA):
+    """Cas 1 et 2 : chaque énoncé court accompagne la réponse correspondante."""
+    apprenant = creer_utilisateur(db)
+    langue, niveau = _references(db)
+    tentative = _creer_tentative(db, apprenant, langue, niveau)
+    questions = [
+        _creer_question(db, langue, niveau, enonce="She ___ a student.", reponse_correcte="is"),
+        _creer_question(
+            db,
+            langue,
+            niveau,
+            enonce="I ___ coffee every morning.",
+            reponse_correcte="drink",
+            choix=["drink", "is"],
+        ),
+    ]
+    _repondre(client, apprenant, tentative, questions[0], "is")
+    _repondre(client, apprenant, tentative, questions[1], "drink")
+
+    response = _terminer(client, apprenant, tentative)
+
+    assert response.status_code == 200
+    (requete,) = ia.appels
+    assert [(preuve.enonce, preuve.contenu, preuve.competence) for preuve in requete.entree.reponses] == [
+        ("She ___ a student.", "is", "grammaire"),
+        ("I ___ coffee every morning.", "drink", "grammaire"),
+    ]
+    assert requete.contexte.code_langue == "en"
+    assert requete.contexte.referentiel == "CECRL"
+    assert requete.contexte.niveau_preliminaire == "A1"
+
+
+def test_enonce_absent_reste_absent_sans_bloquer_l_analyse(client, db: Session, ia: FauxServiceIA):
+    """Cas 3 : un énoncé vide n'est pas inventé et l'analyse reste exploitable."""
+    apprenant = creer_utilisateur(db)
+    langue, niveau = _references(db)
+    tentative = _creer_tentative(db, apprenant, langue, niveau)
+    question = _creer_question(db, langue, niveau, enonce="   ")
+    _repondre(client, apprenant, tentative, question, "is")
+
+    response = _terminer(client, apprenant, tentative)
+
+    assert response.status_code == 200
+    (requete,) = ia.appels
+    assert requete.entree.reponses[0].enonce is None
+    assert requete.entree.reponses[0].contenu == "is"
+    assert "enonce" in requete.model_dump_json()
 
 
 def test_reutilise_l_analyse_sans_second_appel(client, db: Session, ia: FauxServiceIA):

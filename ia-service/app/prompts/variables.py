@@ -16,12 +16,17 @@ ScenarioDiagnostic = Literal["quotidien", "entretien", "examen"]
 
 
 class ReponseDiagnosticPrompt(ModeleStrict):
-    """Réponse fournie par le backend, considérée comme une donnée non fiable."""
+    """Réponse fournie par le backend, considérée comme une donnée non fiable.
+
+    ``enonce`` est facultatif et sert uniquement à la recherche documentaire de l'agent : il est exclu de la
+    sérialisation pour ne pas modifier le contrat du prompt LLM ni exposer le corrigé éventuellement contigu.
+    """
 
     id_question: str = Field(min_length=1, max_length=64)
     competence: Competence
     type_reponse: Literal["choix", "texte", "audio"]
     contenu: str = Field(min_length=1, max_length=5000)
+    enonce: str | None = Field(default=None, max_length=2000, exclude=True)
 
 
 def preuves_depuis_reponses(reponses: Sequence[ReponseDiagnosticPrompt]) -> tuple[PreuveReponse, ...]:

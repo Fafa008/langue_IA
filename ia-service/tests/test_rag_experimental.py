@@ -296,6 +296,30 @@ def test_configuration_officielle_sans_autorisation_ne_charge_rien(
     assert "Corpus CECRL officiel non autorisé" in caplog.text
 
 
+def test_contexte_pedagogique_decide_entre_reperes_carcl_et_repli() -> None:
+    """Le même niveau et la même compétence changent de provenance selon le texte de requête."""
+    recuperateur = RecuperateurAvecRepli(_recuperateur_reel())
+    commune = {
+        "code_langue": "en",
+        "referentiel": "CECRL",
+        "niveau": "A1",
+        "competences": ("grammaire",),
+        "limite": 8,
+    }
+
+    sans_contexte = _rechercher(recuperateur, RequeteRAG(**commune, texte="is"))  # type: ignore[arg-type]
+    avec_contexte = _rechercher(
+        recuperateur,
+        RequeteRAG(**commune, texte="How old are you? I am [age] years old.\nis"),  # type: ignore[arg-type]
+    )
+
+    assert sans_contexte
+    assert all(descripteur.identifiant.startswith(PREFIXE_IDENTIFIANT_SYNTHETIQUE) for descripteur in sans_contexte)
+    assert avec_contexte
+    assert all(descripteur.identifiant.startswith(PREFIXE_IDENTIFIANT_EXPERIMENTAL) for descripteur in avec_contexte)
+    assert recuperateur.version_corpus == VERSION_CORPUS_EXPERIMENTAL
+
+
 def test_repli_reste_synthetique_si_le_corpus_experimental_ne_repond_pas() -> None:
     recuperateur = _recuperateur_reel()
     avec_repli = RecuperateurAvecRepli(recuperateur)

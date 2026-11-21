@@ -24,6 +24,9 @@ from app.harness.registre import RegistreAgents
 from app.llm.adaptateurs.factice import FakeLLMClient, ScenarioLLM
 from app.prompts import RegistrePrompts
 from app.rag import VERSION_CORPUS_EXPERIMENTAL, RecuperateurVide, RequeteRAG
+from app.rag.config import CHEMIN_CORPUS_PAR_DEFAUT
+from app.rag.corpus_experimental import charger_corpus_experimental
+from app.rag.experimental import RecuperateurExperimental
 from app.schemas.commun import CodeErreur, ReponseAgent, ReponseErreur, RequeteAgent
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.diagnostic import PhaseAssimil, ResultatDiagnostic
@@ -108,6 +111,18 @@ RESULTAT_PRUDENT_HSK = {
     "ecart_avec_niveau_preliminaire": 0,
 }
 
+RESULTAT_PRUDENT_A1 = {
+    **RESULTAT_PRUDENT,
+    "niveau_estime": "A1",
+    "niveau_preliminaire": "A1",
+}
+
+CONTEXTE_A1 = {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_preliminaire": "A1",
+}
+
 DESCRIPTEURS = [
     {
         "identifiant": "cecrl-b1-ecrit",
@@ -172,6 +187,12 @@ def preparer(
         recuperateur_rag=rag,
     )
     return harness, client, rag, definition
+
+
+def _recuperateur_carcl_reel() -> RecuperateurExperimental:
+    """Charger le vrai corpus expérimental avec vérification d'empreinte."""
+    corpus = charger_corpus_experimental(CHEMIN_CORPUS_PAR_DEFAUT, verifier_empreinte=True)
+    return RecuperateurExperimental(corpus)
 
 
 def requete(entree: dict | None = None, contexte: dict | None = None) -> RequeteAgent[EntreeDiagnostic]:
@@ -256,6 +277,129 @@ def test_transmet_au_prompt_les_reponses_le_score_et_les_descripteurs() -> None:
             limite=8,
         )
     ]
+
+
+def test_construit_la_requete_rag_avec_les_enonces_et_les_reponses_courtes() -> None:
+    """Cas 1, 2 et 4 : les énoncés courts rejoignent la requête ; filtres et limite restent inchangés."""
+    entree = {
+        "scenario": "quotidien",
+        "reponses": [
+            {
+                "id_question": "q-court-1",
+                "competence": "grammaire",
+                "type_reponse": "choix",
+                "contenu": "is",
+                "enonce": "She ___ a student.",
+            },
+            {
+                "id_question": "q-court-2",
+                "competence": "grammaire",
+                "type_reponse": "choix",
+                "contenu": "drink",
+                "enonce": "I ___ coffee every morning.",
+            },
+        ],
+        "score_preliminaire": 100,
+    }
+    harness, client, rag, _ = preparer(resultat=RESULTAT_PRUDENT_A1)
+
+    resultat = executer(harness, requete(entree=entree, contexte=CONTEXTE_A1))
+
+    assert isinstance(resultat, ReponseAgent)
+    assert all("enonce" not in reponse for reponse in corps_prompt(client)["reponses"])
+    (requete_rag,) = rag.requetes
+    assert requete_rag.texte == "She ___ a student.\nis\nI ___ coffee every morning.\ndrink"
+    assert requete_rag.code_langue == "en"
+    assert requete_rag.referentiel == "CECRL"
+    assert requete_rag.niveau == "A1"
+    assert requete_rag.competences == ("grammaire",)
+    assert requete_rag.limite == 8
+
+
+def test_construit_la_requete_rag_sans_enonce_sans_inventer_de_contenu() -> None:
+    """Cas 3 : un énoncé absent reste absent de la requête, sans exception ni texte fabriqué."""
+    entree = {
+        "scenario": "quotidien",
+        "reponses": [
+            {
+                "id_question": "q-sans-enonce",
+                "competence": "grammaire",
+                "type_reponse": "choix",
+                "contenu": "is",
+                "enonce": None,
+            }
+        ],
+        "score_preliminaire": 100,
+    }
+    harness, _, rag, _ = preparer(resultat=RESULTAT_PRUDENT_A1)
+
+    resultat = executer(harness, requete(entree=entree, contexte=CONTEXTE_A1))
+
+    assert isinstance(resultat, ReponseAgent)
+    (requete_rag,) = rag.requetes
+    assert requete_rag.texte == "is"
+    assert requete_rag.niveau == "A1"
+
+
+def test_recupere_des_reperes_carcl_quand_lenonce_est_indexe() -> None:
+    """Cas 5 : le contexte pédagogique réel permet de récupérer des repères CARCL non officiels."""
+    entree = {
+        "scenario": "quotidien",
+        "reponses": [
+            {
+                "id_question": "q-carcl",
+                "competence": "grammaire",
+                "type_reponse": "choix",
+                "contenu": "20",
+                "enonce": "How old are you? I am [age] years old.",
+            }
+        ],
+        "score_preliminaire": 100,
+    }
+    harness, client, _, _ = preparer(
+        resultat=RESULTAT_PRUDENT_A1,
+        recuperateur=_recuperateur_carcl_reel(),
+    )
+
+    resultat = executer(harness, requete(entree=entree, contexte=CONTEXTE_A1))
+
+    assert isinstance(resultat, ReponseAgent)
+    assert resultat.meta.version_corpus == VERSION_CORPUS_EXPERIMENTAL
+    rendus = corps_prompt(client)["descripteurs_rag"]
+    assert rendus
+    assert all(rendu["identifiant"].startswith("carcl:") for rendu in rendus)
+    assert all("non officiel" in rendu["contenu"] for rendu in rendus)
+    assert not any(rendu["identifiant"].startswith("synthetique_fallback:") for rendu in rendus)
+
+
+def test_garde_le_repli_synthetique_quand_lenonce_ne_correspond_aucun_exercice() -> None:
+    """Cas 6 : sans résultat pertinent, le repli synthétique reste explicite et distinct de CARCL."""
+    entree = {
+        "scenario": "quotidien",
+        "reponses": [
+            {
+                "id_question": "q-sans-correspondance",
+                "competence": "grammaire",
+                "type_reponse": "choix",
+                "contenu": "is",
+                "enonce": "She ___ a student.",
+            }
+        ],
+        "score_preliminaire": 100,
+    }
+    harness, client, _, _ = preparer(
+        resultat=RESULTAT_PRUDENT_A1,
+        recuperateur=_recuperateur_carcl_reel(),
+    )
+
+    resultat = executer(harness, requete(entree=entree, contexte=CONTEXTE_A1))
+
+    assert isinstance(resultat, ReponseAgent)
+    assert resultat.meta.version_corpus == "synthetique_fallback"
+    rendus = corps_prompt(client)["descripteurs_rag"]
+    assert rendus
+    assert all(rendu["identifiant"].startswith("synthetique_fallback:") for rendu in rendus)
+    assert not any(rendu["identifiant"].startswith("carcl:") for rendu in rendus)
 
 
 def test_selectionne_le_few_shot_du_scenario_demande() -> None:
