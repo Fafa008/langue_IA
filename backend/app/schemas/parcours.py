@@ -6,9 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import StatutParcours, TypeExercice
+from app.schemas.ia import DomaineFaiblesseIA, TypeExerciceRecommandationIA
 from app.services.phase_parcours import PhaseParcours
 
 FormatReponse = Literal["choix", "texte", "redaction", "ecoute", "prononciation"]
+StatutRecommandation = Literal["COMPLET", "PARTIEL"]
 
 
 class ReponseExerciceIn(BaseModel):
@@ -42,6 +44,32 @@ class ProgressionLeconOut(BaseModel):
     is_validated: bool
 
 
+class RecommandationActionOut(BaseModel):
+    """Une action de remédiation proposée par l'IA et revalidée par le backend (REC-03)."""
+
+    domaine: DomaineFaiblesseIA
+    type_exercice: TypeExerciceRecommandationIA
+    action: str
+    justification: str
+    priorite: int
+
+
+class RecommandationParcoursOut(BaseModel):
+    """Réponse publique de ``POST /parcours/{id}/recommandations`` et champ de ``GET /parcours/en-cours``.
+
+    ``PARTIEL`` signifie que le service IA n'a pas fourni de proposition exploitable : la liste est alors vide et
+    aucun code technique n'est exposé à l'apprenant.
+    """
+
+    statut: StatutRecommandation
+    code_langue: str
+    referentiel: Literal["CECRL", "HSK"]
+    niveau_cible: str
+    recommandations: list[RecommandationActionOut] = Field(default_factory=list)
+    resume: str
+    confiance: float
+
+
 class ParcoursEnCoursOut(BaseModel):
     """``GET /parcours/en-cours`` (docs/api/contrat-frontend.md, « Parcours personnalisé »)."""
 
@@ -59,6 +87,7 @@ class ParcoursEnCoursOut(BaseModel):
     est_lecon_de_revision: bool
     modules: list[ModuleParcoursOut]
     progressions: list[ProgressionLeconOut] = Field(default_factory=list)
+    recommandation: RecommandationParcoursOut | None = None
 
 
 class ExerciceParcoursOut(BaseModel):

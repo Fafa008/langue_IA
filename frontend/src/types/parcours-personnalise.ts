@@ -20,6 +20,37 @@ export type StatutExercice = "A_FAIRE" | "REUSSI" | "A_REVOIR";
 /** Avancement d'un module ou d'une leçon, déduit de la leçon atteinte et des exercices. */
 export type StatutEtape = "TERMINE" | "EN_COURS" | "A_VENIR";
 
+/** Domaines faibles reconnus par l'agent Recommandation (aucun type d'exercice pour `expression_ecrite`). */
+export type DomaineFaiblesse =
+  | "grammaire"
+  | "vocabulaire"
+  | "comprehension_ecrite"
+  | "comprehension_orale"
+  | "expression_ecrite"
+  | "expression_orale";
+
+/** Statut public d'une recommandation : PARTIEL = IA indisponible ou réponse inexploitable, liste vide. */
+export type StatutRecommandation = "COMPLET" | "PARTIEL";
+
+/** Action de remédiation proposée par l'IA puis revalidée par le backend. */
+export interface RecommandationAction {
+  domaine: DomaineFaiblesse;
+  typeExercice: TypeExercice;
+  action: string;
+  justification: string;
+  priorite: number;
+}
+
+export interface RecommandationParcours {
+  statut: StatutRecommandation;
+  codeLangue: string;
+  referentiel: "CECRL" | "HSK";
+  niveauCible: string;
+  recommandations: RecommandationAction[];
+  resume: string;
+  confiance: number;
+}
+
 /** Module : regroupement de leçons consécutives, sous un thème (pas encore de table côté backend). */
 export interface ModuleParcours {
   numero: number;
@@ -47,6 +78,8 @@ export interface ParcoursPersonnalise {
   /** En phase active, une leçon sur sept est une révision. */
   estLeconDeRevision: boolean;
   modules: ModuleParcours[];
+  /** Dernière recommandation calculée, présente dans GET /parcours/en-cours après une demande explicite. */
+  recommandation: RecommandationParcours | null;
 }
 
 export interface ExerciceParcours {
