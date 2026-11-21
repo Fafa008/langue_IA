@@ -40,7 +40,7 @@ Aucune tâche ClickUp n'a été modifiée. Les identifiants, noms exacts, statut
 | P4-5 | — | — | fait localement (`1ac842c`) | Frontend | `feature/US72-interface-chat` | `[US-72] Interface de chat : retrait du mock` |
 | P5-1 | — | — | À créer | Backend / QA | `feature/US67-api-chatbot` | `[US-67] API chatbot : test d'intégration du relais` |
 | P5-2 | `123t3hw0f52` | `[Sprint 5] QA-E2E – Test de bout en bout du chat, du journal et du refus avant la leçon 50` | partiel : cible `e2e/chat.spec.ts` verte en desktop/mobile (`d331098`) ; suite complète (388 tests) interrompue après 7 tests avec 2 échecs hors chat dans `accessibilite-diagnostic.spec.ts`, journal et refus avant leçon 50 à couvrir | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : E2E` |
-| P5-3 | `123t3hw0f51` | `[Sprint 5] QA-LAT – Mesure de la latence du chat (moins de 2 secondes)` | to do | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : mesure de latence` |
+| P5-3 | `123t3hw0f51` | `[Sprint 5] QA-LAT – Mesure de la latence du chat (moins de 2 secondes)` | fait localement : 5 appels HTTP 200, moyenne 0,406 s, maximum 0,609 s | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : mesure de latence` |
 | P5-4 | `123t3hw0f4k` | `[Sprint 5] US132-QA – Tests de phrases piégées à chaque PR` | to do | — | `feature/US132-anonymisation` | `[US-132] Anonymisation : phrases piégées` |
 | P5-5 | `123t3hw0f4n` | `[Sprint 5] US68-QA – Test : le journal ne contient aucune donnée personnelle` | to do | — | `feature/US68-journal-echange` | `[US-68] Journal des échanges : test RG11` |
 | O-1 | `123t3hw0f4v` / `123t3hw0f4w` / `123t3hw0f4x` | `[Sprint 5] US160-IA – Prompt du mode thème et trois variantes (revue de l'expert IA)` / `[Sprint 5] US160-BE – Route du mode thème et refus avant la leçon 50` / `[Sprint 5] US160-FE – Écran de saisie et affichage des trois variantes` | to do | — / — / — | `feature/US160-mode-theme` | `[US-160] Mode thème : consigne, route, écran` |
@@ -109,6 +109,8 @@ La suite E2E complète a été retentée avec un seul worker et un serveur Next 
 
 Le contrôle IA a été lancé avec un environnement Compose neutre et le dépôt monté en `/work` : le `.env` local injecte des variables `GEMINI_*`/`RAG_*` vides qui écrasent les alias Pydantic attendus par les tests, et le montage par défaut en `/app` fait remonter `RACINE_DEPOT` à `/`.
 
+La latence du chat a été mesurée sur la stack dev, avec un parcours minimal créé pour le compte démo et les fichiers IA de `feature/US74-corrections` empruntés temporairement au worktree (scénario factice `demonstration` de cette branche-ci ne sachant pas encore répondre au chatbot). Cinq appels consécutifs à `POST /api/v1/chatbot/message` ont renvoyé HTTP 200, avec `version_prompt=chatbot/conversation@1.1.0` et un quota décroissant de 19 à 15 : 0,609 s, 0,594 s, 0,272 s, 0,263 s et 0,293 s. Moyenne 0,406 s, maximum 0,609 s, donc objectif < 2 s respecté. Les fichiers IA empruntés ont été restaurés immédiatement après la mesure ; aucun commit ni changement de branche de code n'a été fait pour cette mesure.
+
 ---
 
 ## 3. Non présentes dans ClickUp
@@ -167,7 +169,7 @@ Points restant à cadrer :
 - Port 8001 déjà non publié dans Compose/CI : `.env.example` et Compose corrigés localement (`8a04142`).
 - Sortie IA `{"reponse": ...}` (`chatbot/conversation@1.0.0`) sans corrections : contrat 1.1.0 et démonstration implémentés localement (`cfd9088`, `59c7be5`).
 - Chat frontend encore mocké dans l'export : retrait local et affichage des corrections implémentés (`1ac842c`), avertissement RG11 ajouté (`442042d`).
-- Latence < 2 s jamais mesurée ; ne pas la présenter comme acquise.
+- Latence < 2 s mesurée localement à 0,609 s au maximum sur cinq appels ; reste à rejouer avec le fournisseur LLM retenu en recette.
 - `CONTRIBUTING.md` n'autorise que `feature/`, `bugfix/`, `hotfix/` : pas de branche documentation standard.
 
 ---
