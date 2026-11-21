@@ -1,7 +1,9 @@
 """Tests de la route chat backend (US67/US74) : relais IA, quota, historique et journal anonymisé."""
 
+import json
 from uuid import uuid4
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -13,8 +15,10 @@ from app.schemas.ia import (
     CorrectionChatbotIA,
     MetaExecutionIA,
     ReponseChatbotIA,
+    RequeteChatbotIA,
     ResultatChatbotIA,
 )
+from app.services import ia as service_ia
 from tests.conftest import creer_utilisateur, entete
 from tests.fabriques_parcours import creer_parcours_vide
 
@@ -75,6 +79,43 @@ def test_message_retourne_reponse_et_corrections(
     assert corps["corrections"][0]["extrait"] == "How long I study"
     assert corps["quota_restant"] == 19
     assert corps["version_prompt"] == "chatbot/conversation@1.1.0"
+    assert [m.role for m in db.scalars(select(MessageChatbot)).all()] == ["apprenant", "assistant"]
+
+
+def test_integration_relais_http_vers_service_ia(
+    client: TestClient, db: Session, apprenant_avec_parcours, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    appels: list[httpx.Request] = []
+
+    def simuler_service_ia(requete_http: httpx.Request) -> httpx.Response:
+        appels.append(requete_http)
+        return httpx.Response(200, json=enveloppe("Bonjour !").model_dump(mode="json"))
+
+    def relais(requete: RequeteChatbotIA) -> ReponseChatbotIA:
+        transport = httpx.MockTransport(simuler_service_ia)
+        return service_ia.envoyer_message_chatbot(requete, transport=transport)
+
+    monkeypatch.setattr("app.services.chatbot.envoyer_message_chatbot", relais)
+
+    reponse = client.post(
+        "/api/v1/chatbot/message",
+        headers=entete(apprenant_avec_parcours),
+        json=corps_chat("How long I study English?"),
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["reponse"] == "Bonjour !"
+    assert len(appels) == 1
+    assert appels[0].method == "POST"
+    assert appels[0].url.path == "/chatbot/message"
+    corps_ia = json.loads(appels[0].content)
+    assert corps_ia["contexte"] == {
+        "code_langue": "en",
+        "referentiel": "CECRL",
+        "niveau_preliminaire": "B1",
+    }
+    assert corps_ia["entree"]["message"] == "How long I study English?"
+    assert corps_ia["entree"]["historique"] == []
     assert [m.role for m in db.scalars(select(MessageChatbot)).all()] == ["apprenant", "assistant"]
 
 
