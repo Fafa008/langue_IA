@@ -2,15 +2,13 @@
 
 import { useState } from "react";
 import ExerciceConversation from "@/components/pedagogie/parcours/exercices/ExerciceConversation";
-import { PARCOURS_MOCK } from "@/lib/env";
 import { LANGUES } from "@/lib/languages";
 import type { Langue } from "@/types/langue";
 import { SCENARIOS_CHAT } from "@/lib/scenariosChat";
 
 /**
- * US73-FE — Page du chat avec le professeur IA : choix du scénario et de la langue, libellé de contexte.
- * Tant que le relais backend (B-10) n'existe pas, le chat n'est proposé qu'en démonstration simulée :
- * aucune route absente n'est appelée.
+ * US72/US73-FE — Page du chat avec le professeur IA : choix du scénario et de la langue, libellé de contexte.
+ * Le composant de conversation utilise le service backend (ou le mock explicite en développement).
  */
 export default function ChatView() {
   const [scenarioId, setScenarioId] = useState(SCENARIOS_CHAT[0].id);
@@ -48,29 +46,23 @@ export default function ChatView() {
         Contexte : <strong className="text-content">{scenario.libelle}</strong> · {libelleLangueChoisie}
       </p>
 
-      {PARCOURS_MOCK ? (
-        <section className="card" aria-label="Conversation">
-          {/* La clé réinitialise la conversation à chaque changement de scénario ou de langue */}
-          <ExerciceConversation
-            key={`${scenario.id}-${langue}`}
-            contenu={{
-              format: "conversation",
-              consigne: "Discutez avec le professeur IA, à l'écrit ou à la voix.",
-              sujet: scenario.sujet,
-              messageInitial: scenario.messageInitial,
-              echangesMinimum: 3,
-            }}
-            langue={langue}
-            enCours={false}
-            verrouille
-            onSoumettre={() => {}}
-          />
-        </section>
-      ) : (
-        <p role="status" className="card text-content-secondary">
-          Le chat avec le professeur IA sera disponible prochainement.
-        </p>
-      )}
+      <section className="card" aria-label="Conversation">
+        {/* La clé réinitialise la conversation à chaque changement de scénario ou de langue */}
+        <ExerciceConversation
+          key={`${scenario.id}-${langue}`}
+          contenu={{
+            format: "conversation",
+            consigne: "Discutez avec le professeur IA, à l'écrit ou à la voix.",
+            sujet: scenario.sujet,
+            messageInitial: scenario.messageInitial,
+            echangesMinimum: 3,
+          }}
+          langue={langue}
+          enCours={false}
+          verrouille
+          onSoumettre={() => {}}
+        />
+      </section>
     </div>
   );
 }

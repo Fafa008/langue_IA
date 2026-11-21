@@ -206,8 +206,8 @@ describe("parcours simulé (démo sans backend)", () => {
 
   it("fait réagir le professeur IA puis relancer la conversation", async () => {
     const historique = [{ role: "assistant" as const, contenu: "Bonjour ! Je suis votre professeur IA. Comment vous appelez-vous ?" }];
-    expect(await mock.chatbot("Je m'appelle Rova", historique)).toBe("Très bien ! Enchanté ! D'où venez-vous ?");
-    expect(await mock.chatbot("Rova", historique)).toMatch(/phrase complète/);
+    expect((await mock.chatbot("Je m'appelle Rova", historique)).reponse).toBe("Très bien ! Enchanté ! D'où venez-vous ?");
+    expect((await mock.chatbot("Rova", historique)).reponse).toMatch(/phrase complète/);
   });
 
   it("répond 404 quand l'apprenant n'a pas de parcours", async () => {
@@ -268,12 +268,18 @@ describe("service HTTP (prêt pour le backend)", () => {
     await expect(http.corriger(7, 566, { format: "redaction", reponse: "…" })).rejects.toThrow("Phase de correction non reconnu : MIXTE");
   });
 
-  it("relaie le chatbot avec un historique borné comme le service IA", async () => {
+  it("relaie le chatbot avec un historique borné selon le contrat backend", async () => {
     apiRequest.mockResolvedValueOnce({ reponse: "Bonjour !" });
     const historique = Array.from({ length: 25 }, (_, i) => ({ role: "apprenant" as const, contenu: `m${i}` }));
-    expect(await http.chatbot("Salut", historique)).toBe("Bonjour !");
+    expect(await http.chatbot("Salut", historique)).toEqual({
+      reponse: "Bonjour !",
+      corrections: [],
+      quotaRestant: null,
+      versionPrompt: null,
+    });
     const [route, options] = apiRequest.mock.calls[0];
     expect(route).toBe("/api/v1/chatbot/message");
+    expect(options.body.identifiant_session).toEqual(expect.any(String));
     expect(options.body.historique).toHaveLength(HISTORIQUE_CHATBOT_MAX);
     expect(options.body.historique[0].contenu).toBe("m5");
   });

@@ -5,6 +5,7 @@
 import type { CadreReference } from "@/types/test-diagnostic";
 import type {
   ContenuExercice,
+  CorrectionChatbot,
   CorrectionExercice,
   ExerciceLecon,
   ExerciceParcours,
@@ -12,6 +13,7 @@ import type {
   ModeCorrection,
   ParcoursPersonnalise,
   PhaseParcours,
+  ReponseChatbot,
   StatutExercice,
   StatutParcours,
   TypeExercice,
@@ -95,14 +97,30 @@ export interface CorrectionExerciceDto {
   reformulation?: string | null;
 }
 
-/** POST /chatbot/message (relais backend du service IA, tâche B-10) : mêmes champs que ia-service. */
+/** POST /chatbot/message : contrat frontend du relais backend (docs/api/contrat-frontend.md). */
 export interface MessageChatbotDto {
   message: string;
+  identifiant_session: string;
   historique: { role: "apprenant" | "assistant"; contenu: string }[];
+}
+export interface CorrectionChatbotDto {
+  extrait: string;
+  correction: string;
+  explication: string;
 }
 export interface ReponseChatbotDto {
   reponse: string;
+  corrections?: CorrectionChatbotDto[];
+  quota_restant?: number;
+  version_prompt?: string;
 }
+
+export const toReponseChatbot = (dto: ReponseChatbotDto): ReponseChatbot => ({
+  reponse: dto.reponse,
+  corrections: dto.corrections ?? [],
+  quotaRestant: dto.quota_restant ?? null,
+  versionPrompt: dto.version_prompt ?? null,
+});
 
 const STATUTS_PARCOURS: StatutParcours[] = ["EN_COURS", "TERMINE", "ABANDONNE"];
 const PHASES: PhaseParcours[] = ["PASSIVE", "ACTIVE"];

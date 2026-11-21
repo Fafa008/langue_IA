@@ -35,12 +35,12 @@ afterEach(() => {
 });
 
 describe("US74-FE — corrections en marge", () => {
-  it("affiche la correction sous le message fautif, avec l'extrait, la forme correcte et la règle", () => {
+  it("affiche la correction sous le message fautif, avec l'extrait, la forme correcte et la règle", async () => {
     afficher(<ExerciceConversation contenu={contenu} langue="fr" enCours={false} verrouille={false} onSoumettre={jest.fn()} />);
     envoyer("hier j'ai allé au cinéma");
 
-    const marge = screen.getByTestId("corrections-marge");
-    expect(within(marge).getByText("Corrections simulées")).toBeInTheDocument();
+    const marge = await screen.findByTestId("corrections-marge");
+    expect(within(marge).getByText("Corrections en marge")).toBeInTheDocument();
     expect(within(marge).getByText("j'ai allé")).toBeInTheDocument();
     expect(within(marge).getByText("je suis allé(e)")).toBeInTheDocument();
     expect(within(marge).getByText(/« Aller » se conjugue avec l'auxiliaire être/)).toBeInTheDocument();
@@ -59,10 +59,10 @@ describe("US74-FE — corrections en marge", () => {
     expect(screen.queryByTestId("corrections-marge")).not.toBeInTheDocument();
   });
 
-  it("hors démonstration simulée, aucune correction n'est affichée", () => {
+  it("affiche les corrections renvoyées par le service même hors drapeau de démonstration", async () => {
     drapeau.__parcoursSimule = false;
     afficher(<ExerciceConversation contenu={contenu} langue="fr" enCours={false} verrouille={false} onSoumettre={jest.fn()} />);
     envoyer("hier j'ai allé au cinéma");
-    expect(screen.queryByTestId("corrections-marge")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("corrections-marge")).toBeInTheDocument();
   });
 });

@@ -45,8 +45,11 @@ export const ENDPOINTS = {
     reponse: (idParcours: number, idParcoursExercice: number) =>
       `${API}/parcours/${idParcours}/exercices/${idParcoursExercice}/reponse`,
   },
-  /** Professeur IA : relais backend authentifié de POST /chatbot/message du service IA (tâche B-10, à créer). */
-  chatbotMessage: `${API}/chatbot/message`,
+  /** Chat apprenant : relais backend authentifié du service IA (contrat frontend). */
+  chatbot: {
+    message: `${API}/chatbot/message`,
+    fermerSession: (identifiantSession: string) => `${API}/chatbot/session/${identifiantSession}`,
+  },
   formateurs: `${API}/formateurs`,
   formateur: (idUser: number) => `${API}/formateurs/${idUser}`,
   /** Tableau de bord de l'administrateur */

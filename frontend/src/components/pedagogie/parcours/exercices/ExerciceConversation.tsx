@@ -4,20 +4,19 @@ import { Bot, Send, UserRound, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useChatbot } from "@/hooks/useParcoursPersonnalise";
 import { useReconnaissanceVocale } from "@/hooks/useReconnaissanceVocale";
-import { repererErreurs } from "@/lib/corrections-messages";
 import { PARCOURS_MOCK } from "@/lib/env";
 import { messageErreurParcours } from "@/lib/parcours-personnalise";
 import { lireAVoixHaute, syntheseDisponible } from "@/lib/voix";
-import type { ContenuExercice, ErreurRelevee, MessageChatbot, ReponseExercice } from "@/types/parcours-personnalise";
+import type { ContenuExercice, CorrectionChatbot, MessageChatbot, ReponseExercice } from "@/types/parcours-personnalise";
 import BoutonMicro from "./BoutonMicro";
 
-/** Message affiché : un message de l'apprenant peut porter des corrections en marge (simulées, US74-FE). */
-type MessageEnChat = MessageChatbot & { corrections?: ErreurRelevee[] };
+/** Message affiché : un message de l'apprenant peut porter les corrections renvoyées par le backend (US74-FE). */
+type MessageEnChat = MessageChatbot & { corrections?: CorrectionChatbot[] };
 
 /**
  * Conversation avec le professeur IA (chatbot) : l'apprenant répond à l'écrit ou à la voix (dictée),
  * peut faire lire les réponses à voix haute, puis termine l'échange pour le faire évaluer.
- * La conversation n'est gardée que dans l'écran : aucun historique n'est conservé (tâche F-08).
+ * L'historique est conservé par le backend pendant la session et supprimé à sa fin (D2).
  */
 export default function ExerciceConversation({
   contenu,
@@ -52,13 +51,21 @@ export default function ExerciceConversation({
     const message = brouillon.trim();
     if (!message || chatbot.isPending) return;
     const historique = messages;
-    // Corrections en marge : simulées en démonstration seulement, sans interrompre l'échange
-    const corrections = PARCOURS_MOCK ? repererErreurs(message) : [];
-    setMessages([...historique, { role: "apprenant", contenu: message, ...(corrections.length > 0 ? { corrections } : {}) }]);
+    setMessages([...historique, { role: "apprenant", contenu: message }]);
     setBrouillon("");
     chatbot.mutate(
       { message, historique },
-      { onSuccess: (reponse) => setMessages((liste) => [...liste, { role: "assistant", contenu: reponse }]) },
+      {
+        onSuccess: (reponse) =>
+          setMessages((liste) => [
+            ...liste.map((tour, index) =>
+              index === liste.length - 1 && reponse.corrections.length > 0
+                ? { ...tour, corrections: reponse.corrections }
+                : tour,
+            ),
+            { role: "assistant", contenu: reponse.reponse },
+          ]),
+      },
     );
   };
 
@@ -135,7 +142,7 @@ function Bulle({ message, langue }: { message: MessageEnChat; langue: string }) 
         <span lang={langue}>{message.contenu}</span>
         {message.corrections && message.corrections.length > 0 && (
           <div data-testid="corrections-marge" className="mt-2 space-y-1 border-l-2 border-warning pl-2 text-small text-content">
-            <p className="font-semibold text-warning-dark">Corrections simulées</p>
+            <p className="font-semibold text-warning-dark">Corrections en marge</p>
             <ul aria-label="Corrections du message">
               {message.corrections.map((c) => (
                 <li key={c.extrait}>

@@ -7,6 +7,7 @@ import type {
   LeconParcours,
   MessageChatbot,
   ParcoursPersonnalise,
+  ReponseChatbot,
   ReponseExercice,
 } from "@/types/parcours-personnalise";
 import { ENDPOINTS } from "./endpoints";
@@ -15,6 +16,7 @@ import {
   toExerciceParcours,
   toLeconParcours,
   toParcoursPersonnalise,
+  toReponseChatbot,
   type CorrectionExerciceDto,
   type ExerciceParcoursDto,
   type LeconParcoursDto,
@@ -37,7 +39,7 @@ export interface ParcoursPersonnaliseService {
   lecon(idParcours: number, numeroLecon: number): Promise<LeconParcours>;
   corriger(idParcours: number, idParcoursExercice: number, reponse: ReponseExercice): Promise<CorrectionExercice>;
   /** Message au professeur IA, avec l'historique récent de la conversation. */
-  chatbot(message: string, historique: MessageChatbot[]): Promise<string>;
+  chatbot(message: string, historique: MessageChatbot[]): Promise<ReponseChatbot>;
 }
 
 const parLecon = (a: ExerciceParcours, b: ExerciceParcours) =>
@@ -46,8 +48,14 @@ const parLecon = (a: ExerciceParcours, b: ExerciceParcours) =>
 const corpsReponse = (reponse: ReponseExercice) =>
   reponse.format === "conversation" ? { format: reponse.format, messages: reponse.messages } : reponse;
 
+const identifiantSessionChatbot =
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 const corpsChatbot = (message: string, historique: MessageChatbot[]): MessageChatbotDto => ({
   message,
+  identifiant_session: identifiantSessionChatbot,
   historique: historique.slice(-HISTORIQUE_CHATBOT_MAX).map(({ role, contenu }) => ({ role, contenu })),
 });
 
@@ -71,12 +79,12 @@ export const httpParcoursPersonnaliseService: ParcoursPersonnaliseService = {
     return toCorrectionExercice(dto);
   },
   async chatbot(message, historique) {
-    const dto = await apiRequest<ReponseChatbotDto>(ENDPOINTS.chatbotMessage, {
+    const dto = await apiRequest<ReponseChatbotDto>(ENDPOINTS.chatbot.message, {
       method: "POST",
       body: corpsChatbot(message, historique),
       timeoutMs: DELAI_IA_MS,
     });
-    return dto.reponse;
+    return toReponseChatbot(dto);
   },
 };
 
@@ -87,7 +95,7 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
   lecon: async (idParcours, numeroLecon) => toLeconParcours(await parcoursPersonnaliseMock.lecon(idParcours, numeroLecon)),
   corriger: async (idParcours, idParcoursExercice, reponse) =>
     toCorrectionExercice(await parcoursPersonnaliseMock.corriger(idParcours, idParcoursExercice, reponse)),
-  chatbot: async (message, historique) => (await parcoursPersonnaliseMock.chatbot(corpsChatbot(message, historique))).reponse,
+  chatbot: async (message, historique) => toReponseChatbot(await parcoursPersonnaliseMock.chatbot(corpsChatbot(message, historique))),
 };
 
 export const parcoursPersonnaliseService = PARCOURS_MOCK ? mockParcoursPersonnaliseService : httpParcoursPersonnaliseService;
