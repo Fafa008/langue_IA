@@ -9,6 +9,28 @@
 
 ---
 
+## État de l'agent
+
+**Verdict : opérationnel de bout en bout sur `develop`.** L'agent IA est enregistré dans le Harness, la chaîne backend/frontend est fusionnée, et les six checks de la CI sont au vert.
+
+| Composant | État | Détail |
+| --- | --- | --- |
+| Agent IA `recommandation@1.0.0` | ✅ Actif | Enregistré dans `ia-service/app/main.py:44` ; prompt `recommandation/actions@1.0.0` ; budget 30 000 ms. |
+| Route IA `POST /recommandation/actions` | ✅ Active | `ia-service/app/api/recommandation.py` ; enveloppe `ReponseAgent[ResultatRecommandation]`. |
+| Contrat partagé | ✅ Livré | `contrats/ia/recommandation-parcours/` : requête, réponse, exemples valides et invalides. |
+| Relais backend | ✅ Fusionné | `CHEMIN_RECOMMANDATION` (`backend/app/services/ia.py:28`) ; appel hors session PostgreSQL. |
+| Décision et persistance | ✅ Fusionnées | `backend/app/services/recommandation.py` ; JSONB `parcours.recommandation_ia` ; migration `20261121_rec_recommandation_ia`. |
+| Route apprenant | ✅ Fusionnée | `POST /api/v1/parcours/{id}/recommandations` ; JWT, 401/403/404 ; `COMPLET` ou `PARTIEL`. |
+| Frontend | ✅ Fusionné | `endpoints.ts`, mapper, hook, section « Mes recommandations » de `MonParcours.tsx`. |
+| Tests | ✅ Verts | IA 96,20 % ; backend 95,87 % ; Jest et E2E dédiés verts. |
+| CI (commit `61058ed`) | ✅ 6/6 | Backend, service IA, frontend check/build, E2E, Docker, GitGuardian. |
+| Livraisons | ✅ Terminées | PR #93 (`586ac82`) service IA ; PR #94 (`92b118c`) intégration backend/frontend. |
+| RAG, mémoire, modèle dédié | ❌ Hors périmètre v1 | Aucun artefact ajouté ; l'agent reste sans état. |
+
+État également recensé dans le socle Harness : [`architecture-agent-harness.md`](architecture-agent-harness.md), §1.1.
+
+---
+
 ## 1. Rôle
 
 L'agent Recommandation produit, à partir des **points faibles déjà détectés par le diagnostic** et du **niveau visé** du parcours, une liste courte d'**actions de remédiation** : quoi refaire, pourquoi, dans quel ordre, et avec quel type d'exercice.
