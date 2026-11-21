@@ -240,9 +240,7 @@ def _ajouter_correction(
 
 def resultat_chatbot_demonstration(messages: Sequence[MessageLLM]) -> ResultatChatbot | None:
     """Réponse et corrections de démonstration du chat (US74), ou ``None`` hors prompt de conversation."""
-    donnees = _donnees_diagnostic(
-        messages, f"<{BALISE_CONVERSATION}>", f"</{BALISE_CONVERSATION}>"
-    )
+    donnees = _donnees_diagnostic(messages, f"<{BALISE_CONVERSATION}>", f"</{BALISE_CONVERSATION}>")
     if donnees is None:
         return None
     texte = " ".join(str(donnees["message"]).split())

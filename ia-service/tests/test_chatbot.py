@@ -34,7 +34,9 @@ REPONSE_MODELE = {
         {
             "extrait": "How long I study",
             "correction": "How long have I been studying",
-            "explication": "Pour une action commencée dans le passé et encore vraie, utilisez le present perfect continu.",
+            "explication": (
+                "Pour une action commencée dans le passé et encore vraie, utilisez le present perfect continu."
+            ),
         }
     ],
 }
