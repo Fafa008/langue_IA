@@ -17,9 +17,9 @@ Aucune tâche ClickUp n'a été modifiée. Les identifiants, noms exacts, statut
 | ID plan | Identifiant ClickUp exact | Nom exact | Statut | Responsable | Branche CONTRIBUTING | PR |
 |---|---|---|---|---|---|---|
 | D1–D6 | — | — | — | Product Owner / expert IA | `docs/plan-chatbot` | `[US-67] Plan chatbot et décisions` |
-| P1-1 | — | — | À créer | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : jeton interne et fermeture du port` |
-| P1-2 | — | — | À créer | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : quota par apprenant` |
-| P1-3 | `123t3hw0f45` | `[Sprint 5] PRE-S5-01 – Validation de l'expert IA des prompts du chat et du mode thème` | to do | Fafa | `feature/US67-api-chatbot` | `[US-67] API chatbot : validation des prompts` |
+| P1-1 | — | — | fait localement (`8a04142`) | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : jeton interne et fermeture du port` |
+| P1-2 | — | — | fait localement (`60eb7e2`) | Backend | `feature/US67-api-chatbot` | `[US-67] API chatbot : quota par apprenant` |
+| P1-3 | `123t3hw0f45` | `[Sprint 5] PRE-S5-01 – Validation de l'expert IA des prompts du chat et du mode thème` | consigne provisoire, validation à venir | Fafa | `feature/US67-api-chatbot` | `[US-67] API chatbot : validation des prompts` |
 | P1-4 | `123t3hw0f49` | `[Sprint 5] PRE-S5-05 – Confirmer que la route du jeu de rôle (US67) est appelable depuis le sprint 4` | to do | — | `feature/US67-api-chatbot` | `[US-67] API chatbot : appel confirmé` |
 | P1-5 | `123t3hw0f50` | `[Sprint 5] DEV-ENV – Environnement de recette du chat` | to do | — | `feature/US72-interface-chat` | `[US-72] Interface de chat : environnement de recette` |
 | P2-1 / P2-2 | `123t3hw0f4p` | `[Sprint 5] US74-IA – Prompt de correction et schéma du bloc corrections[] (revue de l'expert IA)` | to do | Fafa | `feature/US74-corrections` | `[US-74] Corrections en marge : consigne et schéma` |
@@ -127,8 +127,10 @@ Décisions validées :
 4. D4 : scénario choisi par l'apprenant, niveau issu du diagnostic.
 5. D5 : mode thème séparé et optionnel.
 6. D6 : bilan de session optionnel.
-7. Quota : 20 échanges par apprenant.
+7. Quota : 20 échanges par apprenant et par session.
 8. Rétention de l'historique : suppression en fin de session uniquement.
+9. Fenêtre du quota : par session, pas par jour ni par mois.
+10. P1-3 : consigne provisoire retenue ; validation écrite de l'expert IA encore attendue avant intégration définitive.
 
 Points restant à cadrer :
 
