@@ -20,6 +20,7 @@ x-python-env: &python-env
   REDIS_HOST: redis
   REDIS_PORT: "6379"
   IA_SERVICE_URL: http://ia-service:8001
+  IA_SERVICE_TOKEN: ${IA_SERVICE_TOKEN:-}
   BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
 
 services:
@@ -94,6 +95,7 @@ services:
     environment:
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
       ENVIRONNEMENT: ${ENVIRONNEMENT:-dev}
+      IA_SERVICE_TOKEN: ${IA_SERVICE_TOKEN:-}
       LLM_FOURNISSEUR: ${LLM_FOURNISSEUR:-factice}
       LLM_FACTICE_SCENARIO: ${LLM_FACTICE_SCENARIO:-demonstration}
       LLM_MODELE: ${LLM_MODELE:-}

@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     # Service IA (PRE-05) : vide = analyse désactivée, le diagnostic renvoie un résultat partiel.
     ia_service_url: str = ""
     ia_service_timeout_s: float = 55.0
+    ia_service_token: str = ""
 
     # E-mails : sans SMTP_HOST (ou avec les valeurs d'exemple), le message est écrit dans les journaux
     smtp_host: str = ""
@@ -68,6 +69,12 @@ class Settings(BaseSettings):
     def secret_obligatoire_en_production(self) -> "Settings":
         if self.environment == "production" and self.secret_key in SECRETS_PAR_DEFAUT:
             raise ValueError("SECRET_KEY doit être changée en production (valeur d'exemple détectée).")
+        return self
+
+    @model_validator(mode="after")
+    def jeton_ia_obligatoire_en_production(self) -> "Settings":
+        if self.environment == "production" and not self.ia_service_token.strip():
+            raise ValueError("IA_SERVICE_TOKEN doit être renseigné en production.")
         return self
 
 

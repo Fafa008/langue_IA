@@ -41,11 +41,17 @@ def _poster(chemin: str, requete: BaseModel, modele: type[T], transport: httpx.B
     if not base:
         raise ErreurServiceIA("non_configure")
 
+    entetes: dict[str, str] = {}
+    jeton = settings.ia_service_token.strip()
+    if jeton:
+        entetes["X-IA-Token"] = jeton
+
     try:
         with httpx.Client(timeout=settings.ia_service_timeout_s, transport=transport) as client:
             reponse = client.post(
                 f"{base.rstrip('/')}{chemin}",
                 json=requete.model_dump(mode="json", exclude_none=True),
+                headers=entetes or None,
             )
     except httpx.TimeoutException:
         raise ErreurServiceIA("timeout") from None

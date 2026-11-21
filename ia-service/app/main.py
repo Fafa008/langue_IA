@@ -19,8 +19,9 @@ from app.agents.chatbot import definir_agent_chatbot
 from app.agents.correction import definir_agent_correction
 from app.agents.diagnostic import construire_definition
 from app.api import chatbot, correction, diagnostic
-from app.core.erreurs import ErreurServiceIA
+from app.core.erreurs import ErreurConfiguration, ErreurServiceIA
 from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service, gerer_erreur_validation
+from app.core.securite import jeton_interne_attendu, verifier_jeton_interne
 from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm.fabrique import obtenir_client, reinitialiser_client
@@ -31,6 +32,9 @@ from app.rag import construire_recuperateur
 @asynccontextmanager
 async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     """Construire les ressources partagées une seule fois, puis les libérer."""
+    if os.getenv("ENVIRONNEMENT", "dev") == "prod" and not jeton_interne_attendu():
+        raise ErreurConfiguration("IA_SERVICE_TOKEN requis en production.")
+
     registre_prompts = RegistrePrompts()
     client_llm = obtenir_client()
     registre_agents = RegistreAgents()
@@ -66,6 +70,7 @@ app.add_exception_handler(ErreurServiceIA, gerer_erreur_service)
 app.add_exception_handler(Exception, gerer_erreur_inattendue)
 # Corps hors contrat : ENTREE_INVALIDE, sans recopier la valeur refusée (US67).
 app.add_exception_handler(RequestValidationError, gerer_erreur_validation)
+app.middleware("http")(verifier_jeton_interne)
 
 # Origines autorisées (frontend) : BACKEND_CORS_ORIGINS du .env, séparées par des virgules
 origines = [o.strip() for o in os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()]

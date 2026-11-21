@@ -150,3 +150,40 @@ def test_erreur_inattendue_masquee() -> None:
     assert reponse.json()["retryable"] is False
     assert "SECRET" not in reponse.text
     assert "RuntimeError" not in reponse.text
+
+
+def test_jeton_interne_requis_sur_les_routes_metier(env_propre: pytest.MonkeyPatch) -> None:
+    env_propre.setenv("IA_SERVICE_TOKEN", "jeton-test")
+    env_propre.setenv("LLM_FACTICE_SCENARIO", "demonstration")
+    corps = {
+        "request_id": str(REQUEST_ID),
+        "contexte": CONTEXTE_MINIMAL,
+        "entree": {"message": "Bonjour"},
+    }
+
+    with TestClient(app) as client:
+        assert client.get("/health").status_code == 200
+
+        sans_jeton = client.post("/chatbot/message", json=corps)
+        assert sans_jeton.status_code == 401
+        assert sans_jeton.json()["code"] == "ACCES_REFUSE"
+        assert sans_jeton.json()["retryable"] is False
+        assert "jeton-test" not in sans_jeton.text
+
+        mauvais_jeton = client.post("/chatbot/message", json=corps, headers={"X-IA-Token": "mauvais"})
+        assert mauvais_jeton.status_code == 401
+        assert mauvais_jeton.json()["code"] == "ACCES_REFUSE"
+
+        avec_jeton = client.post("/chatbot/message", json=corps, headers={"X-IA-Token": "jeton-test"})
+        assert avec_jeton.status_code == 200
+
+
+def test_demarrage_refuse_sans_jeton_en_production(env_propre: pytest.MonkeyPatch) -> None:
+    env_propre.setenv("ENVIRONNEMENT", "prod")
+    env_propre.setenv("LLM_FOURNISSEUR", "gemini")
+    env_propre.setenv("GEMINI_MODEL", "modele-test")
+    env_propre.setenv("GEMINI_API_KEY", "cle-test-gemini")
+
+    with pytest.raises(ErreurConfiguration, match="IA_SERVICE_TOKEN"):
+        with TestClient(app):
+            pass
