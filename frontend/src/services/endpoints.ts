@@ -47,8 +47,11 @@ export const ENDPOINTS = {
     /** Recommandations pédagogiques (REC-03) : appel explicite, idempotent, jamais d'erreur visible. */
     recommandations: (idParcours: number) => `${API}/parcours/${idParcours}/recommandations`,
   },
-  /** Professeur IA : relais backend authentifié de POST /chatbot/message du service IA (tâche B-10, à créer). */
-  chatbotMessage: `${API}/chatbot/message`,
+  /** Chat apprenant : relais backend authentifié du service IA (contrat frontend). */
+  chatbot: {
+    message: `${API}/chatbot/message`,
+    fermerSession: (identifiantSession: string) => `${API}/chatbot/session/${identifiantSession}`,
+  },
   formateurs: `${API}/formateurs`,
   formateur: (idUser: number) => `${API}/formateurs/${idUser}`,
   /** Tableau de bord de l'administrateur */

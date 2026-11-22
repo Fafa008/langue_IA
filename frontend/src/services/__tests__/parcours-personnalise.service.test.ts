@@ -336,12 +336,13 @@ describe("service HTTP (prêt pour le backend)", () => {
     await expect(http.corriger(7, 566, { format: "redaction", reponse: "…" })).rejects.toThrow("Phase de correction non reconnu : MIXTE");
   });
 
-  it("relaie le chatbot avec un historique borné comme le service IA", async () => {
+  it("relaie le chatbot avec un historique borné selon le contrat backend", async () => {
     apiRequest.mockResolvedValueOnce({ reponse: "Bonjour !" });
     const historique = Array.from({ length: 25 }, (_, i) => ({ role: "apprenant" as const, contenu: `m${i}` }));
     expect(await http.chatbot("Salut", historique)).toBe("Bonjour !");
     const [route, options] = apiRequest.mock.calls[0];
     expect(route).toBe("/api/v1/chatbot/message");
+    expect(options.body.identifiant_session).toEqual(expect.any(String));
     expect(options.body.historique).toHaveLength(HISTORIQUE_CHATBOT_MAX);
     expect(options.body.historique[0].contenu).toBe("m5");
   });

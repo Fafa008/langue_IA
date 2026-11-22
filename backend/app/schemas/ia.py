@@ -196,6 +196,47 @@ class ReponseCorrectionIA(_ModeleIA):
     meta: MetaExecutionIA
 
 
+# --- Chat : contrat ``POST /chatbot/message`` (US67/US74) ---
+
+
+class MessageHistoriqueChatbotIA(_ModeleIA):
+    role: Literal["apprenant", "assistant"]
+    contenu: str = Field(min_length=1, max_length=4000)
+
+
+class EntreeChatbotIA(_ModeleIA):
+    message: str = Field(min_length=1, max_length=2000)
+    historique: list[MessageHistoriqueChatbotIA] = Field(default_factory=list, max_length=20)
+
+
+class RequeteChatbotIA(_ModeleIA):
+    request_id: UUID
+    version_agent: str | None = None
+    contexte: ContexteApprenantIA
+    entree: EntreeChatbotIA
+
+
+class CorrectionChatbotIA(_ModeleIA):
+    extrait: str = Field(min_length=1, max_length=120)
+    correction: str = Field(min_length=1, max_length=120)
+    explication: str = Field(min_length=1, max_length=300)
+
+
+class ResultatChatbotIA(_ModeleIA):
+    reponse: str = Field(min_length=1, max_length=4000)
+    corrections: list[CorrectionChatbotIA] = Field(default_factory=list, max_length=3)
+
+
+class ReponseChatbotIA(_ModeleIA):
+    request_id: UUID
+    agent: Literal["chatbot"]
+    version_agent: str = Field(min_length=1, max_length=32)
+    version_prompt: str = Field(min_length=1, max_length=128)
+    statut: Literal["succes"] = "succes"
+    resultat: ResultatChatbotIA
+    meta: MetaExecutionIA
+
+
 # --- REC-00 : recommandation de parcours (``POST /recommandation/actions``) ---
 
 TypeExerciceRecommandationIA = Literal["GRAMMAIRE", "VOCABULAIRE", "COMPREHENSION", "ECOUTE", "ORAL"]

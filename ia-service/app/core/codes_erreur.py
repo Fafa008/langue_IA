@@ -16,6 +16,7 @@ class CodeErreur(str, Enum):
 
     # Entrée et routage
     ENTREE_INVALIDE = "ENTREE_INVALIDE"
+    ACCES_REFUSE = "ACCES_REFUSE"
     AGENT_INCONNU = "AGENT_INCONNU"
     TAILLE_DEPASSEE = "TAILLE_DEPASSEE"
     QUOTA_DEPASSE = "QUOTA_DEPASSE"
@@ -40,6 +41,7 @@ class CodeErreur(str, Enum):
 # Messages publics : une ligne, aucune donnée d'entrée, aucun détail de fournisseur.
 MESSAGES_PUBLICS: dict[CodeErreur, str] = {
     CodeErreur.ENTREE_INVALIDE: "L'entrée ne respecte pas le contrat attendu par l'agent.",
+    CodeErreur.ACCES_REFUSE: "Appel interne non autorisé.",
     CodeErreur.AGENT_INCONNU: "L'agent demandé n'existe pas ou sa version est inconnue.",
     CodeErreur.TAILLE_DEPASSEE: "La requête dépasse la taille autorisée.",
     CodeErreur.QUOTA_DEPASSE: "Le quota de requêtes est atteint, réessayez plus tard.",
@@ -72,6 +74,7 @@ CODES_RETRYABLES: frozenset[CodeErreur] = frozenset(
 # servent surtout à la supervision et aux tests du gestionnaire d'erreurs.
 STATUTS_HTTP: dict[CodeErreur, int] = {
     CodeErreur.ENTREE_INVALIDE: 422,
+    CodeErreur.ACCES_REFUSE: 401,
     CodeErreur.AGENT_INCONNU: 404,
     CodeErreur.TAILLE_DEPASSEE: 413,
     CodeErreur.QUOTA_DEPASSE: 429,

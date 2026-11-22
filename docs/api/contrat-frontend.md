@@ -1091,8 +1091,24 @@ dernière correction remplace la précédente, et la correction automatique vide
 
 **502/503/504** (IA indisponible ou trop lente) : le frontend garde la réponse et propose de la renvoyer.
 
-### `POST /chatbot/message` — relais du service IA (tâche B-10)
+## Chat apprenant (US67/US74) — rôle `APPRENANT`
 
-Mêmes champs que `ia-service` (`app/schemas/chatbot.py`) : `{ "message": "…", "historique": [{ "role": "assistant",
-"contenu": "…" }] }` (20 derniers tours au plus) → `{ "reponse": "…" }`. Le frontend ne garde la conversation que
-dans l'écran (aucun historique conservé, voir F-08) ; sans backend, le professeur IA est simulé et l'écran l'indique.
+Le navigateur n'appelle jamais `ia-service`. Le backend authentifie, borne l'historique à 20 tours, applique le
+quota de 20 échanges par session, appelle le service IA puis valide la réponse avant de la renvoyer.
+
+### `POST /chatbot/message`
+
+Corps : `{ "message": "…", "identifiant_session": "<uuid>", "historique": [{ "role": "assistant", "contenu": "…" }] }`.
+L'`identifiant_session` est généré par le frontend ; l'`historique` transmis reste borné à 20 tours.
+
+Réponse `200` : `{ "reponse": "…", "corrections": [{ "extrait": "…", "correction": "…", "explication": "…" }],
+"quota_restant": 19, "version_prompt": "chatbot/conversation@1.1.0" }`. `corrections` contient au plus trois éléments
+et s'affiche en marge sans interrompre la conversation.
+
+Erreurs : `403` (pas apprenant), `404` (aucun parcours), `422` (langue/niveau non pris en charge), `429` (quota
+dépassé), `502`/`503`/`504` (réponse IA invalide, indisponible ou lente — le frontend propose de renvoyer).
+
+### `DELETE /chatbot/session/{identifiant_session}`
+
+Supprime l'historique et le quota de la session. Le journal anonymisé (durée, modèle, version, nombre de corrections)
+reste conservé côté backend, sans texte brut.

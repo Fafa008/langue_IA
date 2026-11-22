@@ -13,9 +13,11 @@ from pydantic import BaseModel, ValidationError
 
 from app.core.config import get_settings
 from app.schemas.ia import (
+    ReponseChatbotIA,
     ReponseCorrectionIA,
     ReponseDiagnosticIA,
     ReponseRecommandationIA,
+    RequeteChatbotIA,
     RequeteCorrectionIA,
     RequeteDiagnosticIA,
     RequeteRecommandationIA,
@@ -25,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 CHEMIN_EVALUATION = "/diagnostic/evaluer"
 CHEMIN_CORRECTION = "/correction/reponse-libre"
+CHEMIN_CHATBOT = "/chatbot/message"
 CHEMIN_RECOMMANDATION = "/recommandation/actions"
 
 T = TypeVar("T", bound=BaseModel)
@@ -49,11 +52,17 @@ def _poster(chemin: str, requete: BaseModel, modele: type[T], transport: httpx.B
     if not base:
         raise ErreurServiceIA("non_configure")
 
+    entetes: dict[str, str] = {}
+    jeton = settings.ia_service_token.strip()
+    if jeton:
+        entetes["X-IA-Token"] = jeton
+
     try:
         with httpx.Client(timeout=settings.ia_service_timeout_s, transport=transport) as client:
             reponse = client.post(
                 f"{base.rstrip('/')}{chemin}",
                 json=requete.model_dump(mode="json", exclude_none=True),
+                headers=entetes or None,
             )
     except httpx.TimeoutException:
         raise ErreurServiceIA("timeout") from None
@@ -88,6 +97,15 @@ def corriger_reponse_libre(
 ) -> ReponseCorrectionIA:
     """Appeler l'agent de correction (US157) et retourner son feedback v2 validé."""
     return _poster(CHEMIN_CORRECTION, requete, ReponseCorrectionIA, transport)
+
+
+def envoyer_message_chatbot(
+    requete: RequeteChatbotIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseChatbotIA:
+    """Appeler l'agent Chatbot et retourner son enveloppe validée, corrections en marge comprises."""
+    return _poster(CHEMIN_CHATBOT, requete, ReponseChatbotIA, transport)
 
 
 def recommander_actions(
