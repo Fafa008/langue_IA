@@ -11,6 +11,7 @@ import { useSession } from "@/hooks/useSession";
 import { ApiError } from "@/lib/api-client";
 import { PARCOURS_MOCK } from "@/lib/env";
 import { formatDateCourte } from "@/lib/date";
+import { libelleLangue } from "@/lib/languages";
 import {
   DOMAINE_FAIBLESSE_LABELS,
   leconsAvantPhaseActive,
@@ -161,15 +162,29 @@ function RecommandationsParcours({ parcours }: { parcours: ParcoursPersonnalise 
       </div>
 
       {recommandations.isError ? (
-        <p className="mt-4 text-small text-content-secondary">
+        <p role="alert" className="mt-4 text-small text-content-secondary">
           Les recommandations ne sont pas disponibles pour le moment. Réessayez dans un instant.
         </p>
       ) : !donnees ? (
         <p className="mt-4 text-content-secondary">Aucune recommandation pour le moment.</p>
       ) : (
         <div className="mt-4 space-y-3">
+          <p className="text-small text-content-secondary">
+            {libelleLangue(donnees.codeLangue)} · Niveau cible {donnees.niveauCible} ({donnees.referentiel})
+          </p>
           <p className="text-content">{donnees.resume}</p>
-          {donnees.statut === "COMPLET" && donnees.recommandations.length > 0 && (
+          {donnees.statut === "PARTIEL" && (
+            <p role="status" className="msg-warning">
+              Analyse partielle : le service de recommandation n&apos;a pas répondu. Les actions ci-dessous restent
+              indicatives.
+            </p>
+          )}
+          {donnees.recommandations.length === 0 ? (
+            <p className="text-content-secondary">
+              Aucune action ciblée cette fois. Continuez la leçon en cours : de nouvelles recommandations
+              apparaîtront après vos prochains exercices.
+            </p>
+          ) : (
             <ol aria-label="Actions recommandées" className="space-y-2">
               {donnees.recommandations.map((action) => (
                 <li key={`${action.domaine}-${action.priorite}`} className="rounded-btn border border-border p-3">
@@ -182,6 +197,12 @@ function RecommandationsParcours({ parcours }: { parcours: ParcoursPersonnalise 
               ))}
             </ol>
           )}
+          <Link
+            href={ROUTES.apprenant.parcours.lecon(parcours.leconAtteinte)}
+            className="inline-flex min-h-11 items-center font-semibold text-primary hover:underline"
+          >
+            Aller à la leçon {parcours.leconAtteinte} →
+          </Link>
         </div>
       )}
     </section>
