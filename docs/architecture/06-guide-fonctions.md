@@ -57,6 +57,8 @@ L'appel IA est best-effort : il ne doit jamais faire échouer la clôture.
 | P | `_preparer` (`services/analyse_diagnostic.py`) | Applique les garde-fous et rejette les compétences inconnues | Aucune réponse exploitable ⇒ aucun appel LLM |
 | P | `_calculer_competences` (`services/analyse_diagnostic.py`) | Compte les bonnes réponses des **seules** questions à choix | Inclure les réponses libres afficherait un score trompeur |
 | P | `evaluer_diagnostic` (`services/ia.py`) | Client HTTP vers `POST /diagnostic/evaluer` | URL vide = désactivé ; timeout/erreur/réponse invalide ⇒ `ErreurServiceIA`, jamais une erreur pour l'apprenant |
+| O | `recommander_pour_parcours` (`services/recommandation.py`) | Prépare, appelle l'IA hors DB, revérifie, persiste `parcours.recommandation_ia` | Empreinte = idempotence ; un résultat `PARTIEL` n'est pas mis en cache et n'expose aucun code technique |
+| P | `recommander_actions` (`services/ia.py`) | Client HTTP vers `POST /recommandation/actions` | Même dégradation silencieuse que le diagnostic |
 | T | `ErreurServiceIA.code` | Code technique court (`timeout`, `indisponible`…) | Ne contient jamais de prompt, de réponse brute ni de clé |
 
 ---
@@ -68,7 +70,7 @@ normalisée ; il ne persiste rien.
 
 | Couche | Fonction / symbole | Rôle | Règle à connaître |
 | --- | --- | --- | --- |
-| P | `GET /health`, `POST /diagnostic/evaluer`, `POST /chatbot/message` (`app/main.py`) | Frontière HTTP | Le backend appelle uniquement `/diagnostic/evaluer` |
+| P | `GET /health`, `POST /diagnostic/evaluer`, `POST /chatbot/message`, `POST /correction/reponse-libre`, `POST /recommandation/actions` (`app/main.py`) | Frontière HTTP | Le backend appelle `/diagnostic/evaluer` et `/recommandation/actions` ; chatbot et correction sont appelés par d'autres flux |
 | O | `Harness.executer` (`harness/execution.py`) | Résout la version de l'agent, valide l'entrée, applique le budget, normalise succès/erreur | Toute exception est traduite en `ReponseErreur` avec un code stable |
 | O | `_erreur`, `_code_pour`, `_journaliser` (`harness/execution.py`) | Traduction et journalisation des erreurs | Les journaux ne contiennent ni prompt ni donnée personnelle |
 | A | `DiagnosticAgent.executer` (`agents/diagnostic.py`) | Récupère les descripteurs, rend le prompt, appelle le LLM, valide la sortie | Ne recalcule jamais le score du backend |

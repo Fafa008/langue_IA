@@ -21,9 +21,7 @@ def jeton_interne_attendu() -> str:
     return os.getenv("IA_SERVICE_TOKEN", "").strip()
 
 
-async def verifier_jeton_interne(
-    request: Request, call_next: Callable[[Request], Awaitable[Response]]
-) -> Response:
+async def verifier_jeton_interne(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     """Refuser une requête métier sans jeton valide quand un secret est configuré."""
     if request.url.path == "/health":
         return await call_next(request)

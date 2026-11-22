@@ -16,9 +16,11 @@ from app.schemas.ia import (
     ReponseChatbotIA,
     ReponseCorrectionIA,
     ReponseDiagnosticIA,
+    ReponseRecommandationIA,
     RequeteChatbotIA,
     RequeteCorrectionIA,
     RequeteDiagnosticIA,
+    RequeteRecommandationIA,
 )
 
 logger = logging.getLogger(__name__)
@@ -26,6 +28,7 @@ logger = logging.getLogger(__name__)
 CHEMIN_EVALUATION = "/diagnostic/evaluer"
 CHEMIN_CORRECTION = "/correction/reponse-libre"
 CHEMIN_CHATBOT = "/chatbot/message"
+CHEMIN_RECOMMANDATION = "/recommandation/actions"
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -103,3 +106,12 @@ def envoyer_message_chatbot(
 ) -> ReponseChatbotIA:
     """Appeler l'agent Chatbot et retourner son enveloppe validée, corrections en marge comprises."""
     return _poster(CHEMIN_CHATBOT, requete, ReponseChatbotIA, transport)
+
+
+def recommander_actions(
+    requete: RequeteRecommandationIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseRecommandationIA:
+    """Appeler l'agent Recommandation (REC-02) et retourner sa proposition validée."""
+    return _poster(CHEMIN_RECOMMANDATION, requete, ReponseRecommandationIA, transport)

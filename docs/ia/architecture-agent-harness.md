@@ -1,12 +1,12 @@
 # Architecture du Harness d’agents — description, fonctionnement et état
 
-**Date :** 18 novembre 2026
+**Date :** 18 novembre 2026 — **état des agents actualisé le 21 novembre 2026** (fusions #93 et #94).
 
 **Branche :** `feature/PRE-14-architecture-agent-harness`, créée depuis `develop` à `86c529fa7f9845c921604803ac90f31f333c0a87`. La bascule initiale de la session sur `develop` a été corrigée avant toute rédaction ; tous les fichiers non suivis préexistants ont été préservés.
 
-**Statut :** document d’architecture descriptif, **en attente de validation**. Aucun fichier applicatif n’a été modifié, aucune dépendance installée, aucun prompt modifié, aucune base de données touchée.
+**Statut :** document d’architecture descriptif, **en attente de validation**. Aucun fichier applicatif n’a été modifié, aucune dépendance installée, aucun prompt modifié, aucune base de données touchée. La section 1.1 ajoute l’état des agents au 21 novembre, sans modifier le Harness.
 
-**Périmètre :** `ia-service/app/harness/`, les contrats communs, le catalogue d’erreurs, les routes qui appellent le Harness, les deux agents actuellement enregistrés et les tests correspondants. Le backend n’est évoqué que comme consommateur de l’enveloppe.
+**Périmètre :** `ia-service/app/harness/`, les contrats communs, le catalogue d’erreurs, les routes qui appellent le Harness, les quatre agents actuellement enregistrés (`diagnostic`, `chatbot`, `correction`, `recommandation`) et les tests correspondants. Le backend n’est évoqué que comme consommateur de l’enveloppe, sauf pour l’état de livraison de la recommandation (§1.1).
 
 **Source de vérité :** le code exécutable (`app/main.py` et `app/api/*.py`), conformément à `AGENTS.md`. Les README du service contiennent encore plusieurs affirmations obsolètes, signalées dans la section 6.2.
 
@@ -24,7 +24,8 @@ Le Harness est le **point d’entrée unique et uniforme** de tous les agents du
 | Injection des outils | ✅ Terminé | LLM, prompts, RAG, horloge. |
 | Enveloppes communes | ✅ Terminé | `RequeteAgent`, `ReponseAgent`, `ReponseErreur`, `ErreurAgent`, `MetaExecution`. |
 | Catalogue d’erreurs | ✅ Terminé | Code public, message sûr, `retryable`, statut HTTP. |
-| Agents enregistrés | ✅ Terminé pour l’existant | `diagnostic@1.0.0` et `chatbot@1.0.0` seulement. |
+| Agents enregistrés | ✅ Terminé | `diagnostic@1.0.0`, `chatbot@1.0.0`, `correction@1.0.0` et `recommandation@1.0.0` (`app/main.py:41-44`). |
+| Agent Recommandation | ✅ Livré (PR #93 + #94) | Proposition sans état, route `POST /recommandation/actions`, relais et persistance backend, affichage apprenant. Détail en §1.1. |
 | Traçabilité de l’empreinte prompt | ⚠️ Partielle | L’empreinte rendue avec le few-shot n’est pas celle exposée dans `meta`. |
 | Provenance RAG dans `meta` | ⚠️ Partielle | `version_corpus` porte l’étiquette, mais pas le mode lexical/hybride. |
 | Reprise automatique | ❌ Absente | `retryable` est produit mais pas exploité par le Harness ni par le backend. |
@@ -32,6 +33,22 @@ Le Harness est le **point d’entrée unique et uniforme** de tous les agents du
 | Registre dynamique après démarrage | ❌ Volontairement absent | Le registre est rempli au lifespan puis lu seul. |
 
 **Verdict :** l’architecture actuelle est **complète, cohérente et suffisante pour la démonstration**. Elle est conçue pour accepter un nouveau récupérateur RAG sans modifier les agents. Les travaux restants concernent surtout la traçabilité, la provenance documentaire et quelques écarts documentaires — pas une refonte du Harness.
+
+### 1.1 État de l’agent Recommandation (21 novembre 2026)
+
+| Composant | État | Preuve |
+| --- | --- | --- |
+| Agent IA `recommandation@1.0.0` | ✅ Enregistré et actif | `app/main.py:44` ; budget 30 000 ms ; prompt `recommandation/actions@1.0.0`. |
+| Route IA `POST /recommandation/actions` | ✅ Opérationnelle | `app/api/recommandation.py` ; enveloppe `ReponseAgent[ResultatRecommandation]`. |
+| Contrat partagé | ✅ Versionné | `contrats/ia/recommandation-parcours/` (requête, réponse, exemples valides et invalides). |
+| Relais backend | ✅ Fusionné | `CHEMIN_RECOMMANDATION` (`backend/app/services/ia.py:28`) ; appel hors session PostgreSQL. |
+| Décision et persistance | ✅ Fusionnées | `backend/app/services/recommandation.py` ; colonne JSONB `parcours.recommandation_ia` ; migration `20261121_rec_recommandation_ia`. |
+| Route apprenant | ✅ Fusionnée | `POST /api/v1/parcours/{id}/recommandations` ; 401/403/404 ; statut public `COMPLET`/`PARTIEL`. |
+| Frontend | ✅ Fusionné | endpoint `recommandations` (`endpoints.ts`) ; section « Mes recommandations » dans `MonParcours.tsx`. |
+| CI | ✅ 6/6 au vert | Backend, service IA, frontend check/build, E2E, Docker, GitGuardian sur le commit `61058ed`. |
+| RAG, mémoire pédagogique, modèle dédié | ❌ Hors périmètre v1 | Aucun artefact ajouté ; l’agent reste sans état. |
+
+**Verdict agent :** opérationnel de bout en bout sur `develop` (fusions `586ac82` et `92b118c`). Aucune modification du Harness n’a été nécessaire. Documentation générale : [`agent-recommandation.md`](agent-recommandation.md).
 
 ---
 
@@ -143,6 +160,8 @@ recuperateur_rag = construire_recuperateur()
 
 registre_agents.enregistrer(construire_definition(registre_prompts))
 registre_agents.enregistrer(definir_agent_chatbot(registre_prompts))
+registre_agents.enregistrer(definir_agent_correction(registre_prompts))
+registre_agents.enregistrer(definir_agent_recommandation(registre_prompts))
 
 app.state.harness = Harness(
     registre_agents,
@@ -168,8 +187,10 @@ Points structurants :
 | --- | --- | --- | --- | --- |
 | `diagnostic` | `1.0.0` | 45 000 ms | `ResultatDiagnostic` | Oui, via `RequeteRAG`. |
 | `chatbot` | `1.0.0` | 30 000 ms | `ResultatChatbot` | Non, mais l’outil reste injecté. |
+| `correction` | `1.0.0` | 45 000 ms | `ResultatCorrection` | Non. |
+| `recommandation` | `1.0.0` | 30 000 ms | `ResultatRecommandation` | Non (hors périmètre v1). |
 
-Le commentaire de `registre.py` mentionne « les neuf agents » comme horizon de conception ; le code n’en enregistre que deux. Il ne faut donc pas considérer les sept autres comme opérationnels.
+Le commentaire de `registre.py` mentionne « les neuf agents » comme horizon de conception ; le code en enregistre quatre au 21 novembre 2026. Il ne faut donc pas considérer les cinq autres comme opérationnels. L’état de livraison de `recommandation` est détaillé en §1.1.
 
 ---
 

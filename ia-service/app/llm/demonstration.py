@@ -11,6 +11,9 @@ confirmer avec un vrai fournisseur. Le factice reste interdit en production (``C
 US157 : le prompt de correction d'une réponse libre reçoit de la même façon un feedback de démonstration, conforme
 au contrat v2 (phase passive ou active), qui ne vérifie que la majuscule initiale, la ponctuation finale et la
 longueur, et le dit dans son commentaire.
+
+US67 : le chatbot répond lui aussi par un message de démonstration déterministe, sans reprendre le contenu du
+prompt (donnée non fiable), pour que le scénario ``demonstration`` couvre toutes les routes du service.
 """
 
 import json
@@ -20,6 +23,7 @@ from collections.abc import Sequence
 from pydantic import BaseModel
 
 from app.llm.base import MessageLLM
+from app.schemas.chatbot import ResultatChatbot
 from app.schemas.correction import EXTRAIT_MAX, ErreurRelevee, ResultatCorrection
 from app.schemas.diagnostic import (
     PhaseAssimil,
@@ -29,17 +33,29 @@ from app.schemas.diagnostic import (
     calculer_ecart,
     preuve_directe,
 )
+from app.schemas.recommandation import (
+    TYPE_PAR_DOMAINE,
+    ActionRecommandee,
+    ResultatRecommandation,
+)
 from app.schemas.regles import niveaux_du_referentiel
 
 BALISE_OUVRANTE = "<donnees_diagnostic_non_fiables>"
 BALISE_FERMANTE = "</donnees_diagnostic_non_fiables>"
 BALISE_CORRECTION = "donnees_correction_non_fiables"
+BALISE_RECOMMANDATION = "donnees_recommandation_non_fiables"
+BALISE_CONVERSATION = "donnees_conversation_non_fiables"
 
 SCORE_NIVEAU_SUPERIEUR = 85.0
 SCORE_NIVEAU_INFERIEUR = 30.0
 SCORE_ACTIVATION = 60.0
 SCORE_CONFIANCE = 0.5
 POINTS_FAIBLES_MAX = 2
+REPONSE_CHATBOT_DEMONSTRATION = (
+    "Bonjour ! Je suis l'assistant de démonstration du Centre de langues. Sans modèle de langue configuré, "
+    "je ne peux pas encore répondre à votre question : ce message illustre le fonctionnement du chat et sera "
+    "remplacé par un vrai fournisseur LLM."
+)
 
 # Domaine de faiblesse observable sur une production libre, selon la compétence de la question.
 _DOMAINE_PAR_COMPETENCE = {
@@ -200,10 +216,64 @@ def resultat_correction_demonstration(messages: Sequence[MessageLLM]) -> Resulta
     )
 
 
+ACTION_DEMONSTRATION_PAR_DOMAINE = {
+    "grammaire": "Refaire un exercice ciblé sur le point de grammaire observé.",
+    "vocabulaire": "Réviser le champ lexical concerné, puis réemployer les mots dans une phrase.",
+    "comprehension_ecrite": "Relire un court texte, puis répondre à des questions de compréhension.",
+    "comprehension_orale": "Réécouter un court enregistrement, puis reformuler l'essentiel.",
+    "expression_orale": "Enregistrer une courte réponse orale sur le thème travaillé.",
+}
+RESUME_RECOMMANDATION_DEMONSTRATION = (
+    "Recommandations de démonstration sans modèle de langue : à confirmer avec un vrai fournisseur."
+)
+
+
+def resultat_recommandation_demonstration(messages: Sequence[MessageLLM]) -> ResultatRecommandation | None:
+    """Proposition de démonstration calculée depuis le prompt, ou ``None`` si ce n'est pas une recommandation."""
+    donnees = _donnees_diagnostic(messages, f"<{BALISE_RECOMMANDATION}>", f"</{BALISE_RECOMMANDATION}>")
+    if donnees is None:
+        return None
+    contexte = donnees["contexte_apprenant"]
+    recommandations: list[ActionRecommandee] = []
+    for point in donnees["points_faibles"]:
+        domaine = point["domaine"]
+        if domaine not in TYPE_PAR_DOMAINE or len(recommandations) >= 5:
+            continue
+        recommandations.append(
+            ActionRecommandee(
+                domaine=domaine,
+                type_exercice=TYPE_PAR_DOMAINE[domaine],
+                action=ACTION_DEMONSTRATION_PAR_DOMAINE[domaine],
+                justification=f"Observation de démonstration : {point['observation']}",
+                priorite=len(recommandations) + 1,
+            )
+        )
+    return ResultatRecommandation(
+        code_langue=contexte["code_langue"],
+        referentiel=contexte["referentiel"],
+        niveau_cible=donnees["niveau_vise"],
+        recommandations=recommandations,
+        resume=RESUME_RECOMMANDATION_DEMONSTRATION,
+        confiance=SCORE_CONFIANCE,
+    )
+
+
+def resultat_chatbot_demonstration(messages: Sequence[MessageLLM]) -> ResultatChatbot | None:
+    """Message de démonstration du chatbot (US67), sans reprendre le contenu non fiable du prompt."""
+    donnees = _donnees_diagnostic(messages, f"<{BALISE_CONVERSATION}>", f"</{BALISE_CONVERSATION}>")
+    if donnees is None:
+        return None
+    return ResultatChatbot(reponse=REPONSE_CHATBOT_DEMONSTRATION)
+
+
 def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseModel]) -> BaseModel | None:
-    """Répondeur du faux client : le diagnostic et la correction des réponses libres ont une démonstration."""
+    """Répondeur du faux client : diagnostic, correction, recommandation et chat ont une démonstration."""
     if schema is ResultatDiagnostic:
         return resultat_diagnostic_demonstration(messages)
     if schema is ResultatCorrection:
         return resultat_correction_demonstration(messages)
+    if schema is ResultatRecommandation:
+        return resultat_recommandation_demonstration(messages)
+    if schema is ResultatChatbot:
+        return resultat_chatbot_demonstration(messages)
     return None

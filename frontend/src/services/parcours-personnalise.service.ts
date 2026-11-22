@@ -7,6 +7,7 @@ import type {
   LeconParcours,
   MessageChatbot,
   ParcoursPersonnalise,
+  RecommandationParcours,
   ReponseExercice,
 } from "@/types/parcours-personnalise";
 import { ENDPOINTS } from "./endpoints";
@@ -15,11 +16,13 @@ import {
   toExerciceParcours,
   toLeconParcours,
   toParcoursPersonnalise,
+  toRecommandationParcours,
   type CorrectionExerciceDto,
   type ExerciceParcoursDto,
   type LeconParcoursDto,
   type MessageChatbotDto,
   type ParcoursPersonnaliseDto,
+  type RecommandationParcoursDto,
   type ReponseChatbotDto,
 } from "./parcours-personnalise.mapper";
 
@@ -36,6 +39,8 @@ export interface ParcoursPersonnaliseService {
   /** Une leçon et le contenu de ses exercices (403 si elle n'est pas encore atteinte). */
   lecon(idParcours: number, numeroLecon: number): Promise<LeconParcours>;
   corriger(idParcours: number, idParcoursExercice: number, reponse: ReponseExercice): Promise<CorrectionExercice>;
+  /** Recommandations pédagogiques : POST explicite, idempotent ; PARTIEL se traduit par une liste vide. */
+  recommandations(idParcours: number): Promise<RecommandationParcours>;
   /** Message au professeur IA, avec l'historique récent de la conversation. */
   chatbot(message: string, historique: MessageChatbot[]): Promise<string>;
 }
@@ -76,6 +81,13 @@ export const httpParcoursPersonnaliseService: ParcoursPersonnaliseService = {
     });
     return toCorrectionExercice(dto);
   },
+  async recommandations(idParcours) {
+    const dto = await apiRequest<RecommandationParcoursDto>(ENDPOINTS.parcours.recommandations(idParcours), {
+      method: "POST",
+      timeoutMs: DELAI_IA_MS,
+    });
+    return toRecommandationParcours(dto);
+  },
   async chatbot(message, historique) {
     const dto = await apiRequest<ReponseChatbotDto>(ENDPOINTS.chatbot.message, {
       method: "POST",
@@ -93,6 +105,7 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
   lecon: async (idParcours, numeroLecon) => toLeconParcours(await parcoursPersonnaliseMock.lecon(idParcours, numeroLecon)),
   corriger: async (idParcours, idParcoursExercice, reponse) =>
     toCorrectionExercice(await parcoursPersonnaliseMock.corriger(idParcours, idParcoursExercice, reponse)),
+  recommandations: async (idParcours) => toRecommandationParcours(await parcoursPersonnaliseMock.recommandations(idParcours)),
   chatbot: async (message, historique) => (await parcoursPersonnaliseMock.chatbot(corpsChatbot(message, historique))).reponse,
 };
 

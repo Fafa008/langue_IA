@@ -1,5 +1,6 @@
 import { ApiError } from "@/lib/api-client";
 import type {
+  DomaineFaiblesse,
   ExerciceParcours,
   ModuleParcours,
   PhaseParcours,
@@ -46,6 +47,16 @@ export const TYPE_EXERCICE_LABELS: Record<TypeExercice, string> = {
   COMPREHENSION: "Compréhension",
   ECOUTE: "Écoute",
   ORAL: "Oral",
+};
+
+/** Libellés des domaines faibles du diagnostic, affichés dans les recommandations pédagogiques. */
+export const DOMAINE_FAIBLESSE_LABELS: Record<DomaineFaiblesse, string> = {
+  grammaire: "Grammaire",
+  vocabulaire: "Vocabulaire",
+  comprehension_ecrite: "Compréhension écrite",
+  comprehension_orale: "Compréhension orale",
+  expression_ecrite: "Expression écrite",
+  expression_orale: "Expression orale",
 };
 
 export const STATUT_ETAPE_LABELS: Record<StatutEtape, string> = {

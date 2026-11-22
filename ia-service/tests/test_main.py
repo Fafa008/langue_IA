@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from google.genai import types
 
 from app.agents.diagnostic import CODE_AGENT, VERSION_AGENT
+from app.agents.recommandation import CODE_AGENT as CODE_AGENT_RECOMMANDATION
 from app.core.erreurs import ErreurConfiguration, ErreurLlmIndisponible, ErreurServiceIA
 from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service
 from app.harness.execution import Harness
@@ -46,6 +47,8 @@ def test_health_et_lifespan(env_propre: pytest.MonkeyPatch) -> None:
         assert CODE_AGENT in app.state.registre_agents
         assert app.state.registre_agents.resoudre(CODE_AGENT).version == VERSION_AGENT
         assert app.state.registre_agents.resoudre(CODE_AGENT).schema_entree is not None
+        assert CODE_AGENT_RECOMMANDATION in app.state.registre_agents
+        assert app.state.registre_agents.resoudre(CODE_AGENT_RECOMMANDATION).version == "1.0.0"
 
     assert client_llm.ferme is True
 

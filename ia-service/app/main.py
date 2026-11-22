@@ -1,10 +1,11 @@
 """Point d'entrée du service IA.
 
-Le service expose ``GET /health``, ``POST /chatbot/message`` (US67), ``POST /diagnostic/evaluer`` (PRE-05) et
-``POST /correction/reponse-libre`` (US157). Le client LLM unique, le Harness et ses agents Diagnostic, chatbot et
-correction sont enregistrés au démarrage : une configuration LLM invalide empêche le service de démarrer, et les
-ressources partagées sont fermées proprement à l'arrêt. Le service ne persiste rien : c'est le backend qui valide
-et enregistre l'analyse du diagnostic et le feedback des réponses libres.
+Le service expose ``GET /health``, ``POST /chatbot/message`` (US67), ``POST /diagnostic/evaluer`` (PRE-05),
+``POST /correction/reponse-libre`` (US157) et ``POST /recommandation/actions``. Le client LLM unique, le Harness
+et ses agents Diagnostic, chatbot, correction et recommandation sont enregistrés au démarrage : une configuration
+LLM invalide empêche le service de démarrer, et les ressources partagées sont fermées proprement à l'arrêt. Le
+service ne persiste rien : c'est le backend qui valide et enregistre l'analyse du diagnostic, le feedback des
+réponses libres et les propositions de recommandation.
 """
 
 import os
@@ -18,7 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.agents.chatbot import definir_agent_chatbot
 from app.agents.correction import definir_agent_correction
 from app.agents.diagnostic import construire_definition
-from app.api import chatbot, correction, diagnostic
+from app.agents.recommandation import definir_agent_recommandation
+from app.api import chatbot, correction, diagnostic, recommandation
 from app.core.erreurs import ErreurConfiguration, ErreurServiceIA
 from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service, gerer_erreur_validation
 from app.core.securite import jeton_interne_attendu, verifier_jeton_interne
@@ -43,6 +45,7 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     registre_agents.enregistrer(construire_definition(registre_prompts))
     registre_agents.enregistrer(definir_agent_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_correction(registre_prompts))
+    registre_agents.enregistrer(definir_agent_recommandation(registre_prompts))
 
     app.state.client_llm = client_llm
     app.state.registre_agents = registre_agents
@@ -92,3 +95,4 @@ def health() -> dict[str, str]:
 app.include_router(chatbot.router)
 app.include_router(correction.router)
 app.include_router(diagnostic.router)
+app.include_router(recommandation.router)

@@ -19,6 +19,8 @@ export interface ParcoursDto {
   phase: "PASSIVE" | "ACTIVE";
   est_lecon_de_revision: boolean;
   modules: unknown[];
+  /** REC-03 : recommandation persistée renvoyée par GET /parcours/en-cours. */
+  recommandation?: object | null;
 }
 
 export interface ExerciceDto {
