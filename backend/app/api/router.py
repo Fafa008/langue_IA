@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     auth,
+    chatbot,
     diagnostic,
     formateurs,
     formules,
@@ -27,3 +28,4 @@ api_router.include_router(pedagogie.router)
 api_router.include_router(diagnostic.router)
 api_router.include_router(formateurs.router)
 api_router.include_router(parcours.router)
+api_router.include_router(chatbot.router)

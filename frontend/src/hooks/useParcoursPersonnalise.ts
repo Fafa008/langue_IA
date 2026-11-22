@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parcoursPersonnaliseService } from "@/services/parcours-personnalise.service";
-import type { MessageChatbot, ReponseExercice } from "@/types/parcours-personnalise";
+import type { MessageChatbot, ParcoursPersonnalise, ReponseExercice } from "@/types/parcours-personnalise";
 import { queryKeys } from "./queryKeys";
 
 /** Parcours en cours de l'apprenant connecté (404 s'il n'a pas encore passé le test de positionnement). */
@@ -34,6 +34,21 @@ export function useCorrigerExercice(idParcours: number) {
     mutationFn: ({ idParcoursExercice, reponse }: { idParcoursExercice: number; reponse: ReponseExercice }) =>
       parcoursPersonnaliseService.corriger(idParcours, idParcoursExercice, reponse),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.parcoursTout }),
+  });
+}
+
+/**
+ * Recommandations pédagogiques (REC-03) : appel explicite et idempotent. Le résultat est placé dans le cache du
+ * parcours (le backend le persiste aussi), sans recharger tous les exercices.
+ */
+export function useRecommandationsParcours(idParcours: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => parcoursPersonnaliseService.recommandations(idParcours),
+    onSuccess: (recommandation) =>
+      queryClient.setQueryData<ParcoursPersonnalise>(queryKeys.parcours, (parcours) =>
+        parcours ? { ...parcours, recommandation } : parcours,
+      ),
   });
 }
 

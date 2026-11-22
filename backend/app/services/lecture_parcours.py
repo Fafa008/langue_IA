@@ -24,6 +24,7 @@ from app.schemas.parcours import (
 )
 from app.services.parcours import SEUIL_REUSSITE, niveau_estime, referentiel_de_langue
 from app.services.phase_parcours import est_lecon_de_revision
+from app.services.recommandation import vers_recommandation_publique
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,7 @@ def vers_parcours_en_cours(parcours: Parcours, progressions: list[ProgressionLec
         # Modules (regroupements de leçons avec titre) : modèle de données encore à décider, liste vide en attendant.
         modules=[],
         progressions=progressions,
+        recommandation=vers_recommandation_publique(parcours.recommandation_ia),
     )
 
 

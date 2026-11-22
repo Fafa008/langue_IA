@@ -37,6 +37,9 @@ class Parcours(Base):
         server_default=text("1"),
     )
     lecon_atteinte: Mapped[int] = mapped_column(Integer, default=1, server_default=text("1"))
+    # REC-03 : enveloppe de recommandation validée par le backend, avec l'empreinte de la requête qui l'a produite.
+    # NULL tant que l'apprenant n'a pas demandé de recommandation. Le service IA n'écrit jamais directement ici.
+    recommandation_ia: Mapped[dict | None] = mapped_column(JSONB)
 
     test_diagnostic: Mapped[TestDiagnostic] = relationship()
     langue: Mapped[Langue] = relationship()

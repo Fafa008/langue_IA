@@ -8,8 +8,10 @@ import {
   toContenuExercice,
   toExerciceParcours,
   toParcoursPersonnalise,
+  toRecommandationParcours,
   type ExerciceParcoursDto,
   type ParcoursPersonnaliseDto,
+  type RecommandationParcoursDto,
 } from "@/services/parcours-personnalise.mapper";
 import {
   HISTORIQUE_CHATBOT_MAX,
@@ -49,6 +51,25 @@ const parcoursDto = (surcharge: Partial<ParcoursPersonnaliseDto> = {}): Parcours
   phase: "PASSIVE",
   est_lecon_de_revision: false,
   modules: [],
+  ...surcharge,
+});
+
+const recommandationDto = (surcharge: Partial<RecommandationParcoursDto> = {}): RecommandationParcoursDto => ({
+  statut: "COMPLET",
+  code_langue: "en",
+  referentiel: "CECRL",
+  niveau_cible: "B1",
+  recommandations: [
+    {
+      domaine: "grammaire",
+      type_exercice: "GRAMMAIRE",
+      action: "Réviser le prétérit.",
+      justification: "Point faible confirmé.",
+      priorite: 1,
+    },
+  ],
+  resume: "Une action courte.",
+  confiance: 0.7,
   ...surcharge,
 });
 
@@ -98,6 +119,45 @@ describe("conversion du contrat d'API", () => {
     });
     expect(() => toContenuExercice('{"format":"prononciation","consigne":"c"}')).toThrow("Contenu d'exercice incomplet : phrase");
     expect(() => toContenuExercice('{"format":"dessin","consigne":"c"}')).toThrow("Format d'exercice non reconnu : dessin");
+  });
+
+  it("REC-03 — lit la recommandation persistée et trie ses actions par priorité", () => {
+    const parcours = toParcoursPersonnalise(
+      parcoursDto({
+        recommandation: recommandationDto({
+          recommandations: [
+            { domaine: "vocabulaire", type_exercice: "VOCABULAIRE", action: "B", justification: "b", priorite: 2 },
+            { domaine: "grammaire", type_exercice: "GRAMMAIRE", action: "A", justification: "a", priorite: 1 },
+          ],
+        }),
+      }),
+    );
+    expect(parcours.recommandation?.statut).toBe("COMPLET");
+    expect(parcours.recommandation?.recommandations.map((a) => [a.domaine, a.priorite])).toEqual([
+      ["grammaire", 1],
+      ["vocabulaire", 2],
+    ]);
+    expect(toParcoursPersonnalise(parcoursDto()).recommandation).toBeNull();
+  });
+
+  it("REC-03 — refuse une recommandation hors contrat plutôt que de l'afficher", () => {
+    expect(() => toRecommandationParcours(recommandationDto({ statut: "INCONNU" }))).toThrow(
+      "Statut de recommandation non reconnu : INCONNU",
+    );
+    expect(() =>
+      toRecommandationParcours(
+        recommandationDto({
+          recommandations: [{ domaine: "inconnu", type_exercice: "GRAMMAIRE", action: "A", justification: "a", priorite: 1 }],
+        }),
+      ),
+    ).toThrow("Domaine de recommandation non reconnu : inconnu");
+    expect(() =>
+      toRecommandationParcours(
+        recommandationDto({
+          recommandations: [{ domaine: "grammaire", type_exercice: "GRAMMAIRE", action: "A", justification: "a", priorite: 9 }],
+        }),
+      ),
+    ).toThrow("priorité hors intervalle");
   });
 });
 
@@ -214,6 +274,14 @@ describe("parcours simulé (démo sans backend)", () => {
     choisirScenarioParcoursMock("sans-parcours");
     await expect(mock.enCours()).rejects.toMatchObject({ status: 404 });
   });
+
+  it("REC-03 — conserve la recommandation simulée dans le parcours après une demande", async () => {
+    expect((await mock.enCours()).recommandation).toBeNull();
+    const recommandation = await mock.recommandations(7);
+    expect(recommandation.statut).toBe("COMPLET");
+    expect((await mock.enCours()).recommandation).toEqual(recommandation);
+    await expect(mock.recommandations(8)).rejects.toMatchObject({ status: 404 });
+  });
 });
 
 describe("service HTTP (prêt pour le backend)", () => {
@@ -268,12 +336,13 @@ describe("service HTTP (prêt pour le backend)", () => {
     await expect(http.corriger(7, 566, { format: "redaction", reponse: "…" })).rejects.toThrow("Phase de correction non reconnu : MIXTE");
   });
 
-  it("relaie le chatbot avec un historique borné comme le service IA", async () => {
+  it("relaie le chatbot avec un historique borné selon le contrat backend", async () => {
     apiRequest.mockResolvedValueOnce({ reponse: "Bonjour !" });
     const historique = Array.from({ length: 25 }, (_, i) => ({ role: "apprenant" as const, contenu: `m${i}` }));
     expect(await http.chatbot("Salut", historique)).toBe("Bonjour !");
     const [route, options] = apiRequest.mock.calls[0];
     expect(route).toBe("/api/v1/chatbot/message");
+    expect(options.body.identifiant_session).toEqual(expect.any(String));
     expect(options.body.historique).toHaveLength(HISTORIQUE_CHATBOT_MAX);
     expect(options.body.historique[0].contenu).toBe("m5");
   });
@@ -284,5 +353,15 @@ describe("service HTTP (prêt pour le backend)", () => {
     await http.chatbot("Salut", historique as never);
     const [, options] = apiRequest.mock.calls[0];
     expect(options.body.historique).toEqual([{ role: "apprenant", contenu: "j'ai allé" }]);
+  });
+
+  it("REC-03 — demande les recommandations en POST avec le délai IA", async () => {
+    apiRequest.mockResolvedValueOnce(recommandationDto());
+    const resultat = await http.recommandations(7);
+    expect(resultat.recommandations[0]).toMatchObject({ domaine: "grammaire", typeExercice: "GRAMMAIRE", priorite: 1 });
+    expect(apiRequest).toHaveBeenCalledWith("/api/v1/parcours/7/recommandations", {
+      method: "POST",
+      timeoutMs: 45_000,
+    });
   });
 });

@@ -17,6 +17,7 @@ from app.schemas.parcours import (
     ExerciceParcoursOut,
     LeconParcoursOut,
     ParcoursEnCoursOut,
+    RecommandationParcoursOut,
     ReponseExerciceIn,
 )
 from app.services.correction_exercice import CodeErreurCorrection, ErreurCorrection, corriger_exercice
@@ -29,6 +30,7 @@ from app.services.lecture_parcours import (
     vers_parcours_en_cours,
 )
 from app.services.parcours import parcours_de_apprenant
+from app.services.recommandation import ParcoursIntrouvable, recommander_pour_parcours
 
 router = APIRouter(prefix="/parcours", tags=["parcours"])
 
@@ -111,6 +113,26 @@ def lire_lecon(
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "Cette leçon n'est pas encore accessible : vous ne l'avez pas encore atteinte."
         ) from None
+
+
+@router.post("/{id_parcours}/recommandations", response_model=RecommandationParcoursOut)
+def recommander_pour_le_parcours(
+    id_parcours: Annotated[int, Path(gt=0)], db: DbSession, utilisateur: UtilisateurConnecte
+) -> RecommandationParcoursOut:
+    """Recommandations pédagogiques du parcours : point d'entrée explicite, sans erreur visible pour l'apprenant.
+
+    L'appel au service IA se fait hors session PostgreSQL (comme la correction). Une demande identique à la
+    dernière est servie depuis la recommandation persistée ; un rafraîchissement après une panne retente l'appel.
+    """
+    _exiger_apprenant(utilisateur)
+    parcours = parcours_de_apprenant(db, utilisateur.id_user, id_parcours)
+    if parcours is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Parcours introuvable.")
+    db.close()
+    try:
+        return recommander_pour_parcours(utilisateur.id_user, id_parcours)
+    except ParcoursIntrouvable:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Parcours introuvable.") from None
 
 
 @router.post("/{id_parcours}/exercices/{id_parcours_exercice}/reponse", response_model=CorrectionExerciceOut)

@@ -12,8 +12,8 @@ US157 : le prompt de correction d'une réponse libre reçoit de la même façon 
 au contrat v2 (phase passive ou active), qui ne vérifie que la majuscule initiale, la ponctuation finale et la
 longueur, et le dit dans son commentaire.
 
-US74 : le chat reçoit aussi une réponse de démonstration déterministe avec au plus trois corrections en marge,
-uniquement sur des règles visibles (majuscule, ponctuation, espaces) ; elle annonce toujours son origine.
+US67/US74 : le chat reçoit aussi une réponse de démonstration déterministe, avec au plus trois corrections en
+marge uniquement sur des règles visibles (majuscule, ponctuation, espaces) ; elle annonce toujours son origine.
 """
 
 import json
@@ -39,11 +39,17 @@ from app.schemas.diagnostic import (
     calculer_ecart,
     preuve_directe,
 )
+from app.schemas.recommandation import (
+    TYPE_PAR_DOMAINE,
+    ActionRecommandee,
+    ResultatRecommandation,
+)
 from app.schemas.regles import niveaux_du_referentiel
 
 BALISE_OUVRANTE = "<donnees_diagnostic_non_fiables>"
 BALISE_FERMANTE = "</donnees_diagnostic_non_fiables>"
 BALISE_CORRECTION = "donnees_correction_non_fiables"
+BALISE_RECOMMANDATION = "donnees_recommandation_non_fiables"
 BALISE_CONVERSATION = "donnees_conversation_non_fiables"
 
 SCORE_NIVEAU_SUPERIEUR = 85.0
@@ -238,6 +244,48 @@ def _ajouter_correction(
     )
 
 
+ACTION_DEMONSTRATION_PAR_DOMAINE = {
+    "grammaire": "Refaire un exercice ciblé sur le point de grammaire observé.",
+    "vocabulaire": "Réviser le champ lexical concerné, puis réemployer les mots dans une phrase.",
+    "comprehension_ecrite": "Relire un court texte, puis répondre à des questions de compréhension.",
+    "comprehension_orale": "Réécouter un court enregistrement, puis reformuler l'essentiel.",
+    "expression_orale": "Enregistrer une courte réponse orale sur le thème travaillé.",
+}
+RESUME_RECOMMANDATION_DEMONSTRATION = (
+    "Recommandations de démonstration sans modèle de langue : à confirmer avec un vrai fournisseur."
+)
+
+
+def resultat_recommandation_demonstration(messages: Sequence[MessageLLM]) -> ResultatRecommandation | None:
+    """Proposition de démonstration calculée depuis le prompt, ou ``None`` si ce n'est pas une recommandation."""
+    donnees = _donnees_diagnostic(messages, f"<{BALISE_RECOMMANDATION}>", f"</{BALISE_RECOMMANDATION}>")
+    if donnees is None:
+        return None
+    contexte = donnees["contexte_apprenant"]
+    recommandations: list[ActionRecommandee] = []
+    for point in donnees["points_faibles"]:
+        domaine = point["domaine"]
+        if domaine not in TYPE_PAR_DOMAINE or len(recommandations) >= 5:
+            continue
+        recommandations.append(
+            ActionRecommandee(
+                domaine=domaine,
+                type_exercice=TYPE_PAR_DOMAINE[domaine],
+                action=ACTION_DEMONSTRATION_PAR_DOMAINE[domaine],
+                justification=f"Observation de démonstration : {point['observation']}",
+                priorite=len(recommandations) + 1,
+            )
+        )
+    return ResultatRecommandation(
+        code_langue=contexte["code_langue"],
+        referentiel=contexte["referentiel"],
+        niveau_cible=donnees["niveau_vise"],
+        recommandations=recommandations,
+        resume=RESUME_RECOMMANDATION_DEMONSTRATION,
+        confiance=SCORE_CONFIANCE,
+    )
+
+
 def resultat_chatbot_demonstration(messages: Sequence[MessageLLM]) -> ResultatChatbot | None:
     """Réponse et corrections de démonstration du chat (US74), ou ``None`` hors prompt de conversation."""
     donnees = _donnees_diagnostic(messages, f"<{BALISE_CONVERSATION}>", f"</{BALISE_CONVERSATION}>")
@@ -273,11 +321,13 @@ def resultat_chatbot_demonstration(messages: Sequence[MessageLLM]) -> ResultatCh
 
 
 def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseModel]) -> BaseModel | None:
-    """Répondeur du faux client : diagnostic, correction libre et chat ont une démonstration."""
+    """Répondeur du faux client : diagnostic, correction, recommandation et chat ont une démonstration."""
     if schema is ResultatDiagnostic:
         return resultat_diagnostic_demonstration(messages)
     if schema is ResultatCorrection:
         return resultat_correction_demonstration(messages)
+    if schema is ResultatRecommandation:
+        return resultat_recommandation_demonstration(messages)
     if schema is ResultatChatbot:
         return resultat_chatbot_demonstration(messages)
     return None

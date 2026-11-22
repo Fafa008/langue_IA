@@ -26,6 +26,7 @@ from app.core.database import SessionLocal
 from app.models import Question, Reponse, StatutDiagnostic, TestDiagnostic
 from app.schemas.diagnostic import CompetenceResultatOut, PointFaibleOut
 from app.schemas.ia import (
+    NIVEAUX_IA,
     ContexteApprenantIA,
     EntreeDiagnosticIA,
     PreuveDiagnosticIA,
@@ -38,10 +39,6 @@ logger = logging.getLogger(__name__)
 
 LANGUES_IA = frozenset({"fr", "en", "zh", "it", "de"})
 COMPETENCES_IA = ("grammaire", "lecture", "ecoute", "ecrit", "oral")
-NIVEAUX_IA = {
-    "CECRL": ("A1", "A2", "B1", "B2", "C1", "C2"),
-    "HSK": ("HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "HSK 6"),
-}
 CONTENU_REPONSE_MAX = 5000
 ENONCE_MAX = 2000
 

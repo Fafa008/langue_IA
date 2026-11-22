@@ -61,7 +61,7 @@ Ce projet vise à concevoir et développer un **système d'information intellige
 ┌───────▼──────┐ ┌───▼────────┐ ┌▼──────────────┐
 │  PostgreSQL  │ │  Redis     │ │  Microservice │
 │  Port 5432   │ │  Port 6379 │ │  IA (FastAPI) │
-│              │ │  (cache)   │ │  Port 8001    │
+│              │ │  (cache)   │ │  Interne      │
 └──────────────┘ └────────────┘ └───────┬───────┘
                                         │
                           ┌─────────────┼─────────────┐
@@ -126,7 +126,8 @@ docker compose up --build -d --wait      # ou : make up
 # Frontend   : http://localhost:3000
 # Backend    : http://localhost:8000      (santé : /health)
 # Swagger    : http://localhost:8000/docs
-# IA Service : http://localhost:8001      (santé : /health)
+# IA Service : interne à Docker, non exposé sur l'hôte (port 8001 sur back-tier)
+# Appel de santé : docker compose exec -T backend python -c "import urllib.request; urllib.request.urlopen('http://ia-service:8001/health', timeout=3)"
 # PostgreSQL et Redis : internes à Docker (en mode dev : localhost:55432 et localhost:56379)
 ```
 

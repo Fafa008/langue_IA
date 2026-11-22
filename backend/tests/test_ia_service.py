@@ -5,8 +5,9 @@ from uuid import UUID
 
 import httpx
 import pytest
+from pydantic import ValidationError
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.schemas.ia import (
     ContexteApprenantIA,
     EntreeDiagnosticIA,
@@ -72,6 +73,7 @@ def requete() -> RequeteDiagnosticIA:
 def service_ia(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Configurer une URL joignable ; le transport simulé remplace le réseau."""
     monkeypatch.setenv("IA_SERVICE_URL", "http://ia.test")
+    monkeypatch.setenv("IA_SERVICE_TOKEN", "jeton-test")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -96,6 +98,8 @@ def test_appelle_l_agent_et_valide_l_enveloppe(service_ia) -> None:
     assert appels[0].url == "http://ia.test/diagnostic/evaluer"
     corps = appels[0].read().decode()
     assert appels[0].headers["content-type"] == "application/json"
+    assert appels[0].headers["x-ia-token"] == "jeton-test"
+    assert "jeton-test" not in corps
     assert "score_preliminaire" in corps
     assert "reponse_correcte" not in corps
     assert "apprenant" not in corps
@@ -161,3 +165,30 @@ def test_url_absente_desactive_l_analyse(monkeypatch: pytest.MonkeyPatch) -> Non
         assert erreur.value.code == "non_configure"
     finally:
         get_settings.cache_clear()
+
+
+def test_sans_jeton_pas_d_en_tete(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("IA_SERVICE_URL", "http://ia.test")
+    monkeypatch.delenv("IA_SERVICE_TOKEN", raising=False)
+    get_settings.cache_clear()
+    try:
+        appels: list[httpx.Request] = []
+
+        def handler(requete_http: httpx.Request) -> httpx.Response:
+            appels.append(requete_http)
+            return httpx.Response(200, json=ENVELOPPE)
+
+        reponse = evaluer_diagnostic(requete(), transport=_transport(handler))
+        assert reponse.resultat.niveau_estime == "A2"
+        assert "x-ia-token" not in appels[0].headers
+    finally:
+        get_settings.cache_clear()
+
+
+def test_jeton_ia_obligatoire_en_production(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("SECRET_KEY", "cle-de-production-valide")
+    monkeypatch.delenv("IA_SERVICE_TOKEN", raising=False)
+
+    with pytest.raises(ValidationError, match="IA_SERVICE_TOKEN"):
+        Settings()
