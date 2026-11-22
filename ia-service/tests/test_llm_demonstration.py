@@ -12,11 +12,18 @@ from app.core.erreurs import ErreurConfiguration
 from app.llm import fabrique
 from app.llm.adaptateurs.factice import FakeLLMClient, ScenarioLLM
 from app.llm.base import MessageLLM
-from app.llm.demonstration import JUSTIFICATION, repondre_demonstration, resultat_diagnostic_demonstration
+from app.llm.demonstration import (
+    JUSTIFICATION,
+    repondre_demonstration,
+    resultat_chatbot_demonstration,
+    resultat_diagnostic_demonstration,
+)
 from app.main import app
 from app.schemas.base import ModeleStrict
+from app.schemas.chatbot import ResultatChatbot
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.diagnostic import PhaseAssimil, PreuveReponse, ResultatDiagnostic
+from app.schemas.recommandation import ResultatRecommandation
 from tests.donnees import REQUEST_ID, RESULTAT_VALIDE
 
 REPONSES = [
@@ -40,6 +47,19 @@ def messages(niveau: str = "B1", score: float = 64, reponses: list[dict] | None 
         "exemples_few_shot": [],
     }
     contenu = f"Évalue.\n<donnees_diagnostic_non_fiables>\n{json.dumps(donnees)}\n</donnees_diagnostic_non_fiables>"
+    return [MessageLLM(role="system", contenu="Système"), MessageLLM(role="user", contenu=contenu)]
+
+
+def messages_chatbot(message: str) -> list[MessageLLM]:
+    """Messages au format du prompt de conversation (bloc JSON entre balises)."""
+    donnees = {
+        "contexte_apprenant": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+        "historique": [],
+        "message": message,
+    }
+    contenu = (
+        f"Réponds.\n<donnees_conversation_non_fiables>\n{json.dumps(donnees)}\n</donnees_conversation_non_fiables>"
+    )
     return [MessageLLM(role="system", contenu="Système"), MessageLLM(role="user", contenu=contenu)]
 
 
@@ -99,12 +119,36 @@ def test_chinois_reste_dans_le_referentiel_hsk() -> None:
     verifier(resultat, "HSK 2", reponses, langue="zh")
 
 
+def test_chatbot_demonstration_deterministe_et_honnete() -> None:
+    resultat = resultat_chatbot_demonstration(messages_chatbot("hello world"))
+
+    assert resultat is not None
+    assert resultat == resultat_chatbot_demonstration(messages_chatbot("hello world"))
+    assert "démonstration" in resultat.reponse
+    assert [correction.correction for correction in resultat.corrections] == ["Hello", "world."]
+
+
+def test_chatbot_demonstration_sans_correction_observable() -> None:
+    resultat = resultat_chatbot_demonstration(messages_chatbot("Hello!"))
+
+    assert resultat is not None
+    assert resultat.corrections == []
+
+
+def test_chatbot_demonstration_plafonnee_a_trois_corrections() -> None:
+    resultat = resultat_chatbot_demonstration(messages_chatbot("hello  world"))
+
+    assert resultat is not None
+    assert len(resultat.corrections) == 3
+
+
 def test_aucune_reponse_hors_diagnostic() -> None:
     class Autre(ModeleStrict):
         valeur: str
 
     assert repondre_demonstration(messages(), Autre) is None
     assert repondre_demonstration([MessageLLM(role="user", contenu="Bonjour")], ResultatDiagnostic) is None
+    assert repondre_demonstration(messages_chatbot("Hello!"), ResultatChatbot) is not None
 
 
 def test_client_factice_scenarios_prioritaires_puis_repondeur() -> None:
@@ -164,3 +208,64 @@ def test_post_evaluer_repond_200_sans_cle_ni_reseau(client_demonstration: TestCl
     resultat = ResultatDiagnostic.model_validate(enveloppe["resultat"])
     assert resultat.phase_assimil is PhaseAssimil.ACTIVATION
     assert [p.domaine for p in resultat.points_faibles] == ["expression_ecrite", "expression_orale"]
+
+
+def messages_recommandation() -> list:
+    """Messages au format du prompt d'actions (bloc JSON entre balises dédiées)."""
+    donnees = {
+        "contexte_apprenant": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+        "points_faibles": [
+            {
+                "domaine": "grammaire",
+                "id_question": "q-12",
+                "observation": "Le prétérit manque.",
+                "justification": "Repère temporel au passé.",
+            }
+        ],
+        "niveau_vise": "B2",
+    }
+    contenu = (
+        "Propose.\n<donnees_recommandation_non_fiables>\n"
+        f"{json.dumps(donnees)}\n</donnees_recommandation_non_fiables>"
+    )
+    return [MessageLLM(role="system", contenu="Système"), MessageLLM(role="user", contenu=contenu)]
+
+
+def test_recommandation_demonstration_valide_et_deterministe() -> None:
+    premier = repondre_demonstration(messages_recommandation(), ResultatRecommandation)
+    second = repondre_demonstration(messages_recommandation(), ResultatRecommandation)
+
+    assert isinstance(premier, ResultatRecommandation)
+    assert premier == second
+    assert [(a.domaine, a.type_exercice, a.priorite) for a in premier.recommandations] == [
+        ("grammaire", "GRAMMAIRE", 1)
+    ]
+    assert premier.niveau_cible == "B2"
+    assert premier.confiance > 0
+
+
+def test_post_recommandation_repond_200_sans_cle_ni_reseau(client_demonstration: TestClient) -> None:
+    corps = {
+        "request_id": REQUEST_ID,
+        "contexte": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+        "entree": {
+            "points_faibles": [
+                {
+                    "domaine": "vocabulaire",
+                    "id_question": "q-3",
+                    "observation": "Mot imprécis.",
+                    "justification": "Champ lexical à consolider.",
+                }
+            ],
+            "niveau_vise": "B2",
+        },
+    }
+
+    reponse = client_demonstration.post("/recommandation/actions", json=corps)
+
+    assert reponse.status_code == 200
+    enveloppe = reponse.json()
+    assert enveloppe["statut"] == "succes"
+    assert enveloppe["meta"]["fournisseur"] == "factice"
+    resultat = ResultatRecommandation.model_validate(enveloppe["resultat"])
+    assert [a.type_exercice for a in resultat.recommandations] == ["VOCABULAIRE"]

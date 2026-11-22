@@ -1,0 +1,37 @@
+{
+  "request_id": "9c5f0f0a-6b0c-4bd4-9a1f-9b4d6b9a1234",
+  "agent": "recommandation",
+  "version_agent": "1.0.0",
+  "version_prompt": "recommandation/actions@1.0.0",
+  "statut": "succes",
+  "resultat": {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_cible": "B2",
+    "recommandations": [
+      {
+        "domaine": "grammaire",
+        "type_exercice": "GRAMMAIRE",
+        "action": "Refaire un exercice de conjugaison au prétérit sur des récits au passé.",
+        "justification": "Le point faible porte sur le prétérit après un repère temporel explicite.",
+        "priorite": 1
+      },
+      {
+        "domaine": "expression_orale",
+        "type_exercice": "ORAL",
+        "action": "Réviser la liste de vocabulaire des achats, puis la réemployer dans une phrase.",
+        "justification": "Le terme employé est proche mais imprécis ; un réemploi contextualisé est utile.",
+        "priorite": 2
+      }
+    ],
+    "resume": "Deux actions courtes : consolider le prétérit, puis préciser le vocabulaire des achats.",
+    "confiance": 0.72
+  },
+  "meta": {
+    "duree_ms": 1240,
+    "fournisseur": "factice",
+    "modele": "factice-1",
+    "version_corpus": null,
+    "empreinte_prompt": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

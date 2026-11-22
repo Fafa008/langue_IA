@@ -122,3 +122,19 @@ describe("Exercices du parcours (US42)", () => {
     expect(screen.queryByRole("heading", { name: "Tous les exercices du parcours" })).not.toBeInTheDocument();
   });
 });
+
+describe("Recommandations pédagogiques (REC-03)", () => {
+  it("affiche les recommandations seulement après une demande explicite", async () => {
+    afficher();
+    expect(await screen.findByRole("heading", { name: "Mes recommandations" })).toBeInTheDocument();
+    expect(screen.getByText("Aucune recommandation pour le moment.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Afficher mes recommandations" }));
+
+    expect(await screen.findByRole("list", { name: "Actions recommandées" })).toHaveTextContent(
+      "Grammaire · Grammaire",
+    );
+    expect(screen.getByText(/Refaire un exercice sur le passé composé/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Actualiser les recommandations" })).toBeInTheDocument();
+  });
+});

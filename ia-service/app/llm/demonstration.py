@@ -11,6 +11,9 @@ confirmer avec un vrai fournisseur. Le factice reste interdit en production (``C
 US157 : le prompt de correction d'une réponse libre reçoit de la même façon un feedback de démonstration, conforme
 au contrat v2 (phase passive ou active), qui ne vérifie que la majuscule initiale, la ponctuation finale et la
 longueur, et le dit dans son commentaire.
+
+US67/US74 : le chat reçoit aussi une réponse de démonstration déterministe, avec au plus trois corrections en
+marge uniquement sur des règles visibles (majuscule, ponctuation, espaces) ; elle annonce toujours son origine.
 """
 
 import json
@@ -20,6 +23,13 @@ from collections.abc import Sequence
 from pydantic import BaseModel
 
 from app.llm.base import MessageLLM
+from app.schemas.chatbot import (
+    CORRECTIONS_CHATBOT_MAX,
+    EXPLICATION_CORRECTION_MAX,
+    EXTRAIT_CORRECTION_MAX,
+    CorrectionChatbot,
+    ResultatChatbot,
+)
 from app.schemas.correction import EXTRAIT_MAX, ErreurRelevee, ResultatCorrection
 from app.schemas.diagnostic import (
     PhaseAssimil,
@@ -29,17 +39,25 @@ from app.schemas.diagnostic import (
     calculer_ecart,
     preuve_directe,
 )
+from app.schemas.recommandation import (
+    TYPE_PAR_DOMAINE,
+    ActionRecommandee,
+    ResultatRecommandation,
+)
 from app.schemas.regles import niveaux_du_referentiel
 
 BALISE_OUVRANTE = "<donnees_diagnostic_non_fiables>"
 BALISE_FERMANTE = "</donnees_diagnostic_non_fiables>"
 BALISE_CORRECTION = "donnees_correction_non_fiables"
+BALISE_RECOMMANDATION = "donnees_recommandation_non_fiables"
+BALISE_CONVERSATION = "donnees_conversation_non_fiables"
 
 SCORE_NIVEAU_SUPERIEUR = 85.0
 SCORE_NIVEAU_INFERIEUR = 30.0
 SCORE_ACTIVATION = 60.0
 SCORE_CONFIANCE = 0.5
 POINTS_FAIBLES_MAX = 2
+PONCTUATION_FINALE = ".!?…。！？"
 
 # Domaine de faiblesse observable sur une production libre, selon la compétence de la question.
 _DOMAINE_PAR_COMPETENCE = {
@@ -171,7 +189,7 @@ def resultat_correction_demonstration(messages: Sequence[MessageLLM]) -> Resulta
         )
     dernier = mots[-1]
     deja_releve = any(e.extrait.casefold() == dernier.casefold() for e in erreurs)
-    if texte[-1] not in ".!?…。！？" and len(dernier) < EXTRAIT_MAX and not deja_releve:
+    if texte[-1] not in PONCTUATION_FINALE and len(dernier) < EXTRAIT_MAX and not deja_releve:
         erreurs.append(
             ErreurRelevee(extrait=dernier, correction=f"{dernier}.", explication="Terminez la phrase par un point.")
         )
@@ -181,7 +199,7 @@ def resultat_correction_demonstration(messages: Sequence[MessageLLM]) -> Resulta
     reformulation = None
     if phase == "ACTIVE" and erreurs:
         reformulation = texte[0].upper() + texte[1:]
-        if reformulation[-1] not in ".!?…。！？":
+        if reformulation[-1] not in PONCTUATION_FINALE:
             reformulation += "."
 
     return ResultatCorrection(
@@ -200,10 +218,116 @@ def resultat_correction_demonstration(messages: Sequence[MessageLLM]) -> Resulta
     )
 
 
+COMMENTAIRE_CHATBOT = "Réponse de démonstration sans modèle de langue (fournisseur factice)."
+EXPLICATION_CORRECTION_CHATBOT = (
+    "Vérification simple de démonstration : un modèle de langue confirmerait cette correction."
+)
+
+
+def _ajouter_correction(
+    corrections: list[CorrectionChatbot],
+    extrait: str,
+    correction: str,
+    explication: str = EXPLICATION_CORRECTION_CHATBOT,
+) -> None:
+    """Ajouter une correction visible si elle tient dans le contrat et si la limite n'est pas atteinte."""
+    if len(corrections) >= CORRECTIONS_CHATBOT_MAX:
+        return
+    if not extrait.strip() or not correction.strip():
+        return
+    corrections.append(
+        CorrectionChatbot(
+            extrait=extrait[:EXTRAIT_CORRECTION_MAX],
+            correction=correction[:EXTRAIT_CORRECTION_MAX],
+            explication=explication[:EXPLICATION_CORRECTION_MAX],
+        )
+    )
+
+
+ACTION_DEMONSTRATION_PAR_DOMAINE = {
+    "grammaire": "Refaire un exercice ciblé sur le point de grammaire observé.",
+    "vocabulaire": "Réviser le champ lexical concerné, puis réemployer les mots dans une phrase.",
+    "comprehension_ecrite": "Relire un court texte, puis répondre à des questions de compréhension.",
+    "comprehension_orale": "Réécouter un court enregistrement, puis reformuler l'essentiel.",
+    "expression_orale": "Enregistrer une courte réponse orale sur le thème travaillé.",
+}
+RESUME_RECOMMANDATION_DEMONSTRATION = (
+    "Recommandations de démonstration sans modèle de langue : à confirmer avec un vrai fournisseur."
+)
+
+
+def resultat_recommandation_demonstration(messages: Sequence[MessageLLM]) -> ResultatRecommandation | None:
+    """Proposition de démonstration calculée depuis le prompt, ou ``None`` si ce n'est pas une recommandation."""
+    donnees = _donnees_diagnostic(messages, f"<{BALISE_RECOMMANDATION}>", f"</{BALISE_RECOMMANDATION}>")
+    if donnees is None:
+        return None
+    contexte = donnees["contexte_apprenant"]
+    recommandations: list[ActionRecommandee] = []
+    for point in donnees["points_faibles"]:
+        domaine = point["domaine"]
+        if domaine not in TYPE_PAR_DOMAINE or len(recommandations) >= 5:
+            continue
+        recommandations.append(
+            ActionRecommandee(
+                domaine=domaine,
+                type_exercice=TYPE_PAR_DOMAINE[domaine],
+                action=ACTION_DEMONSTRATION_PAR_DOMAINE[domaine],
+                justification=f"Observation de démonstration : {point['observation']}",
+                priorite=len(recommandations) + 1,
+            )
+        )
+    return ResultatRecommandation(
+        code_langue=contexte["code_langue"],
+        referentiel=contexte["referentiel"],
+        niveau_cible=donnees["niveau_vise"],
+        recommandations=recommandations,
+        resume=RESUME_RECOMMANDATION_DEMONSTRATION,
+        confiance=SCORE_CONFIANCE,
+    )
+
+
+def resultat_chatbot_demonstration(messages: Sequence[MessageLLM]) -> ResultatChatbot | None:
+    """Réponse et corrections de démonstration du chat (US74), ou ``None`` hors prompt de conversation."""
+    donnees = _donnees_diagnostic(messages, f"<{BALISE_CONVERSATION}>", f"</{BALISE_CONVERSATION}>")
+    if donnees is None:
+        return None
+    texte = " ".join(str(donnees["message"]).split())
+    corrections: list[CorrectionChatbot] = []
+
+    if texte[:1].isalpha() and texte[:1].islower():
+        premier = texte.split(" ")[0]
+        _ajouter_correction(corrections, premier, premier[0].upper() + premier[1:])
+
+    if texte and texte[-1] not in PONCTUATION_FINALE:
+        dernier = texte.split(" ")[-1]
+        _ajouter_correction(corrections, dernier, f"{dernier}.")
+
+    brut = str(donnees["message"])
+    if "  " in brut:
+        _ajouter_correction(
+            corrections,
+            brut[:EXTRAIT_CORRECTION_MAX],
+            texte[:EXTRAIT_CORRECTION_MAX],
+            "Un seul espace suffit entre deux mots.",
+        )
+
+    propositions = ", ".join(correction.correction for correction in corrections)
+    reponse = COMMENTAIRE_CHATBOT
+    if propositions:
+        reponse += f" Forme(s) proposée(s) : {propositions}."
+    reponse += " Réessayez avec la forme corrigée ; la conversation continue normalement."
+
+    return ResultatChatbot(reponse=reponse, corrections=corrections)
+
+
 def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseModel]) -> BaseModel | None:
-    """Répondeur du faux client : le diagnostic et la correction des réponses libres ont une démonstration."""
+    """Répondeur du faux client : diagnostic, correction, recommandation et chat ont une démonstration."""
     if schema is ResultatDiagnostic:
         return resultat_diagnostic_demonstration(messages)
     if schema is ResultatCorrection:
         return resultat_correction_demonstration(messages)
+    if schema is ResultatRecommandation:
+        return resultat_recommandation_demonstration(messages)
+    if schema is ResultatChatbot:
+        return resultat_chatbot_demonstration(messages)
     return None

@@ -875,9 +875,13 @@ est refusée (message d'erreur) plutôt qu'interprétée ; la casse n'a pas d'im
   "niveau_depart": "A2", "niveau_vise": "B1",
   "lecon_atteinte": 23, "phase": "PASSIVE", "est_lecon_de_revision": false,
   "modules": [{ "numero": 1, "titre": "Premiers contacts", "description": "…", "premiere_lecon": 1, "derniere_lecon": 7 }],
-  "progressions": [{ "numero_lecon": 23, "last_score": 78, "best_score": 78, "is_validated": true }]
+  "progressions": [{ "numero_lecon": 23, "last_score": 78, "best_score": 78, "is_validated": true }],
+  "recommandation": null
 }
 ```
+
+`recommandation` est `null` tant que l'apprenant n'a pas demandé de recommandation (REC-03). Sinon, c'est l'objet
+décrit par `POST /parcours/{id_parcours}/recommandations` ci-dessous, tel que persisté par le backend.
 
 Statut d'un module ou d'une leçon, déduit côté frontend de `lecon_atteinte` : terminé avant, en cours, à venir après.
 **404** : aucun parcours (le frontend invite à passer le test de positionnement).
@@ -888,6 +892,43 @@ la leçon »). Liste vide tant qu'aucune leçon n'est notée.
 
 > **État** : `modules` est renvoyé vide (`[]`) en attendant la décision sur le modèle des modules (table ou
 > configuration, titres et descriptions). Les autres champs sont en place. Le frontend ne lit pas encore `progressions`.
+
+### `POST /parcours/{id_parcours}/recommandations` (REC-03)
+
+Point d'entrée explicite : l'apprenant demande ou actualise ses recommandations pédagogiques. Le backend prépare la
+requête à partir des points faibles de l'analyse diagnostique et du niveau visé, appelle le service IA **sans état**
+(`POST /recommandation/actions`), revalide la réponse puis la persiste sur `parcours.recommandation_ia`. Une requête
+identique à la dernière est servie sans nouvel appel IA (idempotence) ; un rafraîchissement après une panne retente.
+
+**200** (aucun corps de requête) :
+
+```json
+{
+  "statut": "COMPLET",
+  "code_langue": "fr", "referentiel": "CECRL", "niveau_cible": "B1",
+  "recommandations": [
+    {
+      "domaine": "grammaire", "type_exercice": "GRAMMAIRE",
+      "action": "Refaire un exercice sur le passé composé.",
+      "justification": "Les formes au passé sont encore hésitantes.",
+      "priorite": 1
+    }
+  ],
+  "resume": "Une action courte : conjugaison au passé.",
+  "confiance": 0.72
+}
+```
+
+`statut` vaut `COMPLET` ou `PARTIEL`. **`PARTIEL` n'est pas une erreur** : le service IA est indisponible, hors
+contrat (langue ou niveau) ou sa réponse est incohérente ; `recommandations` est alors `[]`, `confiance` vaut `0` et
+`resume` est un message générique. Aucun code technique n'est exposé. Un domaine `expression_ecrite` sans type
+d'exercice associé produit également un résultat vide, sans appel IA.
+
+Contraintes revalidées par le backend : `niveau_cible == niveau_vise`, domaines ⊆ points faibles reçus, type
+d'exercice imposé par le domaine, priorités contiguës de 1 à N, au plus 5 actions, pas de doublon de domaine.
+`confiance = 0` implique une liste vide. En mode mock, la réponse est simulée puis relue dans `GET /parcours/en-cours`.
+
+**403** pour un rôle autre qu'apprenant ; **404** si le parcours n'appartient pas à l'apprenant connecté.
 
 ### `GET /parcours/{id_parcours}/exercices`
 

@@ -14,11 +14,13 @@ from app.prompts.variables import (
     VariablesConversationChatbot,
     VariablesCorrectionReponseLibre,
     VariablesEvaluationDiagnostic,
+    VariablesRecommandation,
 )
 
 VERSION_EVALUATION_DIAGNOSTIC = "1.1.0"
-VERSION_CONVERSATION_CHATBOT = "1.0.0"
+VERSION_CONVERSATION_CHATBOT = "1.1.0"
 VERSION_CORRECTION_REPONSE_LIBRE = "1.0.0"
+VERSION_ACTIONS_RECOMMANDATION = "1.0.0"
 _VARIABLES_TEMPLATE = frozenset(
     {
         "code_langue",
@@ -32,6 +34,7 @@ _VARIABLES_TEMPLATE = frozenset(
 )
 _VARIABLES_TEMPLATE_CHATBOT = frozenset({"contexte_apprenant", "historique", "message"})
 _VARIABLES_TEMPLATE_CORRECTION = frozenset({"contexte_apprenant", "phase", "exercice", "descripteurs_rag"})
+_VARIABLES_TEMPLATE_RECOMMANDATION = frozenset({"contexte_apprenant", "points_faibles", "niveau_vise"})
 _NOMBRE_EXEMPLES_MAX = 3
 
 
@@ -78,6 +81,11 @@ class RegistrePrompts:
                 "reponse-libre",
                 VERSION_CORRECTION_REPONSE_LIBRE,
             ): self._charger_correction_reponse_libre(),
+            (
+                "recommandation",
+                "actions",
+                VERSION_ACTIONS_RECOMMANDATION,
+            ): self._charger_actions_recommandation(),
         }
 
     def definition(self, agent: str, tache: str, version: str) -> tuple[str, str]:
@@ -135,6 +143,41 @@ class RegistrePrompts:
             temperature=definition.temperature,
             max_tokens=definition.max_tokens,
         )
+
+    def rendre_actions_recommandation(
+        self,
+        variables: VariablesRecommandation,
+        *,
+        version: str = VERSION_ACTIONS_RECOMMANDATION,
+    ) -> PromptRendu:
+        """Rendre le prompt d'actions de recommandation à partir de variables validées."""
+        definition = self._definitions.get(("recommandation", "actions", version))
+        if definition is None:
+            raise ErreurPromptIntrouvable("La version du prompt d'actions de recommandation est introuvable.")
+
+        donnees = variables.model_dump(mode="json")
+        valeurs = {nom: _json_prompt(donnees[nom]) for nom in _VARIABLES_TEMPLATE_RECOMMANDATION}
+        return PromptRendu(
+            messages=(
+                MessageLLM(role="system", contenu=definition.systeme),
+                MessageLLM(role="user", contenu=definition.template_utilisateur.substitute(valeurs)),
+            ),
+            version_prompt=definition.version_prompt,
+            empreinte_prompt=definition.empreinte_prompt,
+            temperature=definition.temperature,
+            max_tokens=definition.max_tokens,
+        )
+
+    def identite_actions_recommandation(
+        self,
+        *,
+        version: str = VERSION_ACTIONS_RECOMMANDATION,
+    ) -> tuple[str, str]:
+        """Retourner ``(version_prompt, empreinte_prompt)`` publiés pour la définition de l'agent."""
+        definition = self._definitions.get(("recommandation", "actions", version))
+        if definition is None:
+            raise ErreurPromptIntrouvable("La version du prompt d'actions de recommandation est introuvable.")
+        return definition.version_prompt, definition.empreinte_prompt
 
     def rendre_evaluation_diagnostic(
         self,
@@ -199,6 +242,24 @@ class RegistrePrompts:
         if definition is None:
             raise ErreurPromptIntrouvable("La version du prompt d'évaluation diagnostic est introuvable.")
         return definition
+
+    def _charger_actions_recommandation(self) -> _DefinitionPrompt:
+        nom = f"actions@{VERSION_ACTIONS_RECOMMANDATION}"
+        repertoire = self._repertoire / "recommandation"
+        systeme = self._lire(repertoire / f"{nom}.systeme.md")
+        texte_utilisateur = self._lire(repertoire / f"{nom}.utilisateur.md")
+        template = _valider_template(texte_utilisateur, _VARIABLES_TEMPLATE_RECOMMANDATION)
+
+        empreinte = hashlib.sha256(b"\0".join((systeme.encode("utf-8"), texte_utilisateur.encode("utf-8"))))
+        return _DefinitionPrompt(
+            version_prompt=f"recommandation/actions@{VERSION_ACTIONS_RECOMMANDATION}",
+            systeme=systeme.strip(),
+            template_utilisateur=template,
+            exemples=(),
+            empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
+            temperature=0.2,
+            max_tokens=900,
+        )
 
     def _charger_evaluation_diagnostic(self) -> _DefinitionPrompt:
         nom = f"evaluation@{VERSION_EVALUATION_DIAGNOSTIC}"

@@ -11,7 +11,7 @@ from app.prompts.variables import VariablesConversationChatbot
 from app.schemas.chatbot import EntreeChatbot, ResultatChatbot
 
 CODE_AGENT_CHATBOT = "chatbot"
-VERSION_AGENT_CHATBOT = "1.0.0"
+VERSION_AGENT_CHATBOT = "1.1.0"
 BUDGET_CHATBOT_MS = 30_000
 
 

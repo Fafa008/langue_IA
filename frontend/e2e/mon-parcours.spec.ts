@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAs, type UtilisateurDto } from "./support/session";
+import { json, loginAs, type UtilisateurDto } from "./support/session";
 import { exerciceDto, parcoursDto, servirParcours } from "./support/parcours";
 
 // US41 : « Mon parcours » — vue par niveau et par langue, mode passif/actif, exercices (client HTTP réel).
@@ -72,5 +72,79 @@ test.describe("Mon parcours (US41)", () => {
       largeurFenetre: document.documentElement.clientWidth,
     }));
     expect(largeurPage).toBeLessThanOrEqual(largeurFenetre);
+  });
+});
+
+/** REC-03 : le frontend appelle la route POST explicite et affiche la réponse validée par le backend. */
+test.describe("Recommandations pédagogiques (REC-03)", () => {
+  const recommandationComplete = {
+    statut: "COMPLET",
+    code_langue: "fr",
+    referentiel: "CECRL",
+    niveau_cible: "B1",
+    recommandations: [
+      {
+        domaine: "grammaire",
+        type_exercice: "GRAMMAIRE",
+        action: "Refaire un exercice sur le passé composé.",
+        justification: "Les formes au passé restent hésitantes.",
+        priorite: 1,
+      },
+    ],
+    resume: "Une action courte : conjugaison au passé.",
+    confiance: 0.72,
+  };
+
+  test("affiche les actions après une demande explicite et les relit au rechargement", async ({ page }) => {
+    await loginAs(page, APPRENANT);
+    const parcours = parcoursDto(23, "PASSIVE");
+    await servirParcours(page, { parcours, exercices: EXERCICES });
+    let appels = 0;
+    await page.route("**/api/v1/parcours/7/recommandations", async (route) => {
+      appels += 1;
+      parcours.recommandation = recommandationComplete;
+      await json(route, 200, recommandationComplete);
+    });
+
+    await page.goto("/espace/apprenant/parcours");
+    await expect(page.getByText("Aucune recommandation pour le moment.")).toBeVisible();
+    await page.getByRole("button", { name: "Afficher mes recommandations" }).click();
+
+    await expect(page.getByRole("list", { name: "Actions recommandées" })).toContainText(
+      "Refaire un exercice sur le passé composé.",
+    );
+    expect(appels).toBe(1);
+
+    await page.reload();
+    // Le backend persiste la réponse : GET /parcours/en-cours la renvoie, sans nouvel appel POST.
+    await expect(page.getByRole("list", { name: "Actions recommandées" })).toContainText(
+      "Refaire un exercice sur le passé composé.",
+    );
+    expect(appels).toBe(1);
+  });
+
+  test("un statut PARTIEL est un message simple, jamais une erreur visible", async ({ page }) => {
+    await loginAs(page, APPRENANT);
+    await servirParcours(page, { parcours: parcoursDto(23, "PASSIVE"), exercices: EXERCICES });
+    await page.route("**/api/v1/parcours/7/recommandations", async (route) => {
+      await json(route, 200, {
+        statut: "PARTIEL",
+        code_langue: "fr",
+        referentiel: "CECRL",
+        niveau_cible: "B1",
+        recommandations: [],
+        resume: "Les recommandations ne sont pas disponibles pour le moment.",
+        confiance: 0,
+      });
+    });
+
+    await page.goto("/espace/apprenant/parcours");
+    await page.getByRole("button", { name: "Afficher mes recommandations" }).click();
+
+    const section = page.getByRole("region", { name: "Mes recommandations" });
+    await expect(section.getByRole("list", { name: "Actions recommandées" })).toHaveCount(0);
+    await expect(section.getByText("Les recommandations ne sont pas disponibles pour le moment.")).toBeVisible();
+    // Aucune alerte d'erreur dans la section : PARTIEL n'est pas une panne visible par l'apprenant.
+    await expect(section.getByRole("alert")).toHaveCount(0);
   });
 });

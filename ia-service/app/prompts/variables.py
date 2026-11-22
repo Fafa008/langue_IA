@@ -1,4 +1,4 @@
-"""Données structurées rendues dans les prompts du diagnostic, du chatbot et de la correction."""
+"""Données structurées rendues dans les prompts du diagnostic, du chatbot, de la correction et de la recommandation."""
 
 from collections.abc import Sequence
 from typing import Literal
@@ -9,7 +9,8 @@ from app.schemas.base import ModeleStrict
 from app.schemas.chatbot import HISTORIQUE_CHATBOT_MAX, MESSAGE_CHATBOT_MAX, MessageHistorique
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.correction import EntreeCorrection, phase_de_lecon
-from app.schemas.diagnostic import PreuveReponse, ResultatDiagnostic
+from app.schemas.diagnostic import PointFaible, PreuveReponse, ResultatDiagnostic
+from app.schemas.recommandation import RECOMMANDATIONS_MAX, TYPE_PAR_DOMAINE
 from app.schemas.regles import CodeLangue, CodeNiveau, Competence, Referentiel, erreur, niveaux_du_referentiel
 
 ScenarioDiagnostic = Literal["quotidien", "entretien", "examen"]
@@ -175,4 +176,21 @@ class VariablesCorrectionReponseLibre(ModeleStrict):
             for descripteur in self.descripteurs_rag
         ):
             raise erreur("Les descripteurs RAG doivent correspondre à la langue et au référentiel de l'apprenant.")
+        return self
+
+
+class VariablesRecommandation(ModeleStrict):
+    """Variables du prompt d'actions, construites par l'agent à partir de l'entrée validée."""
+
+    contexte_apprenant: ContexteApprenant
+    points_faibles: list[PointFaible] = Field(min_length=1, max_length=RECOMMANDATIONS_MAX)
+    niveau_vise: CodeNiveau
+
+    @model_validator(mode="after")
+    def verifier_coherence(self) -> "VariablesRecommandation":
+        """Le niveau visé appartient au référentiel et chaque domaine a un type d'exercice connu."""
+        if self.niveau_vise not in niveaux_du_referentiel(self.contexte_apprenant.referentiel):
+            raise erreur("Le niveau visé n'appartient pas au référentiel du contexte apprenant.")
+        if any(point.domaine not in TYPE_PAR_DOMAINE for point in self.points_faibles):
+            raise erreur("Un point faible transmis n'a pas de type d'exercice associé.")
         return self

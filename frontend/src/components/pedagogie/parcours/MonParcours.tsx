@@ -1,17 +1,23 @@
 "use client";
 
-import { BookOpenText, CalendarDays, Ear, Flag, LayoutGrid, Mic2, Repeat, Target } from "lucide-react";
+import { BookOpenText, CalendarDays, Ear, Flag, LayoutGrid, Mic2, Repeat, Sparkles, Target } from "lucide-react";
 import Link from "next/link";
-import { useExercicesParcours, useParcoursPersonnalise } from "@/hooks/useParcoursPersonnalise";
+import {
+  useExercicesParcours,
+  useParcoursPersonnalise,
+  useRecommandationsParcours,
+} from "@/hooks/useParcoursPersonnalise";
 import { useSession } from "@/hooks/useSession";
 import { ApiError } from "@/lib/api-client";
 import { PARCOURS_MOCK } from "@/lib/env";
 import { formatDateCourte } from "@/lib/date";
 import {
+  DOMAINE_FAIBLESSE_LABELS,
   leconsAvantPhaseActive,
   messageErreurParcours,
   PHASES,
   STATUT_PARCOURS_LABELS,
+  TYPE_EXERCICE_LABELS,
 } from "@/lib/parcours-personnalise";
 import { ROUTES } from "@/lib/routes";
 import type { ParcoursPersonnalise, PhaseParcours } from "@/types/parcours-personnalise";
@@ -60,6 +66,8 @@ function ContenuParcours({ parcours }: { parcours: ParcoursPersonnalise }) {
         <CarteLeconAtteinte parcours={parcours} />
         <CarteMode phase={parcours.phase} leconAtteinte={parcours.leconAtteinte} />
       </div>
+
+      <RecommandationsParcours parcours={parcours} />
 
       <LeconDuJour
         numero={parcours.leconAtteinte}
@@ -113,6 +121,69 @@ function EnTete({ parcours }: { parcours: ParcoursPersonnalise }) {
           <CalendarDays size={14} aria-hidden /> Commencé le {formatDateCourte(parcours.dateCreation)}
         </li>
       </ul>
+    </section>
+  );
+}
+
+/**
+ * REC-03 — affichage minimal des recommandations : l'apprenant déclenche lui-même le calcul (route POST
+ * idempotente), puis relit la réponse persistée dans son parcours. Un statut PARTIEL est un simple message, jamais
+ * une erreur : le service IA peut être indisponible sans bloquer la page.
+ */
+function RecommandationsParcours({ parcours }: { parcours: ParcoursPersonnalise }) {
+  const recommandations = useRecommandationsParcours(parcours.idParcours);
+  const donnees = parcours.recommandation;
+  const libelleBouton = recommandations.isPending
+    ? "Calcul en cours…"
+    : donnees
+      ? "Actualiser les recommandations"
+      : "Afficher mes recommandations";
+
+  return (
+    <section aria-labelledby="titre-recommandations" className="card">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 id="titre-recommandations" className="flex items-center gap-2 font-semibold text-primary">
+            <Sparkles size={20} aria-hidden /> Mes recommandations
+          </h2>
+          <p className="mt-1 text-small text-content-secondary">
+            Des actions ciblées, calculées à partir de vos résultats pour progresser vers le niveau {parcours.niveauVise}.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn-secondary min-h-11 px-4 py-2 disabled:opacity-50"
+          onClick={() => void recommandations.mutate()}
+          disabled={recommandations.isPending}
+        >
+          {libelleBouton}
+        </button>
+      </div>
+
+      {recommandations.isError ? (
+        <p className="mt-4 text-small text-content-secondary">
+          Les recommandations ne sont pas disponibles pour le moment. Réessayez dans un instant.
+        </p>
+      ) : !donnees ? (
+        <p className="mt-4 text-content-secondary">Aucune recommandation pour le moment.</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <p className="text-content">{donnees.resume}</p>
+          {donnees.statut === "COMPLET" && donnees.recommandations.length > 0 && (
+            <ol aria-label="Actions recommandées" className="space-y-2">
+              {donnees.recommandations.map((action) => (
+                <li key={`${action.domaine}-${action.priorite}`} className="rounded-btn border border-border p-3">
+                  <p className="font-semibold">
+                    {action.priorite}. {DOMAINE_FAIBLESSE_LABELS[action.domaine]} · {TYPE_EXERCICE_LABELS[action.typeExercice]}
+                  </p>
+                  <p className="mt-1 text-content">{action.action}</p>
+                  <p className="mt-1 text-small text-content-secondary">{action.justification}</p>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
     </section>
   );
 }

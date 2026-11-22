@@ -1,0 +1,26 @@
+{
+  "request_id": "9c5f0f0a-6b0c-4bd4-9a1f-9b4d6b9a1234",
+  "contexte": {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_preliminaire": "B1",
+    "lecon_atteinte": 18
+  },
+  "entree": {
+    "points_faibles": [
+      {
+        "domaine": "grammaire",
+        "id_question": "q-12",
+        "observation": "Le prétérit manque dans « yesterday I go ».",
+        "justification": "Le repère temporel situe l'action dans le passé."
+      },
+      {
+        "domaine": "vocabulaire",
+        "id_question": "q-18",
+        "observation": "Le mot « marchandise » est employé à la place de « goods ».",
+        "justification": "Le champ lexical des achats reste imprécis."
+      }
+    ],
+    "niveau_vise": "B2"
+  }
+}

@@ -7,15 +7,19 @@ import type {
   ContenuExercice,
   CorrectionChatbot,
   CorrectionExercice,
+  DomaineFaiblesse,
   ExerciceLecon,
   ExerciceParcours,
   LeconParcours,
   ModeCorrection,
   ParcoursPersonnalise,
   PhaseParcours,
+  RecommandationAction,
+  RecommandationParcours,
   ReponseChatbot,
   StatutExercice,
   StatutParcours,
+  StatutRecommandation,
   TypeExercice,
 } from "@/types/parcours-personnalise";
 
@@ -25,6 +29,25 @@ export interface ModuleParcoursDto {
   description: string;
   premiere_lecon: number;
   derniere_lecon: number;
+}
+
+/** POST /parcours/{id}/recommandations et champ `recommandation` de GET /parcours/en-cours. */
+export interface ActionRecommandationDto {
+  domaine: string;
+  type_exercice: string;
+  action: string;
+  justification: string;
+  priorite: number;
+}
+
+export interface RecommandationParcoursDto {
+  statut: string;
+  code_langue: string;
+  referentiel: string;
+  niveau_cible: string;
+  recommandations: ActionRecommandationDto[];
+  resume: string;
+  confiance: number;
 }
 
 /** GET /parcours/en-cours (404 si l'apprenant n'a pas encore de parcours). */
@@ -42,6 +65,7 @@ export interface ParcoursPersonnaliseDto {
   phase: string;
   est_lecon_de_revision: boolean;
   modules: ModuleParcoursDto[];
+  recommandation?: RecommandationParcoursDto | null;
 }
 
 /** Élément de GET /parcours/{id_parcours}/exercices (une ligne de parcours_exercice et son exercice). */
@@ -127,6 +151,16 @@ const PHASES: PhaseParcours[] = ["PASSIVE", "ACTIVE"];
 const TYPES: TypeExercice[] = ["GRAMMAIRE", "VOCABULAIRE", "COMPREHENSION", "ECOUTE", "ORAL"];
 const STATUTS_EXERCICE: StatutExercice[] = ["A_FAIRE", "REUSSI", "A_REVOIR"];
 const MODES_CORRECTION: ModeCorrection[] = ["AUTOMATIQUE", "IA"];
+const STATUTS_RECOMMANDATION: StatutRecommandation[] = ["COMPLET", "PARTIEL"];
+const REFERENTIELS = ["CECRL", "HSK"] as const;
+const DOMAINES_FAIBLESSE: DomaineFaiblesse[] = [
+  "grammaire",
+  "vocabulaire",
+  "comprehension_ecrite",
+  "comprehension_orale",
+  "expression_ecrite",
+  "expression_orale",
+];
 
 /** Valeur d'énumération reconnue (sans tenir compte de la casse) ; une valeur inconnue est une erreur de contrat. */
 function valeurConnue<T extends string>(valeurs: readonly T[], valeur: string, quoi: string): T {
@@ -138,6 +172,44 @@ function valeurConnue<T extends string>(valeurs: readonly T[], valeur: string, q
 function requis<T>(valeur: T | undefined, champ: string): T {
   if (valeur === undefined || valeur === null || valeur === "") throw new Error(`Contenu d'exercice incomplet : ${champ}`);
   return valeur;
+}
+
+/** Énumération en snake_case (domaines) : une valeur inconnue est une erreur de contrat, pas une traduction. */
+function domaineConnu(valeur: string): DomaineFaiblesse {
+  const trouve = DOMAINES_FAIBLESSE.find((d) => d === valeur.toLowerCase());
+  if (!trouve) throw new Error(`Domaine de recommandation non reconnu : ${valeur}`);
+  return trouve;
+}
+
+/**
+ * Recommandation reçue du backend : contrôle des énumérations et des priorités contiguës (règles REC-00).
+ * Le frontend ne recalcule rien : il refuse une réponse hors contrat au lieu d'afficher une action incohérente.
+ */
+export function toRecommandationParcours(dto: RecommandationParcoursDto): RecommandationParcours {
+  const recommandations: RecommandationAction[] = dto.recommandations.map((action) => ({
+    domaine: domaineConnu(action.domaine),
+    typeExercice: valeurConnue(TYPES, action.type_exercice, "Type d'exercice recommandé"),
+    action: action.action,
+    justification: action.justification,
+    priorite: action.priorite,
+  }));
+  if (recommandations.some((a) => a.priorite < 1 || a.priorite > 5)) {
+    throw new Error("Recommandation incomplète : priorité hors intervalle");
+  }
+  const priorites = recommandations.map((a) => a.priorite).sort((a, b) => a - b);
+  if (priorites.some((priorite, index) => priorite !== index + 1)) {
+    throw new Error("Recommandation incomplète : priorités non contiguës");
+  }
+  const referentiel = valeurConnue(REFERENTIELS, dto.referentiel, "Référentiel de recommandation");
+  return {
+    statut: valeurConnue(STATUTS_RECOMMANDATION, dto.statut, "Statut de recommandation"),
+    codeLangue: dto.code_langue,
+    referentiel,
+    niveauCible: dto.niveau_cible,
+    recommandations: [...recommandations].sort((a, b) => a.priorite - b.priorite),
+    resume: dto.resume,
+    confiance: dto.confiance,
+  };
 }
 
 export function toParcoursPersonnalise(dto: ParcoursPersonnaliseDto): ParcoursPersonnalise {
@@ -162,6 +234,7 @@ export function toParcoursPersonnalise(dto: ParcoursPersonnaliseDto): ParcoursPe
         premiereLecon: m.premiere_lecon,
         derniereLecon: m.derniere_lecon,
       })),
+    recommandation: dto.recommandation ? toRecommandationParcours(dto.recommandation) : null,
   };
 }
 
