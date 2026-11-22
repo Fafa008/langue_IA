@@ -59,7 +59,7 @@ export default function Header() {
                 <Link href={ROUTES.login} className="btn-secondary">Se connecter</Link>
                 <Link href={ROUTES.register} className="btn-primary">S&apos;inscrire</Link>
               </div>
-              <button className="lg:hidden" aria-label="Menu" onClick={() => setOpen(!open)}>
+              <button className="lg:hidden" aria-label="Menu" aria-expanded={open} onClick={() => setOpen(!open)}>
                 {open ? <X /> : <Menu />}
               </button>
             </>

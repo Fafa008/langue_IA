@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Alert from "@/components/ui/Alert";
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
+import FormSection from "@/components/ui/FormSection";
 import IconInput from "@/components/ui/IconInput";
 import PasswordInput from "@/components/ui/PasswordInput";
 import { useForm } from "@/hooks/useForm";
@@ -46,10 +47,6 @@ const toPayload = (v: ProfilFormValues): ProfilPayload => ({
 /** Libellé d'un champ obligatoire : « Prénom * ». */
 const required = (label: string) => `${label} *`;
 
-function SectionTitle({ children }: { children: ReactNode }) {
-  return <h2 className="text-h3 text-primary">{children}</h2>;
-}
-
 /*(section Sécurité). */
 function LockedLabel({ children }: { children: ReactNode }) {
   return (
@@ -78,6 +75,7 @@ export default function ProfilForm({ utilisateur, onSaved }: ProfilFormProps) {
           onSaved();
         },
       }),
+    submitting: update.isPending,
   });
   const { values, errors, handleSubmit } = form;
 
@@ -97,7 +95,7 @@ export default function ProfilForm({ utilisateur, onSaved }: ProfilFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="md:pl-8" aria-label="Modifier mon profil">
-      <SectionTitle>Informations personnelles</SectionTitle>
+      <FormSection title="Informations personnelles" variant="titre">
 
       {update.isError && !motDePasseActuelRefuse && (
         <Alert className="mt-4">{getErrorMessage(update.error, PROFIL_ERRORS)}</Alert>
@@ -163,10 +161,11 @@ export default function ProfilForm({ utilisateur, onSaved }: ProfilFormProps) {
           />
         )}
       </FormField>
+      </FormSection>
 
       <hr className="my-8 border-border" />
 
-      <SectionTitle>Sécurité</SectionTitle>
+      <FormSection title="Sécurité" variant="titre">
       <p className="mt-1 text-small text-content-secondary">
         Pour changer de mot de passe, saisissez d&apos;abord l&apos;actuel. Laissez ces champs vides pour le conserver.
       </p>
@@ -216,6 +215,7 @@ export default function ProfilForm({ utilisateur, onSaved }: ProfilFormProps) {
           />
         )}
       </FormField>
+      </FormSection>
 
       <div className="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button type="button" variant="secondary" onClick={cancel} disabled={update.isPending} className="sm:min-w-32">

@@ -11,7 +11,8 @@ Tant qu'une route n'existe pas côté backend, le frontend utilise des données 
 ## Règle d'architecture : le navigateur ne parle jamais au service IA
 
 Le frontend n'appelle que le backend. Le service IA (`ia-service`) n'est joignable que depuis le backend, sur le réseau
-interne, sans authentification propre. Aucune variable `NEXT_PUBLIC_IA_URL` n'existe ; un test de garde
+interne, avec un jeton `X-IA-Token` interne obligatoire en environnement de production. Aucune variable `NEXT_PUBLIC_IA_URL`
+n'existe ; un test de garde
 (`frontend/src/lib/__tests__/garde-service-ia.test.ts`) l'interdit.
 
 ## Règles générales

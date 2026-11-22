@@ -71,7 +71,7 @@
   /* Messages */
   .msg-success { @apply text-small font-medium text-success; }
   .msg-error   { @apply text-small font-medium text-error; }
-  .msg-warning { @apply text-small font-medium text-warning; }
+  .msg-warning { @apply text-small font-medium text-warning-dark; }
 
   /* Libellé de section (ex : "NOS LANGUES") */
   .eyebrow {

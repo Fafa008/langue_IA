@@ -52,7 +52,7 @@ export function useRecommandationsParcours(idParcours: number) {
   });
 }
 
-/** Message au professeur IA ; la conversation reste dans l'écran (aucun historique conservé, cf. tâche F-08). */
+/** Message au professeur IA : l'historique affiché reste local, mais le backend conserve les tours de la session. */
 export function useChatbot() {
   return useMutation({
     mutationFn: ({ message, historique }: { message: string; historique: MessageChatbot[] }) =>

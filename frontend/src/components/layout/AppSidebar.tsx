@@ -27,7 +27,7 @@ export default function AppSidebar() {
           const ouverte = Boolean(sousPages) && (sousMenuChoisi ?? active);
           if (bientot) {
             return (
-              <span key={href} aria-disabled className="flex cursor-default items-center gap-4 rounded-btn px-3 py-3 font-medium text-content-secondary">
+              <span key={href} aria-disabled title={libelleEtat ? `Fonctionnalité à venir : ${libelleEtat}` : "Fonctionnalité à venir"} className="flex cursor-default items-center gap-4 rounded-btn px-3 py-3 font-medium text-content-secondary">
                 <Icon size={22} strokeWidth={1.75} className="shrink-0" aria-hidden />
                 <span className="truncate">{label}</span>
                 <span className="ml-auto shrink-0 rounded-full bg-background px-2 py-0.5 text-[0.6875rem] font-semibold">{libelleEtat ?? "Bientôt"}</span>

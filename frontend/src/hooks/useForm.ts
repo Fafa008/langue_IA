@@ -6,6 +6,8 @@ interface UseFormOptions<T> {
   initialValues: T;
   validate: Validator<T>;
   onSubmit: (values: T) => void;
+  /** Pendant une soumission en cours, les envois suivants sont ignorés (un clic = une requête). */
+  submitting?: boolean;
 }
 
 /** Place le focus (et donc fait défiler la page) sur le premier champ marqué aria-invalid. */
@@ -24,7 +26,7 @@ function focusFirstInvalidField(form: HTMLFormElement) {
  * Les erreurs n'apparaissent qu'après une première tentative d'envoi, puis sont recalculées à chaque frappe.
  * En cas d'erreur au moment de l'envoi, le premier champ invalide reçoit le focus.
  */
-export function useForm<T extends object>({ initialValues, validate, onSubmit }: UseFormOptions<T>) {
+export function useForm<T extends object>({ initialValues, validate, onSubmit, submitting = false }: UseFormOptions<T>) {
   const [values, setValues] = useState<T>(initialValues);
   const [errors, setErrors] = useState<FieldErrors<T>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -37,6 +39,7 @@ export function useForm<T extends object>({ initialValues, validate, onSubmit }:
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
     setSubmitted(true);
     const nextErrors = validate(values);
     setErrors(nextErrors);

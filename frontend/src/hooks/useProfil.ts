@@ -5,9 +5,17 @@ import { useAuthStore } from "@/store/auth.store";
 import { queryKeys } from "./queryKeys";
 import type { Utilisateur } from "@/types/utilisateur";
 
-/** Profil de l'utilisateur connecté, relu depuis l'API pour préremplir le formulaire. */
-export function useProfil() {
-  return useQuery({ queryKey: queryKeys.profil, queryFn: profilService.getProfil });
+/**
+ * Profil de l'utilisateur connecté, relu depuis l'API pour préremplir le formulaire.
+ * `refetchOnWindowFocus` garantit qu'une suspension décidée côté backend prend effet au retour d'onglet.
+ */
+export function useProfil(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.profil,
+    queryFn: profilService.getProfil,
+    enabled,
+    refetchOnWindowFocus: true,
+  });
 }
 
 /** Après une modification, le profil en cache et la session (en-tête) sont mis à jour. */

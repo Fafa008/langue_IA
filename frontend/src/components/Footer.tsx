@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Logo from "@/components/ui/Logo";
 import { CITATION } from "@/lib/marque";
+import { ROUTES } from "@/lib/routes";
 
 export default function Footer() {
   return (
@@ -14,7 +15,7 @@ export default function Footer() {
         <div className="flex flex-col gap-2 md:items-end">
           <nav className="flex gap-6 text-small">
             <Link href="#apropos" className="hover:underline">À propos</Link>
-            <Link href="/faq" className="hover:underline">FAQ</Link>
+            <Link href={ROUTES.faq} className="hover:underline">FAQ</Link>
             <Link href="#contact" className="hover:underline">Contact</Link>
           </nav>
           <p className="text-small text-white/70">
