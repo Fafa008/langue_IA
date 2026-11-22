@@ -5,6 +5,7 @@
 import type { CadreReference } from "@/types/test-diagnostic";
 import type {
   ContenuExercice,
+  CorrectionChatbot,
   CorrectionExercice,
   DomaineFaiblesse,
   ExerciceLecon,
@@ -15,6 +16,7 @@ import type {
   PhaseParcours,
   RecommandationAction,
   RecommandationParcours,
+  ReponseChatbot,
   StatutExercice,
   StatutParcours,
   StatutRecommandation,
@@ -136,6 +138,13 @@ export interface ReponseChatbotDto {
   quota_restant?: number;
   version_prompt?: string;
 }
+
+export const toReponseChatbot = (dto: ReponseChatbotDto): ReponseChatbot => ({
+  reponse: dto.reponse,
+  corrections: dto.corrections ?? [],
+  quotaRestant: dto.quota_restant ?? null,
+  versionPrompt: dto.version_prompt ?? null,
+});
 
 const STATUTS_PARCOURS: StatutParcours[] = ["EN_COURS", "TERMINE", "ABANDONNE"];
 const PHASES: PhaseParcours[] = ["PASSIVE", "ACTIVE"];

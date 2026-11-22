@@ -5,6 +5,7 @@
  * Scénario de départ : NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO (par défaut « passif »).
  */
 import { ApiError } from "@/lib/api-client";
+import { repererErreurs } from "@/lib/corrections-messages";
 import { delay } from "@/mocks/delay";
 import type {
   CorrectionExerciceDto,
@@ -442,11 +443,15 @@ export const parcoursPersonnaliseMock = {
     await delay(500);
     const conversation = CONVERSATIONS.find((c) => c.message_initial === historique[0]?.contenu) ?? CONVERSATIONS[0];
     const tour = historique.filter((m) => m.role === "apprenant").length;
+    const corrections = repererErreurs(message).slice(0, 3);
     if (normaliserReponse(message).split(" ").length < 2) {
-      return { reponse: "Pouvez-vous répondre avec une phrase complète ? Par exemple : « Je m'appelle… »." };
+      return {
+        reponse: "Pouvez-vous répondre avec une phrase complète ? Par exemple : « Je m'appelle… ».",
+        corrections,
+      };
     }
     const reaction = ["Très bien !", "D'accord, merci.", "Intéressant !"][tour % 3];
     const relance = conversation.relances[tour] ?? "Merci pour cet échange, vous pouvez terminer la conversation.";
-    return { reponse: `${reaction} ${relance}` };
+    return { reponse: `${reaction} ${relance}`, corrections };
   },
 };

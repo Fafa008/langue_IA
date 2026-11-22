@@ -165,8 +165,23 @@ export interface CorrectionExercice {
   reformulation: string | null;
 }
 
-/** Tour de parole du chatbot ; mêmes rôles que le service IA (ia-service/app/schemas/chatbot.py). */
+/** Tour de parole du chatbot ; mêmes rôles que le contrat backend. */
 export interface MessageChatbot {
   role: "apprenant" | "assistant";
   contenu: string;
+}
+
+/** Correction en marge renvoyée par l'agent Chatbot (US74). */
+export interface CorrectionChatbot {
+  extrait: string;
+  correction: string;
+  explication: string;
+}
+
+/** Réponse du chat : la conversation continue, les corrections s'affichent à côté. */
+export interface ReponseChatbot {
+  reponse: string;
+  corrections: CorrectionChatbot[];
+  quotaRestant: number | null;
+  versionPrompt: string | null;
 }

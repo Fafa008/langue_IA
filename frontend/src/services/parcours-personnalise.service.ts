@@ -8,6 +8,7 @@ import type {
   MessageChatbot,
   ParcoursPersonnalise,
   RecommandationParcours,
+  ReponseChatbot,
   ReponseExercice,
 } from "@/types/parcours-personnalise";
 import { ENDPOINTS } from "./endpoints";
@@ -17,6 +18,7 @@ import {
   toLeconParcours,
   toParcoursPersonnalise,
   toRecommandationParcours,
+  toReponseChatbot,
   type CorrectionExerciceDto,
   type ExerciceParcoursDto,
   type LeconParcoursDto,
@@ -42,7 +44,7 @@ export interface ParcoursPersonnaliseService {
   /** Recommandations pédagogiques : POST explicite, idempotent ; PARTIEL se traduit par une liste vide. */
   recommandations(idParcours: number): Promise<RecommandationParcours>;
   /** Message au professeur IA, avec l'historique récent de la conversation. */
-  chatbot(message: string, historique: MessageChatbot[]): Promise<string>;
+  chatbot(message: string, historique: MessageChatbot[]): Promise<ReponseChatbot>;
 }
 
 const parLecon = (a: ExerciceParcours, b: ExerciceParcours) =>
@@ -94,7 +96,7 @@ export const httpParcoursPersonnaliseService: ParcoursPersonnaliseService = {
       body: corpsChatbot(message, historique),
       timeoutMs: DELAI_IA_MS,
     });
-    return dto.reponse;
+    return toReponseChatbot(dto);
   },
 };
 
@@ -106,7 +108,8 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
   corriger: async (idParcours, idParcoursExercice, reponse) =>
     toCorrectionExercice(await parcoursPersonnaliseMock.corriger(idParcours, idParcoursExercice, reponse)),
   recommandations: async (idParcours) => toRecommandationParcours(await parcoursPersonnaliseMock.recommandations(idParcours)),
-  chatbot: async (message, historique) => (await parcoursPersonnaliseMock.chatbot(corpsChatbot(message, historique))).reponse,
+  chatbot: async (message, historique) =>
+    toReponseChatbot(await parcoursPersonnaliseMock.chatbot(corpsChatbot(message, historique))),
 };
 
 export const parcoursPersonnaliseService = PARCOURS_MOCK ? mockParcoursPersonnaliseService : httpParcoursPersonnaliseService;
