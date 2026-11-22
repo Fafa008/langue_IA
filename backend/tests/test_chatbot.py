@@ -1,6 +1,7 @@
 """Tests de la route chat backend (US67/US74) : relais IA, quota, historique et journal anonymisé."""
 
 import json
+from collections.abc import Iterator
 from uuid import uuid4
 
 import httpx
@@ -9,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.models import Role
 from app.models.chatbot import JournalChatbot, MessageChatbot, QuotaChatbot
 from app.schemas.ia import (
@@ -82,8 +84,17 @@ def test_message_retourne_reponse_et_corrections(
     assert [m.role for m in db.scalars(select(MessageChatbot)).all()] == ["apprenant", "assistant"]
 
 
+@pytest.fixture
+def url_ia(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """URL joignable pour le client HTTP ; le transport simulé remplace le réseau."""
+    monkeypatch.setenv("IA_SERVICE_URL", "http://ia.test")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 def test_integration_relais_http_vers_service_ia(
-    client: TestClient, db: Session, apprenant_avec_parcours, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, db: Session, apprenant_avec_parcours, monkeypatch: pytest.MonkeyPatch, url_ia: None
 ) -> None:
     appels: list[httpx.Request] = []
 
