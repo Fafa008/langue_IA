@@ -24,15 +24,18 @@ export default function ExerciceConversation({
   enCours,
   verrouille,
   onSoumettre,
+  libelleTerminer,
 }: {
   contenu: Extract<ContenuExercice, { format: "conversation" }>;
   langue: string;
   enCours: boolean;
   verrouille: boolean;
   onSoumettre: (reponse: ReponseExercice) => void;
+  libelleTerminer?: string;
 }) {
   const [messages, setMessages] = useState<MessageEnChat[]>([{ role: "assistant", contenu: contenu.messageInitial }]);
   const [brouillon, setBrouillon] = useState("");
+  const [quotaRestant, setQuotaRestant] = useState<number | null>(null);
   const chatbot = useChatbot();
   const voix = useReconnaissanceVocale(langue);
   const finRef = useRef<HTMLDivElement>(null);
@@ -56,7 +59,8 @@ export default function ExerciceConversation({
     chatbot.mutate(
       { message, historique },
       {
-        onSuccess: (reponse) =>
+        onSuccess: (reponse) => {
+          setQuotaRestant(reponse.quotaRestant);
           setMessages((liste) => [
             ...liste.map((tour, index) =>
               index === liste.length - 1 && reponse.corrections.length > 0
@@ -64,7 +68,8 @@ export default function ExerciceConversation({
                 : tour,
             ),
             { role: "assistant", contenu: reponse.reponse },
-          ]),
+          ]);
+        },
       },
     );
   };
@@ -76,6 +81,12 @@ export default function ExerciceConversation({
         {contenu.echangesMinimum} échanges
         {PARCOURS_MOCK && " · professeur IA simulé (démonstration)"}
       </p>
+      {quotaRestant !== null && (
+        <p role="status" data-testid="quota-chat" className="mt-1 text-small text-content-secondary">
+          Messages restants dans cette session : {quotaRestant}
+          {quotaRestant === 0 ? " — terminez et recommencez une conversation." : ""}
+        </p>
+      )}
 
       <div role="log" aria-live="polite" aria-label="Conversation avec le professeur IA" className="mt-3 max-h-80 space-y-3 overflow-y-auto rounded-card bg-background p-3">
         {messages.map((message, index) => (
@@ -101,6 +112,7 @@ export default function ExerciceConversation({
           <span className="sr-only">Votre message</span>
           <input
             type="text"
+            disabled={quotaRestant === 0}
             value={brouillon}
             onChange={(e) => setBrouillon(e.target.value)}
             placeholder={voix.ecoute ? "Je vous écoute…" : "Écrivez ou dictez votre réponse…"}
@@ -110,11 +122,20 @@ export default function ExerciceConversation({
           />
         </label>
         {voix.disponible && <BoutonMicro ecoute={voix.ecoute} onDemarrer={voix.demarrer} onArreter={voix.arreter} libelle="Dicter" />}
-        <button type="submit" disabled={!brouillon.trim() || chatbot.isPending} className="btn-secondary min-h-11 px-4 py-2 disabled:opacity-50">
+        <button type="submit" disabled={!brouillon.trim() || chatbot.isPending || quotaRestant === 0} className="btn-secondary min-h-11 px-4 py-2 disabled:opacity-50">
           <Send size={16} aria-hidden /> Envoyer
         </button>
       </form>
-      {voix.erreur && <p role="alert" className="msg-error mt-2">{voix.erreur}</p>}
+      {!voix.disponible && (
+        <p role="note" className="mt-2 text-small text-content-secondary">
+          Dictée indisponible dans ce navigateur : le mode écrit de secours reste actif.
+        </p>
+      )}
+      {voix.erreur && (
+        <p role="alert" className="mt-2 text-small text-content-secondary">
+          {voix.erreur} Le mode écrit reste disponible.
+        </p>
+      )}
 
       {!verrouille && (
         <button
@@ -123,7 +144,7 @@ export default function ExerciceConversation({
           disabled={echanges === 0 || enCours || chatbot.isPending}
           className="btn-primary mt-4 px-5 py-2.5 disabled:opacity-50"
         >
-          {enCours ? "Évaluation en cours…" : "Terminer et évaluer la conversation"}
+          {enCours ? "Évaluation en cours…" : libelleTerminer ?? "Terminer et évaluer la conversation"}
         </button>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { nouvelleSessionChatbot } from "@/lib/session-chatbot";
 import {
   choisirScenarioParcoursMock,
   corrigerRedaction,
@@ -350,6 +351,20 @@ describe("service HTTP (prêt pour le backend)", () => {
     expect(options.body.identifiant_session).toEqual(expect.any(String));
     expect(options.body.historique).toHaveLength(HISTORIQUE_CHATBOT_MAX);
     expect(options.body.historique[0].contenu).toBe("m5");
+  });
+
+  it("ferme la session courante et en ouvre une nouvelle pour la conversation suivante", async () => {
+    apiRequest.mockResolvedValueOnce({ reponse: "Bonjour !" });
+    await http.chatbot("Salut", []);
+    const premiereSession = apiRequest.mock.calls[0][1].body.identifiant_session as string;
+
+    await http.fermerSession();
+    expect(apiRequest).toHaveBeenCalledWith(`/api/v1/chatbot/session/${premiereSession}`, { method: "DELETE" });
+
+    nouvelleSessionChatbot();
+    apiRequest.mockResolvedValueOnce({ reponse: "Bonjour !" });
+    await http.chatbot("Salut", []);
+    expect(apiRequest.mock.calls[2][1].body.identifiant_session).not.toBe(premiereSession);
   });
 
   it("n'envoie au service IA que le rôle et le contenu : pas de corrections en marge (US74-FE)", async () => {

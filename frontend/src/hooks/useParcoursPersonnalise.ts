@@ -59,3 +59,8 @@ export function useChatbot() {
       parcoursPersonnaliseService.chatbot(message, historique),
   });
 }
+
+/** Ferme la session chatbot (historique et quota supprimés côté backend). */
+export function useFermerSessionChatbot() {
+  return useMutation({ mutationFn: () => parcoursPersonnaliseService.fermerSession() });
+}
