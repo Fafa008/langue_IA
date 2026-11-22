@@ -12,8 +12,8 @@ US157 : le prompt de correction d'une réponse libre reçoit de la même façon 
 au contrat v2 (phase passive ou active), qui ne vérifie que la majuscule initiale, la ponctuation finale et la
 longueur, et le dit dans son commentaire.
 
-US67 : le chatbot répond lui aussi par un message de démonstration déterministe, sans reprendre le contenu du
-prompt (donnée non fiable), pour que le scénario ``demonstration`` couvre toutes les routes du service.
+US67/US74 : le chat reçoit aussi une réponse de démonstration déterministe, avec au plus trois corrections en
+marge uniquement sur des règles visibles (majuscule, ponctuation, espaces) ; elle annonce toujours son origine.
 """
 
 import json
@@ -23,7 +23,13 @@ from collections.abc import Sequence
 from pydantic import BaseModel
 
 from app.llm.base import MessageLLM
-from app.schemas.chatbot import ResultatChatbot
+from app.schemas.chatbot import (
+    CORRECTIONS_CHATBOT_MAX,
+    EXPLICATION_CORRECTION_MAX,
+    EXTRAIT_CORRECTION_MAX,
+    CorrectionChatbot,
+    ResultatChatbot,
+)
 from app.schemas.correction import EXTRAIT_MAX, ErreurRelevee, ResultatCorrection
 from app.schemas.diagnostic import (
     PhaseAssimil,
@@ -51,11 +57,7 @@ SCORE_NIVEAU_INFERIEUR = 30.0
 SCORE_ACTIVATION = 60.0
 SCORE_CONFIANCE = 0.5
 POINTS_FAIBLES_MAX = 2
-REPONSE_CHATBOT_DEMONSTRATION = (
-    "Bonjour ! Je suis l'assistant de démonstration du Centre de langues. Sans modèle de langue configuré, "
-    "je ne peux pas encore répondre à votre question : ce message illustre le fonctionnement du chat et sera "
-    "remplacé par un vrai fournisseur LLM."
-)
+PONCTUATION_FINALE = ".!?…。！？"
 
 # Domaine de faiblesse observable sur une production libre, selon la compétence de la question.
 _DOMAINE_PAR_COMPETENCE = {
@@ -187,7 +189,7 @@ def resultat_correction_demonstration(messages: Sequence[MessageLLM]) -> Resulta
         )
     dernier = mots[-1]
     deja_releve = any(e.extrait.casefold() == dernier.casefold() for e in erreurs)
-    if texte[-1] not in ".!?…。！？" and len(dernier) < EXTRAIT_MAX and not deja_releve:
+    if texte[-1] not in PONCTUATION_FINALE and len(dernier) < EXTRAIT_MAX and not deja_releve:
         erreurs.append(
             ErreurRelevee(extrait=dernier, correction=f"{dernier}.", explication="Terminez la phrase par un point.")
         )
@@ -197,7 +199,7 @@ def resultat_correction_demonstration(messages: Sequence[MessageLLM]) -> Resulta
     reformulation = None
     if phase == "ACTIVE" and erreurs:
         reformulation = texte[0].upper() + texte[1:]
-        if reformulation[-1] not in ".!?…。！？":
+        if reformulation[-1] not in PONCTUATION_FINALE:
             reformulation += "."
 
     return ResultatCorrection(
@@ -213,6 +215,32 @@ def resultat_correction_demonstration(messages: Sequence[MessageLLM]) -> Resulta
             if manque
             else CONSEIL_CORRECTION[phase]
         ),
+    )
+
+
+COMMENTAIRE_CHATBOT = "Réponse de démonstration sans modèle de langue (fournisseur factice)."
+EXPLICATION_CORRECTION_CHATBOT = (
+    "Vérification simple de démonstration : un modèle de langue confirmerait cette correction."
+)
+
+
+def _ajouter_correction(
+    corrections: list[CorrectionChatbot],
+    extrait: str,
+    correction: str,
+    explication: str = EXPLICATION_CORRECTION_CHATBOT,
+) -> None:
+    """Ajouter une correction visible si elle tient dans le contrat et si la limite n'est pas atteinte."""
+    if len(corrections) >= CORRECTIONS_CHATBOT_MAX:
+        return
+    if not extrait.strip() or not correction.strip():
+        return
+    corrections.append(
+        CorrectionChatbot(
+            extrait=extrait[:EXTRAIT_CORRECTION_MAX],
+            correction=correction[:EXTRAIT_CORRECTION_MAX],
+            explication=explication[:EXPLICATION_CORRECTION_MAX],
+        )
     )
 
 
@@ -259,11 +287,37 @@ def resultat_recommandation_demonstration(messages: Sequence[MessageLLM]) -> Res
 
 
 def resultat_chatbot_demonstration(messages: Sequence[MessageLLM]) -> ResultatChatbot | None:
-    """Message de démonstration du chatbot (US67), sans reprendre le contenu non fiable du prompt."""
+    """Réponse et corrections de démonstration du chat (US74), ou ``None`` hors prompt de conversation."""
     donnees = _donnees_diagnostic(messages, f"<{BALISE_CONVERSATION}>", f"</{BALISE_CONVERSATION}>")
     if donnees is None:
         return None
-    return ResultatChatbot(reponse=REPONSE_CHATBOT_DEMONSTRATION)
+    texte = " ".join(str(donnees["message"]).split())
+    corrections: list[CorrectionChatbot] = []
+
+    if texte[:1].isalpha() and texte[:1].islower():
+        premier = texte.split(" ")[0]
+        _ajouter_correction(corrections, premier, premier[0].upper() + premier[1:])
+
+    if texte and texte[-1] not in PONCTUATION_FINALE:
+        dernier = texte.split(" ")[-1]
+        _ajouter_correction(corrections, dernier, f"{dernier}.")
+
+    brut = str(donnees["message"])
+    if "  " in brut:
+        _ajouter_correction(
+            corrections,
+            brut[:EXTRAIT_CORRECTION_MAX],
+            texte[:EXTRAIT_CORRECTION_MAX],
+            "Un seul espace suffit entre deux mots.",
+        )
+
+    propositions = ", ".join(correction.correction for correction in corrections)
+    reponse = COMMENTAIRE_CHATBOT
+    if propositions:
+        reponse += f" Forme(s) proposée(s) : {propositions}."
+    reponse += " Réessayez avec la forme corrigée ; la conversation continue normalement."
+
+    return ResultatChatbot(reponse=reponse, corrections=corrections)
 
 
 def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseModel]) -> BaseModel | None:

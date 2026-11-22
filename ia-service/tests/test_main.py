@@ -95,7 +95,7 @@ def test_chatbot_utilise_gemini_via_le_harness(env_propre: pytest.MonkeyPatch) -
             )
 
     assert reponse.status_code == 200
-    assert reponse.json()["resultat"] == {"reponse": "Bonjour !"}
+    assert reponse.json()["resultat"] == {"reponse": "Bonjour !", "corrections": []}
     assert reponse.json()["meta"]["fournisseur"] == "gemini"
     assert reponse.json()["meta"]["modele"] == "modele-test"
     sdk.aio.models.generate_content.assert_awaited_once()
