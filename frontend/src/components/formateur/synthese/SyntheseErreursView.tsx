@@ -34,7 +34,7 @@ export default function SyntheseErreursView({ erreurs = ERREURS_SIMULEES }: { er
         </ol>
       </section>
 
-      <section aria-labelledby="titre-bilan-reel" className="card" aria-disabled="true">
+      <section aria-labelledby="titre-bilan-reel" data-testid="bilan-reel" className="card opacity-70">
         <h2 id="titre-bilan-reel" className="flex items-center gap-3 text-h3 text-content">
           Bilan réel des sessions
           <span className="rounded-full bg-background px-2.5 py-0.5 text-small font-semibold text-content-secondary">Bientôt</span>
