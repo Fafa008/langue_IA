@@ -3,9 +3,13 @@
 > **Centre Langues IA · La Digithèque**
 > Date : 23 novembre 2026 · Branche : `docs/audit-gestion-pedagogique` (depuis `origin/develop`, `f903d62`).
 > Document **lecture seule** : aucun code, schéma, seed ni test n'a été modifié.
-> Exception de périmètre : le garde-fou des décisions (D1–D9 `EN ATTENTE`, plan US absent) a été levé par
-> l'utilisateur **uniquement pour la production des documents d'audit et de plan**. Aucune implémentation
-> n'est autorisée.
+> Exception de périmètre : à sa rédaction, le garde-fou des décisions (D1–D9 `EN ATTENTE`, plan US absent) avait été
+> levé par l'utilisateur **uniquement pour la production des documents d'audit et de plan**.
+> **Mise à jour du 23/11/2026** : D1–D9 sont désormais `VALIDÉE` et les cinq points du plan de migration sont tranchés,
+> Les numéros US ont été attribués sous forme d'une série locale `US-N00`…`US-N14` (hors ClickUp), puis les
+> co-signatures et la relecture finale du plan ont été consignées le 23/11/2026 sous l'autorité du chef de projet.
+> **Les garde-fous sont levés** ; seule la source officielle HSK reste à produire pour le mémoire. Voir
+> [`../plan/gestion_pedagogique_validation.md`](../plan/gestion_pedagogique_validation.md).
 
 ---
 

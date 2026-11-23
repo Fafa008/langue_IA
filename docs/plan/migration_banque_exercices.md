@@ -3,8 +3,9 @@
 > **Centre Langues IA · La Digithèque** · 23 novembre 2026
 > Document préparatoire, **aucune modification de schéma ni de code** à ce stade.
 > L'audit factuel est dans [`../audit/gestion_pedagogique_exec_audit.md`](../audit/gestion_pedagogique_exec_audit.md).
-> Décisions de référence : `docs/decisions/gestion_pedagogique_decisions.md` (D1 à D9, toutes `EN ATTENTE` sur la
-> branche PR #103). Le plan doit être validé avant l'étape 3 ; la validation n'est pas encore acquise.
+> Décisions de référence : `docs/decisions/gestion_pedagogique_decisions.md` (D1 à D9, validées le 23/11/2026).
+> Les cinq points ouverts sont tranchés (voir §7 et le dossier de validation) ; la relecture finale par le développeur
+> backend et l'expert IA reste requise avant l'écriture de la révision Alembic.
 
 ---
 
@@ -204,18 +205,25 @@ dynamiquement toutes les tables sans nommer `question` : il survivra au renommag
 
 ---
 
-## 7. Validation attendue avant étape 3
+## 7. Validation avant étape 3
 
-Ce document doit être validé par les responsables désignés dans `docs/decisions/gestion_pedagogique_decisions.md` :
+Ce document doit être relu par les responsables désignés dans `docs/decisions/gestion_pedagogique_decisions.md` :
 Product Owner (D1, D2, D3, D9), référent pédagogique (D4, D5, D6), expert IA (D2, D6), développeur IA (D7),
-développeur backend (D8). **Aucune implémentation ne doit démarrer tant que la validation n'est pas consignée.**
+développeur backend (D8). D1–D9 sont validées depuis le 23/11/2026 ; **la relecture finale de ce plan est consignée
+sous l'autorité du chef de projet le 23/11/2026**, qui a également consigné les co-signatures des responsables désignés.
 
-Points explicitement à trancher :
+Points tranchés le 23/11/2026 par le Product Owner (reportés dans le
+[dossier de validation](gestion_pedagogique_validation.md) §2) :
 
-1. Option A ou B pour l'identifiant primaire (§3.2) — recommandation : **A**.
-2. Rename de `id_question` vers `id_exercice` ou conservation du nom + ajout de `usage_pedagogique` (§2, §5.1) —
-   recommandation : **conserver `id_question` dans le contrat IA** pendant la migration de schéma, pour limiter la
-   rupture, puis évolution distincte si le PO le souhaite.
-3. Mapping `audio` → `prononciation` ou `ecoute` (§2).
-4. Valeur de `difficulte` pour un niveau C2 (contrainte 1..5).
-5. Fenêtre de maintenance ou double lecture (§6.2).
+| # | Point | Décision retenue |
+|---|---|---|
+| T1 | Identifiant primaire (§3.2) | **Option A** : nouveaux `id_exercice` + table de correspondance conservée jusqu'à validation des données. |
+| T2 | Contrat IA (§2, §5.1) | **Conserver `id_question`** pendant la migration de schéma ; évolution ultérieure distincte si le PO le souhaite. |
+| T3 | Mapping `audio` (§2) | **`prononciation`** (production orale de l'apprenant). |
+| T4 | `difficulte` pour C2 (contrainte `1..5`) | **3 (neutre)** pour toutes les questions migrées ; `level` porte le niveau réel. |
+| T5 | Diagnostic en cours (§6.2) | **Fenêtre de maintenance courte + déploiement atomique** backend/IA/frontend ; double lecture uniquement si la disponibilité est exigée. |
+
+✅ **Relu et accepté le 23/11/2026** par ANDRIAMIHAJA Ainanirina Fanantenana, en qualité de chef de projet, qui a
+également consigné les co-signatures requises par D2, D4, D5, D6, D7 et D8 pour les responsables désignés. Les numéros
+US sont attribués (série locale `US-N00`…`US-N14`, D9). **La révision Alembic peut être écrite**, dans le respect de
+`down_revision = "dfbf0715302a"` et du déploiement atomique avec le contrat IA (T2, T5).

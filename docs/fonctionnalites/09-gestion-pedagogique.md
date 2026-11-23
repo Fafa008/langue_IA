@@ -10,10 +10,12 @@
 >
 > Dépendances :
 >
-> - registre des décisions `docs/decisions/gestion_pedagogique_decisions.md` (D1 à D9, **toutes `EN ATTENTE`**,
->   présentes sur la branche de la PR #103) ;
+> - registre des décisions `docs/decisions/gestion_pedagogique_decisions.md` (D1 à D9, **`VALIDÉE` le 23/11/2026**) ;
 > - audit factuel : [`../audit/gestion_pedagogique_exec_audit.md`](../audit/gestion_pedagogique_exec_audit.md) ;
-> - plan technique : [`../plan/migration_banque_exercices.md`](../plan/migration_banque_exercices.md) ;
+> - plan technique : [`../plan/migration_banque_exercices.md`](../plan/migration_banque_exercices.md), dont les cinq
+>   points ouverts sont tranchés ;
+> - plan US [`../plan/gestion_pedagogique_plan.md`](../plan/gestion_pedagogique_plan.md) et dossier de validation
+>   [`../plan/gestion_pedagogique_validation.md`](../plan/gestion_pedagogique_validation.md) ;
 > - contrat frontend source de vérité : [`../api/contrat-frontend.md`](../api/contrat-frontend.md) et
 >   `frontend/src/services/endpoints.ts`.
 
@@ -213,21 +215,22 @@ de production orale (`prononciation`) ou d'écoute reste à trancher (§10).
 
 | Décision | Traitée au § | Statut | Bloque quoi |
 |---|---|---|---|
-| D1 Banque unique | 3.1, 4 R1 | `EN ATTENTE` | Toute migration de schéma. |
-| D2 Profil d'épreuve | 3.3, 5.2 | `EN ATTENTE` | Toute règle de sélection du diagnostic. |
-| D3 Usage d'un exercice | 3.1, 4 R4 | `EN ATTENTE` | Le champ `usage` et l'exclusion par le formateur. |
-| D4 Types de leçon | 3.2 | `EN ATTENTE` | Les tables cours/modules et les écrans associés. |
-| D5 Types d'exercice | 3.4 | `EN ATTENTE` | Les schémas `contenu` et les modes de correction. |
-| D6 Champs HSK | 3.1, 3.5 | `EN ATTENTE` | Les affirmations sur le mandarin dans le mémoire. |
-| D7 Corpus audio | 3.1, 3.5, 4 R6 | `EN ATTENTE` | Toute référence audio diffusée. |
-| D8 Seed de test | 3.5, 4 R7 | `EN ATTENTE` | Le marquage `donnees_test`. |
-| D9 Numéros US | 9 | `EN ATTENTE` | La création de la **moindre branche d'implémentation**. |
+| D1 Banque unique | 3.1, 4 R1 | `VALIDÉE` | — (T1 tranché, plan de migration relu) |
+| D2 Profil d'épreuve | 3.3, 5.2 | `VALIDÉE` | — (co-signature consignée par le chef de projet) |
+| D3 Usage d'un exercice | 3.1, 4 R4 | `VALIDÉE` | — (F8 : drapeau d'exclusion retenu) |
+| D4 Types de leçon | 3.2 | `VALIDÉE` | — (co-signature consignée par le chef de projet) |
+| D5 Types d'exercice | 3.4 | `VALIDÉE` | — (co-signature consignée par le chef de projet) |
+| D6 Champs HSK | 3.1, 3.5 | `VALIDÉE` | Source officielle HSK (F5) à produire pour le mémoire |
+| D7 Corpus audio | 3.1, 3.5, 4 R6 | `VALIDÉE` | Droits par fichier à vérifier avant diffusion |
+| D8 Seed de test | 3.5, 4 R7 | `VALIDÉE` | — (co-signature consignée par le chef de projet) |
+| D9 Numéros US | 9 | `VALIDÉE` | Série locale `US-N00`…`US-N14` attribuée (hors ClickUp) ; branches `feature/US-Nxx-…` |
 
 ---
 
 ## 8. Critères d'acceptation fonctionnels
 
-Ils ne deviennent actifs qu'après validation de D1–D9, du plan US et du plan de migration.
+D1–D9 sont validées, les numéros `US-N00`…`US-N14` attribués et tous les garde-fous levés le 23/11/2026 sous
+l'autorité du chef de projet. Ces critères sont actifs dès l'ouverture de chaque branche US.
 
 | ID | Étant donné… | Quand… | Alors… |
 |---|---|---|---|
@@ -244,29 +247,37 @@ Ils ne deviennent actifs qu'après validation de D1–D9, du plan US et du plan 
 
 ## 9. Séquence avant implémentation
 
-1. **Valider D1 à D9** par les responsables désignés (PO, référent pédagogique, expert IA, développeurs).
-2. **Attribuer les numéros US dans ClickUp**, puis renseigner
-   [`../plan/gestion_pedagogique_plan.md`](../plan/gestion_pedagogique_plan.md) : le brouillon contient déjà une US par
-   fonctionnalité, avec des numéros `US-??` à remplacer (D9). Sans numéro, aucune branche
-   `feature/US<numéro>-<nom-court>` n'est créée.
+1. ✅ **D1 à D9 validées le 23/11/2026** par le Product Owner ; co-signatures et relecture du plan de migration
+   consignées le même jour sous l'autorité du chef de projet.
+2. ✅ **Numéros attribués** : série locale officielle `US-N00`…`US-N14` renseignée dans
+   [`../plan/gestion_pedagogique_plan.md`](../plan/gestion_pedagogique_plan.md) le 23/11/2026 (D9). Déviation à D9
+   consignée : aucun ticket ClickUp n'a été créé ni modifié.
 3. **Valider le plan de migration** `docs/plan/migration_banque_exercices.md`, notamment ses cinq points ouverts.
-4. **Ensuite seulement** : ouvrir les branches US depuis `origin/develop`, commits `type(scope): ...`, PR titulées
-   `[US-XX] ...` vers `develop`, CI verte, 1 reviewer (2 pour l'IA), sans fusion par l'auteur.
+4. **Ensuite seulement** : ouvrir les branches `feature/US-Nxx-<nom-court>` depuis `origin/develop`, commits
+   `type(scope): ...`, PR titulées `[US-Nxx] ...` vers `develop`, CI verte, 1 reviewer (2 pour l'IA), sans fusion par
+   l'auteur.
 
 ---
 
-## 10. Questions ouvertes
+## 10. Questions ouvertes — état au 23/11/2026
 
-1. Identifiant primaire : nouveaux ids + table de correspondance (recommandé) ou réutilisation des ids `question` ?
-2. Contrat IA : conserver `id_question` pendant la migration ou basculer immédiatement en `id_exercice` ?
-3. Mapping de l'audio historique : `prononciation` ou `ecoute` ?
-4. Valeur de `difficulte` pour un niveau C2, sachant la contrainte existante `1..5`.
-5. Fenêtre de maintenance ou double lecture transitoire pour les diagnostics en cours ?
-6. Codes de permission à créer pour le formateur, et qui les porte par défaut ?
-7. Qui valide la publication : administrateur, référent formateur, ou les deux selon le type de contenu ?
-8. Définition exacte de « cours » et « module » dans la hiérarchie, au-delà du numéro de leçon actuel.
-9. Circuit de correction d'une production libre : file à traiter, notification, traçabilité de la note.
-10. Sources officielles à citer pour les niveaux HSK, le pinyin et la correspondance CECRL (D6).
+Les dix points ci-dessous ont été tranchés le 23/11/2026 (voir le
+[dossier de validation](../plan/gestion_pedagogique_validation.md) §2 et §3). Ils sont conservés à titre de traçabilité.
+
+1. ✅ Identifiant primaire : **nouveaux ids + table de correspondance** (T1, option A).
+2. ✅ Contrat IA : **`id_question` conservé** pendant la migration ; évolution ultérieure distincte (T2).
+3. ✅ Mapping de l'audio historique : **`prononciation`** (T3).
+4. ✅ Valeur de `difficulte` pour C2 : **3 (neutre)**, `level` portant le niveau réel (T4).
+5. ✅ Diagnostic en cours : **fenêtre de maintenance courte + déploiement atomique** (T5).
+6. ✅ Permissions du formateur : **`pedagogy:content:write`** et **`pedagogy:content:publish`** (F1).
+7. ✅ Validation de la publication : **administrateur** pour les référentiels et la publication (F2).
+8. ✅ Hiérarchie : **cours → module → leçon**, numérotation stable, séquence d'exercices (F3).
+9. ✅ Correction libre : **file formateur, note + commentaire persistés, aucune note IA** (F4).
+10. ⏳ Sources officielles HSK : **action encore à produire** par l'expert IA avant toute affirmation dans le mémoire (F5).
+
+**Plus aucun point bloquant** : numérotation (F6/D9), co-signatures et relecture du plan de migration sont réglés.
+Reste à produire, sans blocage du code : la source officielle HSK (F5) pour le mémoire, et la vérification des droits
+audio par fichier (D7) avant toute diffusion.
 
 ---
 
