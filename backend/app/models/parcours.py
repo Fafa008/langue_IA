@@ -225,6 +225,29 @@ class Exercice(Base):
     def audio_texte(self) -> str | None:
         return self._contenu_dict().get("texte_audio")
 
+    # Test de positionnement 4 compétences (phase 2). Ces champs vivent dans `contenu` :
+    # aucune colonne supplémentaire, donc aucune migration et aucune donnée existante modifiée.
+    @property
+    def format_exercice(self) -> str | None:
+        """Format pédagogique (`qcm`, `dictee`, …), distinct de `type_reponse` (`choix`, `texte`, `audio`)."""
+        return self._contenu_dict().get("format_exercice")
+
+    @property
+    def lettres_melangees(self) -> list[str] | None:
+        return self._contenu_dict().get("lettres_melangees")
+
+    @property
+    def duree_secondes(self) -> int | None:
+        return self._contenu_dict().get("duree_secondes")
+
+    @property
+    def duree_minimale_secondes(self) -> int | None:
+        return self._contenu_dict().get("duree_minimale_secondes")
+
+    @property
+    def mots_minimum(self) -> int | None:
+        return self._contenu_dict().get("mots_minimum")
+
 
 class ParcoursExercice(Base):
     __tablename__ = "parcours_exercice"

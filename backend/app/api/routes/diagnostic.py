@@ -33,7 +33,7 @@ from app.services.diagnostic import (
     lister_questions as lister_questions_service,
 )
 from app.services.parcours import generer_parcours_pour_tentative
-from app.services.scoring import CodeErreurScoring, ErreurScoring, cadre_de_langue
+from app.services.scoring import CodeErreurScoring, ErreurScoring, cadre_de_langue, resultat_detaille
 from app.services.scoring import terminer_tentative as terminer_tentative_service
 
 router = APIRouter(tags=["diagnostic"])
@@ -105,6 +105,11 @@ def _question_out(question: Question, niveau: str) -> QuestionOut:
         support=question.support,
         audio_url=question.audio_url,
         audio_texte=question.audio_texte,
+        format=question.format_exercice,
+        lettres_melangees=question.lettres_melangees,
+        duree_secondes=question.duree_secondes,
+        duree_minimale_secondes=question.duree_minimale_secondes,
+        mots_minimum=question.mots_minimum,
     )
 
 
@@ -221,8 +226,10 @@ def terminer_tentative(
     except ErreurScoring as erreur:
         raise _convertir_erreur_scoring(erreur) from None
 
-    # Libérer la connexion PostgreSQL avant l'appel HTTP : le service IA peut prendre plusieurs dizaines de secondes.
+    # Détail déterministe calculé avant de libérer la connexion, comme le score lui-même.
     id_test = tentative.id_test
+    competences_deterministes, donnees_analyse = resultat_detaille(db, id_test)
+    # Libérer la connexion PostgreSQL avant l'appel HTTP : le service IA peut prendre plusieurs dizaines de secondes.
     db.close()
     analyse = analyser_tentative(id_test)
     generer_parcours_pour_tentative(id_test)
@@ -233,7 +240,10 @@ def terminer_tentative(
         percentage=float(score),
         level=code_niveau,
         framework=cadre.value,
-        competences=analyse.competences if analyse else None,
+        # Le détail déterministe prime sur l'analyse IA dès que la banque est enrichie :
+        # l'agent interprète les faits, il ne recalcule pas les scores.
+        competences=competences_deterministes or (analyse.competences if analyse else None),
         points_faibles=analyse.points_faibles if analyse else None,
         phase_assimil=analyse.phase_assimil if analyse else None,
+        donnees_analyse=donnees_analyse or None,
     )
