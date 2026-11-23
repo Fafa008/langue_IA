@@ -2,7 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parcoursPersonnaliseService } from "@/services/parcours-personnalise.service";
-import type { MessageChatbot, ParcoursPersonnalise, ReponseExercice } from "@/types/parcours-personnalise";
+import type {
+  MessageChatbot,
+  ParcoursPersonnalise,
+  ReponseExercice,
+  TypeErreurChatbot,
+} from "@/types/parcours-personnalise";
 import { queryKeys } from "./queryKeys";
 
 /** Parcours en cours de l'apprenant connecté (404 s'il n'a pas encore passé le test de positionnement). */
@@ -57,6 +62,30 @@ export function useChatbot() {
   return useMutation({
     mutationFn: ({ message, historique }: { message: string; historique: MessageChatbot[] }) =>
       parcoursPersonnaliseService.chatbot(message, historique),
+  });
+}
+
+/** Correction du dernier message par l'agent dédié, distincte de la réponse du tuteur. */
+export function useCorrigerChatbot() {
+  return useMutation({
+    mutationFn: ({ message, historique }: { message: string; historique: MessageChatbot[] }) =>
+      parcoursPersonnaliseService.corrigerChatbot(message, historique),
+  });
+}
+
+/** Traduction d'une réponse du tuteur, indexée par son identifiant de message. */
+export function useTraduireChatbot() {
+  return useMutation({
+    mutationFn: ({ idMessage, message }: { idMessage: string; message: string }) =>
+      parcoursPersonnaliseService.traduireChatbot(idMessage, message),
+  });
+}
+
+/** Exercice ciblé sur une erreur relevée par le correcteur. */
+export function useExerciceChatbot() {
+  return useMutation({
+    mutationFn: ({ typeErreur, erreur }: { typeErreur: TypeErreurChatbot; erreur: string }) =>
+      parcoursPersonnaliseService.exerciceChatbot(typeErreur, erreur),
   });
 }
 

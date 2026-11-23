@@ -7,7 +7,9 @@ import type {
   ContenuExercice,
   CorrectionChatbot,
   CorrectionExercice,
+  CorrectionSepareeChatbot,
   DomaineFaiblesse,
+  ExerciceCibleChatbot,
   ExerciceLecon,
   ExerciceParcours,
   LeconParcours,
@@ -17,6 +19,7 @@ import type {
   RecommandationAction,
   RecommandationParcours,
   ReponseChatbot,
+  TraductionSepareeChatbot,
   StatutExercice,
   StatutParcours,
   StatutRecommandation,
@@ -128,6 +131,7 @@ export interface MessageChatbotDto {
   historique: { role: "apprenant" | "assistant"; contenu: string }[];
 }
 export interface CorrectionChatbotDto {
+  type?: "grammaire" | "orthographe" | "syntaxe";
   extrait: string;
   correction: string;
   explication: string;
@@ -149,6 +153,49 @@ export const toReponseChatbot = (dto: ReponseChatbotDto): ReponseChatbot => ({
   explication: dto.explication ?? "",
   quotaRestant: dto.quota_restant ?? null,
   versionPrompt: dto.version_prompt ?? null,
+});
+
+/** POST /chatbot/correction : le backend mappe le `erreur` de l'IA vers `extrait` et ajoute le type. */
+export interface CorrectionSepareeChatbotDto {
+  corrections: CorrectionChatbotDto[];
+  version_prompt?: string;
+}
+
+export const toCorrectionSepareeChatbot = (dto: CorrectionSepareeChatbotDto): CorrectionSepareeChatbot => ({
+  corrections: dto.corrections,
+  versionPrompt: dto.version_prompt ?? null,
+});
+
+/** POST /chatbot/traduction : la clé de cache IA est `id_message`, renvoyée telle quelle par le backend. */
+export interface TraductionSepareeChatbotDto {
+  id_message: string;
+  traduction: string;
+  explication: string;
+  version_prompt?: string;
+}
+
+export const toTraductionSepareeChatbot = (dto: TraductionSepareeChatbotDto): TraductionSepareeChatbot => ({
+  idMessage: dto.id_message,
+  traduction: dto.traduction,
+  explication: dto.explication,
+  versionPrompt: dto.version_prompt ?? null,
+});
+
+/** POST /chatbot/exercice : contrat public backend, distinct de la charge utile interne du service IA. */
+export interface ExerciceCibleChatbotDto {
+  id_exercice: number;
+  enonce: string;
+  consigne: string;
+  descripteur_id: string;
+  niveau: string;
+}
+
+export const toExerciceCibleChatbot = (dto: ExerciceCibleChatbotDto): ExerciceCibleChatbot => ({
+  idExercice: dto.id_exercice,
+  enonce: dto.enonce,
+  consigne: dto.consigne,
+  descripteurId: dto.descripteur_id,
+  niveau: dto.niveau,
 });
 
 const STATUTS_PARCOURS: StatutParcours[] = ["EN_COURS", "TERMINE", "ABANDONNE"];

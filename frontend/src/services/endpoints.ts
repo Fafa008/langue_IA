@@ -51,6 +51,10 @@ export const ENDPOINTS = {
   /** Chat apprenant : relais backend authentifié du service IA (routes présentes dans routes/chatbot.py). */
   chatbot: {
     message: `${API}/chatbot/message`,
+    /** Tâches LLM séparées (US-IA-CHAT-05) : le navigateur n'appelle jamais le service IA directement. */
+    correction: `${API}/chatbot/correction`,
+    traduction: `${API}/chatbot/traduction`,
+    exercice: `${API}/chatbot/exercice`,
     fermerSession: (identifiantSession: string) => `${API}/chatbot/session/${identifiantSession}`,
   },
   formateurs: `${API}/formateurs`,

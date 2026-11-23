@@ -9,6 +9,8 @@ import { repererErreurs } from "@/lib/corrections-messages";
 import { delay } from "@/mocks/delay";
 import type {
   CorrectionExerciceDto,
+  CorrectionSepareeChatbotDto,
+  ExerciceCibleChatbotDto,
   ExerciceParcoursDto,
   LeconParcoursDto,
   MessageChatbotDto,
@@ -16,6 +18,7 @@ import type {
   ParcoursPersonnaliseDto,
   RecommandationParcoursDto,
   ReponseChatbotDto,
+  TraductionSepareeChatbotDto,
 } from "@/services/parcours-personnalise.mapper";
 import type { ReponseExercice } from "@/types/parcours-personnalise";
 
@@ -329,7 +332,7 @@ export function corrigerRedaction(texte: string, motsMinimum: number, leconAttei
 }
 
 /** Traduction et explication de démonstration : une paire par réponse du tuteur, sans modèle de langue. */
-function traductionDemo(reponse: string): Pick<ReponseChatbotDto, "traduction" | "explication"> {
+function traductionDemo(reponse: string): { traduction: string; explication: string } {
   return {
     traduction: `Traduction française (démonstration) : « ${reponse} ».`,
     explication:
@@ -461,5 +464,38 @@ export const parcoursPersonnaliseMock = {
     const relance = conversation.relances[tour] ?? "Merci pour cet échange, vous pouvez terminer la conversation.";
     const reponse = `${reaction} ${relance}`;
     return { reponse, corrections, ...traductionDemo(reponse) };
+  },
+
+  /** Correction séparée simulée : même détection d'erreurs, contrat public du relais backend. */
+  async corrigerChatbot({ message }: MessageChatbotDto): Promise<CorrectionSepareeChatbotDto> {
+    await delay(200);
+    return {
+      corrections: repererErreurs(message)
+        .slice(0, 3)
+        .map((correction) => ({ type: "grammaire" as const, ...correction })),
+      version_prompt: "chatbot/correction@1.0.0",
+    };
+  },
+
+  /** Traduction séparée simulée : l'identifiant de message est renvoyé tel quel. */
+  async traduireChatbot(idMessage: string, message: string): Promise<TraductionSepareeChatbotDto> {
+    await delay(200);
+    return {
+      id_message: idMessage,
+      ...traductionDemo(message),
+      version_prompt: "chatbot/traduction@1.0.0",
+    };
+  },
+
+  /** Exercice ciblé simulé : aucun LLM, mais la même forme que le contrat public backend. */
+  async exerciceChatbot(typeErreur: string, erreur: string): Promise<ExerciceCibleChatbotDto> {
+    await delay(200);
+    return {
+      id_exercice: 901,
+      enonce: `Réécrivez « ${erreur} » au passé.`,
+      consigne: `Exercice de démonstration ciblé sur ${typeErreur}.`,
+      descripteur_id: "cecrl-a1-grammaire-1",
+      niveau: "A1",
+    };
   },
 };
