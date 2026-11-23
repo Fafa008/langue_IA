@@ -216,21 +216,21 @@ de production orale (`prononciation`) ou d'écoute reste à trancher (§10).
 | Décision | Traitée au § | Statut | Bloque quoi |
 |---|---|---|---|
 | D1 Banque unique | 3.1, 4 R1 | `VALIDÉE` | — (choix fait, attend T1 et la relecture du plan de migration) |
-| D2 Profil d'épreuve | 3.3, 5.2 | `VALIDÉE` | Co-signature expert IA ; numéros US |
+| D2 Profil d'épreuve | 3.3, 5.2 | `VALIDÉE` | Co-signature expert IA |
 | D3 Usage d'un exercice | 3.1, 4 R4 | `VALIDÉE` | — (F8 : drapeau d'exclusion retenu) |
-| D4 Types de leçon | 3.2 | `VALIDÉE` | Co-signature référent ; numéros US |
-| D5 Types d'exercice | 3.4 | `VALIDÉE` | Co-signature référent ; numéros US |
+| D4 Types de leçon | 3.2 | `VALIDÉE` | Co-signature référent |
+| D5 Types d'exercice | 3.4 | `VALIDÉE` | Co-signature référent |
 | D6 Champs HSK | 3.1, 3.5 | `VALIDÉE` | Co-signatures IA et référent ; source officielle HSK (F5) |
 | D7 Corpus audio | 3.1, 3.5, 4 R6 | `VALIDÉE` | Co-signature développeur IA ; droits par fichier |
 | D8 Seed de test | 3.5, 4 R7 | `VALIDÉE` | Co-signature développeur backend |
-| D9 Numéros US | 9 | `VALIDÉE` | **Exécution pendante** : 15 `US-??` à remplacer → aucune branche |
+| D9 Numéros US | 9 | `VALIDÉE` | Série locale `US-N00`…`US-N14` attribuée (hors ClickUp) ; branches `feature/US-Nxx-…` |
 
 ---
 
 ## 8. Critères d'acceptation fonctionnels
 
-D1–D9 sont validées depuis le 23/11/2026 ; ces critères ne deviennent actifs qu'après attribution des numéros US,
-co-signature des responsables et relecture du plan de migration. Aucun code n'est écrit d'ici là.
+D1–D9 sont validées et les numéros `US-N00`…`US-N14` attribués depuis le 23/11/2026 ; ces critères ne deviennent
+actifs qu'après co-signature des responsables et relecture du plan de migration. Aucun code n'est écrit d'ici là.
 
 | ID | Étant donné… | Quand… | Alors… |
 |---|---|---|---|
@@ -248,13 +248,13 @@ co-signature des responsables et relecture du plan de migration. Aucun code n'es
 ## 9. Séquence avant implémentation
 
 1. ✅ **D1 à D9 validées le 23/11/2026** par le Product Owner ; co-signatures des autres responsables encore à recueillir.
-2. **Attribuer les numéros US dans ClickUp**, puis renseigner
-   [`../plan/gestion_pedagogique_plan.md`](../plan/gestion_pedagogique_plan.md) : le brouillon contient déjà une US par
-   fonctionnalité, avec des numéros `US-??` à remplacer (D9). Sans numéro, aucune branche
-   `feature/US<numéro>-<nom-court>` n'est créée.
+2. ✅ **Numéros attribués** : série locale officielle `US-N00`…`US-N14` renseignée dans
+   [`../plan/gestion_pedagogique_plan.md`](../plan/gestion_pedagogique_plan.md) le 23/11/2026 (D9). Déviation à D9
+   consignée : aucun ticket ClickUp n'a été créé ni modifié.
 3. **Valider le plan de migration** `docs/plan/migration_banque_exercices.md`, notamment ses cinq points ouverts.
-4. **Ensuite seulement** : ouvrir les branches US depuis `origin/develop`, commits `type(scope): ...`, PR titulées
-   `[US-XX] ...` vers `develop`, CI verte, 1 reviewer (2 pour l'IA), sans fusion par l'auteur.
+4. **Ensuite seulement** : ouvrir les branches `feature/US-Nxx-<nom-court>` depuis `origin/develop`, commits
+   `type(scope): ...`, PR titulées `[US-Nxx] ...` vers `develop`, CI verte, 1 reviewer (2 pour l'IA), sans fusion par
+   l'auteur.
 
 ---
 
@@ -274,7 +274,8 @@ Les dix points ci-dessous ont été tranchés le 23/11/2026 (voir le
 9. ✅ Correction libre : **file formateur, note + commentaire persistés, aucune note IA** (F4).
 10. ⏳ Sources officielles HSK : **action encore à produire** par l'expert IA avant toute affirmation dans le mémoire (F5).
 
-**Reste réellement ouvert** : les 15 numéros US (F6/D9), les co-signatures, la relecture du plan de migration et la source HSK.
+**Reste réellement ouvert** : les co-signatures, la relecture du plan de migration et la source HSK. La numérotation
+(F6/D9) est réglée par la série locale `US-N00`…`US-N14`.
 
 ---
 

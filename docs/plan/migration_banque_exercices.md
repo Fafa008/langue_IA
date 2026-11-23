@@ -223,5 +223,6 @@ Points tranchés le 23/11/2026 par le Product Owner (reportés dans le
 | T4 | `difficulte` pour C2 (contrainte `1..5`) | **3 (neutre)** pour toutes les questions migrées ; `level` porte le niveau réel. |
 | T5 | Diagnostic en cours (§6.2) | **Fenêtre de maintenance courte + déploiement atomique** backend/IA/frontend ; double lecture uniquement si la disponibilité est exigée. |
 
-Reste à consigner avant l'étape 3 : la relecture du plan par le backend et l'expert IA, les co-signatures des
-responsables désignés, et les numéros US (D9, exécution pendante). Aucun code n'est écrit d'ici là.
+Reste à consigner avant l'étape 3 : la relecture du plan par le backend et l'expert IA, et les co-signatures des
+responsables désignés. Les numéros US sont attribués depuis le 23/11/2026 (série locale `US-N00`…`US-N14`, D9).
+Aucun code n'est écrit d'ici là.

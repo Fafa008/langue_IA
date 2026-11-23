@@ -141,8 +141,10 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 - **Responsable** : Product Owner
 - **Statut** : `VALIDÉE`
 - **Validée par** : ANDRIAMIHAJA Ainanirina Fanantenana (Product Owner) **Date** : 23/11/2026
-- **Exécution pendante** : la règle est validée, mais les 15 emplacements `US-??` du plan US ne sont pas encore
-  remplacés. **Aucune branche `feature/US…` ne peut être créée tant qu'ils ne le sont pas.** ClickUp n'a pas été modifié.
+- **Exécution** : le PO a attribué les quinze numéros sous forme d'une **série locale officielle `US-N00`…`US-N14`**,
+  faute de numéros ClickUp disponibles. **Déviation à D9 explicitement enregistrée** : ces identifiants ne sont pas
+  des tickets ClickUp et ClickUp n'a pas été modifié. Le plan US est `VALIDÉ` et les branches
+  `feature/US-Nxx-<nom-court>` sont possibles, sous réserve des deux autres conditions résiduelles ci-dessous.
 
 ---
 
@@ -158,19 +160,18 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 | D6 Champs HSK | Expert IA, référent | `VALIDÉE` | PO — 23/11/2026 (co-signatures IA et référent à recueillir) |
 | D7 Corpus audio | Product Owner, développeur IA | `VALIDÉE` | PO — 23/11/2026 (co-signature dev IA à recueillir) |
 | D8 Seed de test | Développeur backend | `VALIDÉE` | PO — 23/11/2026 (co-signature dev backend à recueillir) |
-| D9 Numéros US | Product Owner | `VALIDÉE` | PO — 23/11/2026 (numéros à fournir) |
+| D9 Numéros US | Product Owner | `VALIDÉE` | PO — 23/11/2026 (série locale `US-N00`…`US-N14`, hors ClickUp) |
 
 ## Conditions résiduelles avant implémentation
 
-Les choix sont faits. Trois points restent ouverts et bloquent encore la première branche :
+Les choix sont faits et les numéros attribués. **Deux points restent ouverts** et bloquent encore la première branche :
 
-1. **D9 — exécution** : attribuer les 15 numéros dans ClickUp puis les reporter dans
-   [`gestion_pedagogique_plan.md`](../plan/gestion_pedagogique_plan.md). Aucun numéro n'a été inventé ici.
-2. **Co-signatures** : D2, D4, D5, D6, D7 et D8 désignent plusieurs responsables. Le PO a confirmé les recommandations
+1. **Co-signatures** : D2, D4, D5, D6, D7 et D8 désignent plusieurs responsables. Le PO a confirmé les recommandations
    en son nom ; les co-signatures des autres responsables ne sont pas encore consignées.
-3. **Plan de migration** : les cinq points T1–T5 ont été tranchés dans le
+2. **Plan de migration** : les cinq points T1–T5 ont été tranchés dans le
    [dossier de validation](../plan/gestion_pedagogique_validation.md), mais le plan
    [`migration_banque_exercices.md`](../plan/migration_banque_exercices.md) doit encore être relu par le développeur
    backend et l'expert IA avant la révision Alembic.
 
-Tant que ces trois points ne sont pas levés, aucun code n'est écrit.
+Le point « source officielle HSK » (F5) n'est pas bloquant pour le code : il conditionne seulement les affirmations
+du mémoire. Tant que les deux points ci-dessus ne sont pas levés, aucun code n'est écrit.
