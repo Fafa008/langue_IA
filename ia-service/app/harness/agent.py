@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app.core.erreurs import ErreurRegistre
 from app.llm.base import FournisseurLLM
+from app.memory.court import MemoireCourte, MemoireCourteVide
 from app.prompts import RegistrePrompts
 from app.rag.base import RecuperateurRAG
 from app.schemas.commun import CODE_AGENT_PATTERN, EMPREINTE_PATTERN, VERSION_PATTERN, VERSION_PROMPT_PATTERN
@@ -32,6 +33,8 @@ class OutilsCommuns:
     registre_prompts: RegistrePrompts
     recuperateur_rag: RecuperateurRAG
     horloge: Callable[[], float]
+    # Mémoire courte injectée pour la traduction en cache ; le repli garde les agents sans état par défaut.
+    memoire: MemoireCourte = field(default_factory=MemoireCourteVide)
 
 
 @dataclass(slots=True)

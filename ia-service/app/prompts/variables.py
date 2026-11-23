@@ -9,6 +9,7 @@ from app.schemas.base import ModeleStrict
 from app.schemas.chatbot import (
     HISTORIQUE_CHATBOT_MAX,
     MESSAGE_CHATBOT_MAX,
+    REPONSE_CHATBOT_MAX,
     MessageHistorique,
     PhaseAssimil,
 )
@@ -197,6 +198,14 @@ class VariablesCorrectionChatbot(ModeleStrict):
     niveau_effectif: CodeNiveau
     phase_assimil: PhaseAssimil
     resume_session: str = Field(default="", max_length=RESUME_MEMOIRE_MAX)
+
+
+class VariablesTraductionChatbot(ModeleStrict):
+    """Variables du prompt de traduction d'une réponse de l'assistant vers le français."""
+
+    message: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
+    code_langue: CodeLangue
+    niveau_effectif: CodeNiveau
 
 
 class VariablesCorrectionReponseLibre(ModeleStrict):

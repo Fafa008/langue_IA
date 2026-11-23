@@ -110,6 +110,13 @@ class EntreeTraduction(ModeleStrict):
     message: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
 
 
+class TraductionGeneree(ModeleStrict):
+    """Sortie brute du LLM pour la traduction d'un message de l'assistant."""
+
+    traduction: str = Field(min_length=1, max_length=TRADUCTION_CHATBOT_MAX)
+    explication: str = Field(min_length=1, max_length=EXPLICATION_CHATBOT_MAX)
+
+
 class ResultatTraduction(ModeleStrict):
     """Traduction française mise en cache par identifiant de message."""
 
