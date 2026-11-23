@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.ia import CompetenceIA, DomaineFaiblesseIA, PhaseAssimilIA
 
+FormatExercice = Literal["qcm", "vrai_faux", "texte_a_trous", "dictee", "parler"]
+
 
 class QuestionOut(BaseModel):
     """Question affichable par l'apprenant ; aucune donnée de correction n'est exposée."""
@@ -19,6 +21,12 @@ class QuestionOut(BaseModel):
     support: str | None = None
     audio_url: str | None = None
     audio_texte: str | None = None
+    # Test de positionnement 4 compétences : absent des questions historiques.
+    format: FormatExercice | None = None
+    lettres_melangees: list[str] | None = None
+    duree_secondes: int | None = Field(default=None, ge=1)
+    duree_minimale_secondes: int | None = Field(default=None, ge=1)
+    mots_minimum: int | None = Field(default=None, ge=1)
 
 
 class LangueDiagnosticOut(BaseModel):
@@ -78,6 +86,19 @@ class CompetenceResultatOut(BaseModel):
     total: int = Field(gt=0)
 
 
+class DonneeAnalyseOut(BaseModel):
+    """Fait factuel par exercice destiné à l'agent : jamais de note ni de pondération."""
+
+    id_question: str
+    competence: CompetenceIA
+    format: FormatExercice
+    difficulte: int = Field(ge=1)
+    justesse: bool
+    temps_reponse_secondes: float = Field(ge=0)
+    transcription: str | None = None
+    confiance_stt: float | None = Field(default=None, ge=0, le=1)
+
+
 class PointFaibleOut(BaseModel):
     """Point faible issu de l'analyse IA, réduit à ce que le contrat public expose."""
 
@@ -101,3 +122,4 @@ class ScoreDiagnosticOut(BaseModel):
     competences: list[CompetenceResultatOut] | None = None
     points_faibles: list[PointFaibleOut] | None = None
     phase_assimil: PhaseAssimilIA | None = None
+    donnees_analyse: list[DonneeAnalyseOut] | None = None

@@ -1,6 +1,6 @@
 # Plan — Test de positionnement MVP (4 compétences, front prioritaire)
 
-**Statut : PHASE 1 LIVRÉE sur les mocks — PR #115 (base `develop`).**
+**Statut : PHASE 1 LIVRÉE sur les mocks (PR #115) — PHASE 2 backend en cours.**
 **Date : 23/11/2026.**
 **Branche de travail : `feature/test-positionnement-4-competences`.*
 
@@ -60,6 +60,22 @@ Règle conservée : **le backend calcule la note, l'agent interprète et ne calc
 ## Phase 2 — BACKEND
 
 **Livrable :** sélection, barème et persistance réels, sans toucher au contrat IA.
+
+### Réalisé dans cette phase
+
+- `Exercice` expose depuis `contenu` les champs du test (`format_exercice`, `lettres_melangees`, `duree_secondes`,
+  `duree_minimale_secondes`, `mots_minimum`) : **aucune migration**, les données existantes sont inchangées.
+- `QuestionOut` et `ScoreDiagnosticOut` exposent ces champs et `donnees_analyse`, sans jamais renvoyer de correction.
+- Scoring : les réponses textuelles enrichies sont corrigées exactement, la production orale compte comme fausse tant
+  que la STT n'existe pas ; le détail par compétence et le dossier factuel sont déterministes et priment sur l'IA.
+- Tests : `backend/tests/test_diagnostic_positionnement.py`.
+
+### Reste à faire dans la phase 2
+
+- Contrôle de couverture avant démarrage (5 exercices par compétence, liste explicite des manques).
+- Rattachement de chaque réponse à la `version` de l'exercice (colonne dédiée, donc migration).
+- Mesure réelle du temps de réponse : le backend renvoie aujourd'hui `0`, en attendant que le client transmette la durée.
+
 
 - `backend/app/models/parcours.py` / `app/models/__init__.py` : champs `competence`, `format`, `duree_secondes`, `version` sur l'exercice ; migration Alembic réversible (aucune donnée supprimée).
 - `backend/app/schemas/diagnostic.py` : étendre `QuestionOut` (liste blanche stricte, aucune clé de correction).

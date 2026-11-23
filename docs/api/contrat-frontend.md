@@ -519,11 +519,13 @@ question n'a encore été enregistrée pour cette combinaison.
 
 Une question peut également contenir `support`, `audio_url` ou `audio_texte`. Les champs sans valeur sont omis.
 
-#### Test de positionnement enrichi (phase frontend, champs facultatifs)
+#### Test de positionnement enrichi (champs facultatifs)
 
 Le mock frontend (`src/mocks/questions-test.mock.ts`) fournit 20 exercices par langue : 5 par compétence
 `lecture` (lire), `ecoute` (écouter), `ecrit` (écrire), `oral` (parler). Ces champs sont **optionnels** et absents des
-questions historiques ; le backend ne les expose pas encore. Le frontend les ignore s'ils manquent.
+questions historiques ; le backend les expose depuis la phase 2 quand l'exercice les porte dans son `contenu`.
+Le frontend les ignore s'ils manquent. Le format pédagogique est stocké dans `contenu.format_exercice` ;
+`contenu.format` reste le type de réponse (`choix`, `texte`, `audio`).
 
 | Champ | Type | Usage |
 | --- | --- | --- |
@@ -613,11 +615,16 @@ arrondi à deux décimales. Une nouvelle requête sur une tentative terminée re
 `phase_assimil`) viennent de l'analyse IA de la tentative, faite à la clôture ; ils sont décrits plus bas, dans la section
 de l'analyse, et absents quand elle n'existe pas.
 
-Le dossier factuel destiné à l'agent diagnostic peut aussi être fourni dans `donnees_analyse` (facultatif, absent
-aujourd'hui côté backend). Chaque ligne décrit un exercice : `id_question`, `competence`, `format`, `difficulte`
-(entier ≥ 1), `justesse` (booléen), `temps_reponse_secondes` (nombre ≥ 0) et, le cas échéant, `transcription` et
+Le dossier factuel destiné à l'agent diagnostic peut aussi être fourni dans `donnees_analyse` (facultatif). Le backend
+le renvoie depuis la phase 2 pour les exercices enrichis. Chaque ligne décrit un exercice : `id_question`,
+`competence`, `format`, `difficulte` (entier ≥ 1), `justesse` (booléen), `temps_reponse_secondes` (nombre ≥ 0,
+encore à 0 côté backend tant que le client ne transmet pas la durée) et, le cas échéant, `transcription` et
 `confiance_stt` fournies plus tard par le service vocal. L'agent interprète ces faits : il ne calcule ni la note ni la
 pondération. Le frontend écarte les lignes invalides et n'affiche rien si le champ est absent.
+
+Quand la banque est enrichie, le backend renvoie aussi un `competences` déterministe (une ligne par compétence
+`lecture`/`ecoute`/`ecrit`/`oral`, avec `score` et `total`) qui prime sur l'analyse IA : l'agent interprète, il ne
+recalcule pas les scores. Sans exercice enrichi, le comportement historique est conservé.
 
 La grille de référence utilisée par le backend est :
 
