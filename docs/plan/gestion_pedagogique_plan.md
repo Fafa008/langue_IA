@@ -2,16 +2,16 @@
 
 > **Centre Langues IA · La Digithèque** · 23 novembre 2026
 >
-> **Statut : BROUILLON.** Ce document ne donne aucun ordre d'implémentation exécutable. D1 à D9 sont encore
-> `EN ATTENTE` et aucun numéro US n'a été attribué. **Aucune branche `feature/US…` ne doit être créée tant que le
-> Product Owner n'a pas attribué les numéros dans ClickUp et reporté la validation ici (D9).**
+> **Statut : BROUILLON.** Ce document ne donne aucun ordre d'implémentation exécutable. D1 à D9 sont `VALIDÉE` depuis
+> le 23/11/2026, mais aucun numéro US n'a été attribué. **Aucune branche `feature/US…` ne doit être créée tant que le
+> Product Owner n'a pas attribué les numéros dans ClickUp et les a reportés ici (D9, exécution pendante).**
 >
 > Aucune tâche ClickUp n'a été modifiée pour produire ce brouillon. Les numéros sont des emplacements `US-??`, pas
 > des identifiants. La colonne `P1…P14` est un ordre de lecture interne, pas un numéro de user story.
 
 ## Sources
 
-- `docs/decisions/gestion_pedagogique_decisions.md` — D1 à D9, toutes `EN ATTENTE`.
+- `docs/decisions/gestion_pedagogique_decisions.md` — D1 à D9, validées le 23/11/2026.
 - [`../audit/gestion_pedagogique_exec_audit.md`](../audit/gestion_pedagogique_exec_audit.md) — état réel du code.
 - [`migration_banque_exercices.md`](migration_banque_exercices.md) — migration technique à valider.
 - [`../fonctionnalites/09-gestion-pedagogique.md`](../fonctionnalites/09-gestion-pedagogique.md) — spécification fonctionnelle cible.
@@ -37,7 +37,7 @@
 
 | Ordre | US à attribuer | Fonctionnalité | Décisions | Couches | Dépendances | Statut |
 |---|---|---|---|---|---|---|
-| **P0** | `US-??` | Validation D1–D9 et attribution des numéros US | D1–D9 | Gouvernance | — | `BROUILLON` |
+| **P0** | `US-??` | Validation D1–D9 et attribution des numéros US | D1–D9 | Gouvernance | — | `EN COURS` (D1–D9 validées, numéros à attribuer) |
 | **P1** | `US-??` | Banque unique : migration `question` → `exercice` | D1, D3, D8 | Backend, Alembic | P0 + plan de migration validé | `BROUILLON` |
 | **P2** | `US-??` | Contrat IA atomique et identifiant d'exercice | D2, D3 | Backend, IA, prompts, contrats | P0 | `BROUILLON` |
 | **P3** | `US-??` | Diagnostic comme profil d'épreuve | D2 | Backend, frontend, contrat | P1, P2 | `BROUILLON` |
@@ -65,9 +65,10 @@
 - **US** : `US-??` — à attribuer si le PO souhaite une traçabilité dédiée.
 - **Responsables** : Product Owner (D1, D2, D3, D4, D5, D9), expert IA (D2, D6), référent pédagogique (D4, D5, D6),
   développeur IA (D7), développeur backend (D8).
-- **Livrable** : D1–D9 passent en `VALIDÉE` avec nom et date ; les `US-??` ci-dessus sont remplacés ; ce document passe
-  de `BROUILLON` à `VALIDÉ`.
-- **Critère d'arrêt** : tant que la synthèse du registre contient `EN ATTENTE`, aucune branche n'est créée.
+- **Livrable** : ✅ D1–D9 sont passées en `VALIDÉE` avec nom et date le 23/11/2026 ; reste à remplacer les `US-??`
+  ci-dessus pour faire passer ce document de `BROUILLON` à `VALIDÉ`.
+- **Critère d'arrêt** : tant que des `US-??` subsistent, aucune branche n'est créée. Les co-signatures et la relecture
+  du plan de migration restent également requises (voir le dossier de validation).
 
 ### P1 — Banque unique : migration `question` → `exercice`
 
@@ -203,14 +204,18 @@
 
 ## 4. Contrôles avant création de la première branche
 
-Le [`gestion_pedagogique_validation.md`](gestion_pedagogique_validation.md) regroupe les options recommandées et les
-points à signer ; il ne modifie aucun statut.
+Le [`gestion_pedagogique_validation.md`](gestion_pedagogique_validation.md) consigne les validations du 23/11/2026 et
+les points encore ouverts.
 
-- [ ] D1 à D9 portent `VALIDÉE` avec nom et date dans le registre des décisions.
+- [x] D1 à D9 portent `VALIDÉE` avec nom et date dans le registre des décisions.
 - [ ] Chaque `US-??` ci-dessus est remplacé par un numéro attribué dans ClickUp, sans modification de ClickUp par l'agent.
-- [ ] Le plan de migration `migration_banque_exercices.md` est validé, avec ses cinq points ouverts tranchés.
-- [ ] La recommandation IA (`id_question` conservé pendant la transition) est confirmée ou remplacée.
-- [ ] Les codes de permission du formateur et le validateur de publication sont désignés.
+- [x] Les cinq points ouverts du plan de migration sont tranchés (T1–T5 : option A, `id_question` conservé,
+  `prononciation`, `difficulte = 3`, maintenance atomique).
+- [ ] Le plan de migration `migration_banque_exercices.md` est relu par le développeur backend et l'expert IA.
+- [x] La recommandation IA (`id_question` conservé pendant la transition) est confirmée.
+- [x] Les codes de permission du formateur (`pedagogy:content:write`, `pedagogy:content:publish`) et le validateur
+  de publication (administrateur) sont désignés.
+- [ ] Les co-signatures des responsables désignés sont consignées.
 - [ ] Le chapitre 09 est relu comme spécification de référence ; `docs/api/contrat-frontend.md` est à jour.
 - [ ] Aucune fusion n'est prévue par l'auteur des PR.
 
