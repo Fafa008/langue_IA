@@ -17,7 +17,7 @@ Au HEAD, **quatre agents** sont enregistrés derrière un seul Harness et **cinq
 | Diagnostic | `diagnostic@1.0.0` | `diagnostic/evaluation@1.1.0` | 45 s | `POST /diagnostic/evaluer` |
 | Correction | `correction@1.0.0` | `correction/reponse-libre@1.0.0` | 45 s | `POST /correction/reponse-libre` |
 | Recommandation | `recommandation@1.0.0` | `recommandation/actions@1.0.0` | 30 s | `POST /recommandation/actions` |
-| Chatbot | **`chatbot@1.1.0`** | **`chatbot/conversation@1.1.0`** | 30 s | `POST /chatbot/message` |
+| Chatbot (tuteur IA) | **`chatbot@1.2.0`** | **`chatbot/conversation@1.2.0`** | 30 s | `POST /chatbot/message` |
 
 Hiérarchie des responsabilités :
 
@@ -105,9 +105,11 @@ Le Harness ne persiste rien et ne contient aucune règle pédagogique. Les véri
 - `diagnostic/evaluation@1.1.0` — sept variables + few-shot ;
 - `correction/reponse-libre@1.0.0` — `contexte_apprenant`, `phase`, `exercice`, `descripteurs_rag` ;
 - `recommandation/actions@1.0.0` — `contexte_apprenant`, `points_faibles`, `niveau_vise` ;
-- `chatbot/conversation@1.1.0` — `contexte_apprenant`, `historique`, `message` ; les fichiers `@1.0.0` restent sur disque mais ne sont plus chargés (`registre.py:292-309`).
+- `chatbot/conversation@1.2.0` — `contexte_apprenant`, `historique`, `message` ; les fichiers `@1.0.0` et `@1.1.0` restent sur disque mais ne sont plus chargés (`registre.py:292-309`).
 
 La version chatbot 1.1.0 ajoute les « corrections en marge (US74) » : uniquement sur le dernier message, trois corrections maximum, `reponse` toujours non vide, JSON strict. Le prompt utilisateur place contexte, historique et message dans `<donnees_conversation_non_fiables>`.
+
+La version 1.2.0 renomme la persona en **tuteur IA** et impose, pour chaque réponse, une `traduction` et une `explication` en français : la traduction porte l'expression utile de la réponse, l'explication en donne le sens et l'usage. Les deux champs sont obligatoires, non vides, et affichés à côté de la réponse côté frontend.
 
 ### 5.2 Fournisseur LLM
 
@@ -186,9 +188,9 @@ But : proposer jusqu'à cinq actions de remédiation à partir des points faible
 
 ---
 
-## 9. Agent 4 — Chatbot (professeur IA conversationnel)
+## 9. Agent 4 — Chatbot (tuteur IA conversationnel)
 
-But : répondre à un message avec corrections en marge. **La chaîne est désormais complète**, contrairement à l'état `b8a9dd7`.
+But : répondre à un message avec corrections en marge, puis afficher à côté de chaque réponse sa traduction et son explication en français. **La chaîne est désormais complète**, contrairement à l'état `b8a9dd7`.
 
 ### 9.1 Séquence complète
 
@@ -202,16 +204,17 @@ But : répondre à un message avec corrections en marge. **La chaîne est désor
    - appelle `envoyer_message_chatbot` hors transaction ; le client IA ajoute `X-IA-Token` ;
    - **revalide les corrections** : 3 max et chaque `extrait` doit figurer dans le message (`verifier_corrections`) ;
    - persiste les deux tours et un `JournalChatbot` **sans texte brut** (durée, modèle, version du prompt, nombre de corrections) ;
-   - renvoie `reponse`, `corrections`, `quota_restant`, `version_prompt`.
-5. Le middleware IA vérifie le jeton, la route appelle le Harness, qui exécute `chatbot@1.1.0` : prompt `conversation@1.1.0` (`temperature=0.5`, `max_tokens=600`), `generer_json(schema=ResultatChatbot)`.
-6. Contrat `schemas/chatbot.py` : message 1–2 000 car., réponse 1–4 000 car., historique 20 tours max, corrections 3 max, extrait 120 car., explication 300 car.
+   - renvoie `reponse`, `corrections`, `traduction`, `explication`, `quota_restant`, `version_prompt`.
+5. Le middleware IA vérifie le jeton, la route appelle le Harness, qui exécute `chatbot@1.2.0` : prompt `conversation@1.2.0` (`temperature=0.5`, `max_tokens=900`), `generer_json(schema=ResultatChatbot)`.
+6. Contrat `schemas/chatbot.py` : message 1–2 000 car., réponse 1–4 000 car., historique 20 tours max, corrections 3 max, extrait 120 car., explication de correction 300 car. ; `traduction` et `explication` obligatoires, 1–4 000 car. chacune.
 7. En fin de session, `terminer_session_chat` supprime historique et quota ; le journal anonymisé reste (`services/chatbot.py:150-156`).
 
 ### 9.2 Particularités
 
-- **Réponse factice disponible** : `LLM_FACTICE_SCENARIO=demonstration` produit un `ResultatChatbot` déterministe (majuscule, ponctuation, espaces doubles, ≤ 3 corrections) qui annonce son origine non fiable (`demonstration.py:289-320`).
+- **Réponse factice disponible** : `LLM_FACTICE_SCENARIO=demonstration` produit un `ResultatChatbot` déterministe (majuscule, ponctuation, espaces doubles, ≤ 3 corrections) avec une traduction et une explication françaises indicatives, et annonce son origine non fiable (`demonstration.py:296-336`).
 - **Dégradation stricte** : contrairement au diagnostic, aucun repli silencieux côté backend. `IA_SERVICE_URL` vide, panne IA ou corrections incohérentes → 502/503/504 visibles par l'apprenant ; quota dépassé → 429.
-- **Incohérence d'affichage** : `ChatView.tsx:77-79` affiche la langue choisie dans l'UI, mais le backend dérive la langue du parcours (`services/chatbot.py:84-88`) : la langue affichée n'est pas transmise.
+- **Langue alignée** : `ChatView.tsx` lit la langue dans `GET /parcours/en-cours` (plus de sélecteur manuel) et le backend dérive la même langue du parcours (`services/chatbot.py:84-88`).
+- **Persona et affichage** : le menu, la page et les bulles présentent le **tuteur IA** ; chaque réponse générée est accompagnée de `traduction` et `explication` dans une marge dédiée (`ExerciceConversation.tsx`).
 - **Preuve E2E indirecte** : `frontend/e2e/chat.spec.ts` intercepte l'API et renvoie une réponse codée en dur ; les tests valident le branchement frontend et le contrat, pas un appel réel jusqu'au LLM.
 
 ---
@@ -289,7 +292,7 @@ Seuls `QUOTA_DEPASSE`, `LLM_INDISPONIBLE`, `LLM_TIMEOUT`, `LLM_LIMITE_REQUETES`,
 | Harness | `ia-service/app/harness/execution.py`, `agent.py`, `registre.py` |
 | Enveloppes et erreurs | `ia-service/app/schemas/commun.py`, `app/core/codes_erreur.py`, `erreurs.py`, `gestionnaire_erreurs.py` |
 | Agents | `ia-service/app/agents/diagnostic.py`, `correction.py`, `recommandation.py`, `chatbot.py` |
-| Prompts | `ia-service/app/prompts/registre.py`, `app/prompts/chatbot/conversation@1.1.0.*.md` |
+| Prompts | `ia-service/app/prompts/registre.py`, `app/prompts/chatbot/conversation@1.2.0.*.md` |
 | LLM | `ia-service/app/llm/fabrique.py`, `demonstration.py`, `adaptateurs/` |
 | RAG | `ia-service/app/rag/fabrique.py`, `repli.py`, `vide.py`, `local.py`, `experimental.py` |
 | Routes IA | `ia-service/app/api/diagnostic.py`, `correction.py`, `recommandation.py`, `chatbot.py` |

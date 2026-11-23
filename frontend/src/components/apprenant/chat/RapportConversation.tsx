@@ -53,7 +53,7 @@ export default function RapportConversation({
                 <UserRound size={16} aria-hidden className="mt-0.5 shrink-0 text-primary" />
               )}
               <span>
-                <strong className="text-content">{message.role === "assistant" ? "Professeur IA : " : "Vous : "}</strong>
+                <strong className="text-content">{message.role === "assistant" ? "Tuteur IA : " : "Vous : "}</strong>
                 {message.contenu}
               </span>
             </li>
@@ -61,8 +61,8 @@ export default function RapportConversation({
         </ul>
       </div>
       <p role="note" className="rounded-btn border border-border bg-background p-3 text-small text-content-secondary">
-        Synthèse indicative : aucun score ni niveau n&apos;est attribué pour une conversation libre. Les corrections
-        affichées pendant l&apos;échange restent disponibles dans la conversation.
+        Synthèse indicative : aucun score ni niveau n&apos;est attribué pour une conversation libre. Les corrections,
+        traductions et explications affichées pendant l&apos;échange restent disponibles dans la conversation.
       </p>
       <button type="button" onClick={onRecommencer} className="btn-primary min-h-11">
         <RotateCcw size={16} aria-hidden /> Recommencer une conversation

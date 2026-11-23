@@ -27,7 +27,7 @@ export const ROUTES = {
       module: (numero: number) => `${PARCOURS}/modules/${numero}`,
       lecon: (numero: number) => `${PARCOURS}/lecons/${numero}`,
     },
-    /** Chat avec le professeur IA : page livrée et exposée dans le menu (RE-02 / US72). */
+    /** Chat avec le tuteur IA : page livrée et exposée dans le menu (RE-02 / US72 / US74). */
     chat: `${ESPACE}/apprenant/chat`,
     /** Ma progression : page fille de l'accueil, données simulées tant que US47 et US48 ne sont pas livrés (US51-FE). */
     progression: `${ESPACE}/apprenant/progression`,

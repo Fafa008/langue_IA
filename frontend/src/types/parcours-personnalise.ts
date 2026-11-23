@@ -103,7 +103,7 @@ export interface ExerciceParcours {
  * - redaction : réponse libre de quelques phrases, corrigée par l'IA ;
  * - ecoute : extrait audio (fichier ou texte lu par le navigateur) puis question à choix ;
  * - prononciation : phrase à dire à voix haute, reconnue par la reconnaissance vocale ;
- * - conversation : échange avec le professeur IA (chatbot), à l'écrit ou à la voix.
+ * - conversation : échange avec le tuteur IA (chatbot), à l'écrit ou à la voix.
  */
 export type ContenuExercice =
   | { format: "choix"; consigne: string; enonce: string; choix: string[] }
@@ -178,10 +178,14 @@ export interface CorrectionChatbot {
   explication: string;
 }
 
-/** Réponse du chat : la conversation continue, les corrections s'affichent à côté. */
+/** Réponse du tuteur IA : la conversation continue, corrections et traduction/explication s'affichent à côté. */
 export interface ReponseChatbot {
   reponse: string;
   corrections: CorrectionChatbot[];
+  /** Traduction française de l'expression utile de la réponse (une par réponse). */
+  traduction: string;
+  /** Explication française du sens et de l'usage de cette expression (une par réponse). */
+  explication: string;
   quotaRestant: number | null;
   versionPrompt: string | null;
 }

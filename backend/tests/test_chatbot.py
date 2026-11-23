@@ -25,15 +25,22 @@ from tests.conftest import creer_utilisateur, entete
 from tests.fabriques_parcours import creer_parcours_vide
 
 
-def enveloppe(message: str = "Très bien !", corrections: list[dict[str, str]] | None = None) -> ReponseChatbotIA:
+def enveloppe(
+    message: str = "Très bien !",
+    corrections: list[dict[str, str]] | None = None,
+    traduction: str = "Très bien !",
+    explication: str = "Cette expression sert à encourager l'apprenant.",
+) -> ReponseChatbotIA:
     return ReponseChatbotIA(
         request_id=uuid4(),
         agent="chatbot",
-        version_agent="1.1.0",
-        version_prompt="chatbot/conversation@1.1.0",
+        version_agent="1.2.0",
+        version_prompt="chatbot/conversation@1.2.0",
         resultat=ResultatChatbotIA(
             reponse=message,
             corrections=[CorrectionChatbotIA(**c) for c in (corrections or [])],
+            traduction=traduction,
+            explication=explication,
         ),
         meta=MetaExecutionIA(
             duree_ms=12,
@@ -79,8 +86,10 @@ def test_message_retourne_reponse_et_corrections(
     corps = reponse.json()
     assert corps["reponse"].startswith("On dit")
     assert corps["corrections"][0]["extrait"] == "How long I study"
+    assert corps["traduction"] == "Très bien !"
+    assert corps["explication"] == "Cette expression sert à encourager l'apprenant."
     assert corps["quota_restant"] == 19
-    assert corps["version_prompt"] == "chatbot/conversation@1.1.0"
+    assert corps["version_prompt"] == "chatbot/conversation@1.2.0"
     assert [m.role for m in db.scalars(select(MessageChatbot)).all()] == ["apprenant", "assistant"]
 
 
@@ -157,6 +166,28 @@ def test_corrections_hors_message_refusees(
             corrections=[{"extrait": "texte absent", "correction": "autre", "explication": "Explication."}]
         ),
     )
+
+    reponse = client.post(
+        "/api/v1/chatbot/message", headers=entete(apprenant_avec_parcours), json=corps_chat("Bonjour")
+    )
+
+    assert reponse.status_code == 502
+    assert reponse.json()["detail"].startswith("La réponse du chat")
+
+
+def test_reponse_sans_traduction_refusee(
+    client: TestClient, apprenant_avec_parcours, monkeypatch: pytest.MonkeyPatch, url_ia: None
+) -> None:
+    corps_ia = enveloppe().model_dump(mode="json")
+    del corps_ia["resultat"]["traduction"]
+
+    def simuler_service_ia(_requete_http: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=corps_ia)
+
+    def relais(requete: RequeteChatbotIA) -> ReponseChatbotIA:
+        return service_ia.envoyer_message_chatbot(requete, transport=httpx.MockTransport(simuler_service_ia))
+
+    monkeypatch.setattr("app.services.chatbot.envoyer_message_chatbot", relais)
 
     reponse = client.post(
         "/api/v1/chatbot/message", headers=entete(apprenant_avec_parcours), json=corps_chat("Bonjour")

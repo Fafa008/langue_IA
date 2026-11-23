@@ -1095,7 +1095,9 @@ dernière correction remplace la précédente, et la correction automatique vide
 ## Chat apprenant (US67/US74) — rôle `APPRENANT`
 
 Le navigateur n'appelle jamais `ia-service`. Le backend authentifie, borne l'historique à 20 tours, applique le
-quota de 20 échanges par session, appelle le service IA puis valide la réponse avant de la renvoyer.
+quota de 20 échanges par session, appelle le service IA puis valide la réponse avant de la renvoyer. L'agent qui
+parle à l'apprenant est le **tuteur IA** (même agent `chatbot`, contrat 1.2.0) : chaque réponse porte sa traduction
+et son explication en français, affichées à côté de la réponse.
 
 ### `POST /chatbot/message`
 
@@ -1103,8 +1105,10 @@ Corps : `{ "message": "…", "identifiant_session": "<uuid>", "historique": [{ "
 L'`identifiant_session` est généré par le frontend ; l'`historique` transmis reste borné à 20 tours.
 
 Réponse `200` : `{ "reponse": "…", "corrections": [{ "extrait": "…", "correction": "…", "explication": "…" }],
-"quota_restant": 19, "version_prompt": "chatbot/conversation@1.1.0" }`. `corrections` contient au plus trois éléments
-et s'affiche en marge sans interrompre la conversation.
+"traduction": "…", "explication": "…", "quota_restant": 19, "version_prompt": "chatbot/conversation@1.2.0" }`.
+`corrections` contient au plus trois éléments et s'affiche en marge sans interrompre la conversation. `traduction`
+(traduction française de l'expression utile de la réponse) et `explication` (sens et usage en français) sont
+obligatoires et non vides pour chaque réponse ; elles s'affichent à côté de la réponse, sans la remplacer.
 
 Erreurs : `403` (pas apprenant), `404` (aucun parcours : le détail du backend est affiché tel quel, avec un accès au
 test de positionnement), `422` (langue/niveau non pris en charge), `429` (quota

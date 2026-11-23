@@ -58,7 +58,14 @@ async function installerChat(page: Page, statutMessage = 200) {
     if (await handlePreflight(route)) return;
     requetes.push(route.request().postDataJSON() as { identifiant_session: string });
     if (statutMessage !== 200) return json(route, statutMessage, { detail: "Détail technique interne" });
-    await json(route, 200, { reponse: "Très bien ! Et après ?", corrections: [], quota_restant: 19 });
+    await json(route, 200, {
+      reponse: "Très bien ! Et après ?",
+      corrections: [],
+      traduction: "Très bien ! Et ensuite ?",
+      explication: "« Et après » invite à poursuivre le récit.",
+      quota_restant: 19,
+      version_prompt: "chatbot/conversation@1.2.0",
+    });
   });
   await page.route("**/api/v1/chatbot/session/*", async (route: Route) => {
     if (await handlePreflight(route)) return;
@@ -177,13 +184,14 @@ test.describe("Démonstration générale — scénarios 1 à 15", () => {
     );
   });
 
-  test("8. Professeur IA : échange, quota, fermeture de session et synthèse", async ({ page }) => {
+  test("8. Tuteur IA : échange, traduction, quota, fermeture de session et synthèse", async ({ page }) => {
     await loginAs(page, APPRENANT);
     const chat = await installerChat(page);
     await aller(page, "/espace/apprenant/chat");
     await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("bonjour");
     await page.getByRole("button", { name: "Envoyer" }).click();
     await expect(page.getByTestId("quota-chat")).toContainText("19");
+    await expect(page.getByTestId("traduction-explication")).toContainText("Très bien ! Et ensuite ?");
     await page.getByRole("button", { name: "Terminer et voir le rapport" }).click();
     await expect(page.getByTestId("rapport-chat")).toContainText("Synthèse indicative");
     expect(chat.sessionsFermees).toEqual([chat.requetes[0].identifiant_session]);

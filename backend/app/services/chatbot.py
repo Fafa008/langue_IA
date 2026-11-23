@@ -2,7 +2,8 @@
 
 Le backend reste l'autorité : il authentifie, lit le niveau depuis le parcours, applique le quota, appelle le
 service IA sans transaction PostgreSQL ouverte, revalide le bloc ``corrections[]`` puis enregistre l'historique de
-session et un journal sans texte brut. Aucun contenu n'est journalisé.
+session et un journal sans texte brut. Aucun contenu n'est journalisé. La ``traduction`` et l'``explication``
+françaises sont revalidées avec la réponse du tuteur avant d'être transmises au frontend.
 """
 
 import logging
@@ -142,6 +143,8 @@ def envoyer_message(id_user: int, corps: ChatbotMessageIn) -> ChatbotMessageOut:
     return ChatbotMessageOut(
         reponse=resultat.reponse,
         corrections=[correction.model_dump() for correction in resultat.corrections],
+        traduction=resultat.traduction,
+        explication=resultat.explication,
         quota_restant=quota_restant,
         version_prompt=enveloppe.version_prompt,
     )

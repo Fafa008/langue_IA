@@ -223,8 +223,12 @@ class CorrectionChatbotIA(_ModeleIA):
 
 
 class ResultatChatbotIA(_ModeleIA):
+    """Miroir du contrat 1.2.0 : chaque réponse du tuteur porte sa traduction et son explication en français."""
+
     reponse: str = Field(min_length=1, max_length=4000)
     corrections: list[CorrectionChatbotIA] = Field(default_factory=list, max_length=3)
+    traduction: str = Field(min_length=1, max_length=4000)
+    explication: str = Field(min_length=1, max_length=4000)
 
 
 class ReponseChatbotIA(_ModeleIA):

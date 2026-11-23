@@ -18,7 +18,7 @@ from app.prompts.variables import (
 )
 
 VERSION_EVALUATION_DIAGNOSTIC = "1.1.0"
-VERSION_CONVERSATION_CHATBOT = "1.1.0"
+VERSION_CONVERSATION_CHATBOT = "1.2.0"
 VERSION_CORRECTION_REPONSE_LIBRE = "1.0.0"
 VERSION_ACTIONS_RECOMMANDATION = "1.0.0"
 _VARIABLES_TEMPLATE = frozenset(
@@ -305,7 +305,8 @@ class RegistrePrompts:
             exemples=(),
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.5,
-            max_tokens=600,
+            # La traduction et l'explication françaises s'ajoutent à la réponse et aux corrections en marge.
+            max_tokens=900,
         )
 
     def _charger_correction_reponse_libre(self) -> _DefinitionPrompt:

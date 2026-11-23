@@ -1,7 +1,8 @@
 """Contrat public du chat apprenant (US67/US74).
 
 Le frontend ne parle qu'à ce contrat : snake_case, aucun appel direct au service IA. L'historique transmis reste
-borné à 20 tours et les corrections en marge à 3, comme dans le contrat interne du service IA.
+borné à 20 tours et les corrections en marge à 3, comme dans le contrat interne du service IA. Depuis le contrat
+1.2.0, chaque réponse du tuteur IA porte aussi `traduction` et `explication`, rédigées en français.
 """
 
 from typing import Literal
@@ -38,6 +39,8 @@ class CorrectionChatbotOut(_ModeleChatbot):
 class ChatbotMessageOut(_ModeleChatbot):
     reponse: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
     corrections: list[CorrectionChatbotOut] = Field(default_factory=list, max_length=CORRECTIONS_CHATBOT_MAX)
+    traduction: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
+    explication: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
     quota_restant: int = Field(ge=0)
     version_prompt: str = Field(min_length=1, max_length=128)
 

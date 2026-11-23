@@ -265,9 +265,12 @@ describe("parcours simulé (démo sans backend)", () => {
     expect(scorePrononciation("Où se trouve la gare ?", "la gare")).toBe(40);
   });
 
-  it("fait réagir le professeur IA puis relancer la conversation", async () => {
-    const historique = [{ role: "assistant" as const, contenu: "Bonjour ! Je suis votre professeur IA. Comment vous appelez-vous ?" }];
-    expect((await mock.chatbot("Je m'appelle Rova", historique)).reponse).toBe("Très bien ! Enchanté ! D'où venez-vous ?");
+  it("fait réagir le tuteur IA puis relancer la conversation, avec traduction et explication", async () => {
+    const historique = [{ role: "assistant" as const, contenu: "Bonjour ! Je suis votre tuteur IA. Comment vous appelez-vous ?" }];
+    const reponse = await mock.chatbot("Je m'appelle Rova", historique);
+    expect(reponse.reponse).toBe("Très bien ! Enchanté ! D'où venez-vous ?");
+    expect(reponse.traduction).toContain("Traduction française (démonstration)");
+    expect(reponse.explication).toContain("Explication (démonstration)");
     expect((await mock.chatbot("Rova", historique)).reponse).toMatch(/phrase complète/);
   });
 
@@ -338,11 +341,17 @@ describe("service HTTP (prêt pour le backend)", () => {
   });
 
   it("relaie le chatbot avec un historique borné selon le contrat backend", async () => {
-    apiRequest.mockResolvedValueOnce({ reponse: "Bonjour !" });
+    apiRequest.mockResolvedValueOnce({
+      reponse: "Bonjour !",
+      traduction: "Bonjour !",
+      explication: "Salutation utilisée pour commencer un échange.",
+    });
     const historique = Array.from({ length: 25 }, (_, i) => ({ role: "apprenant" as const, contenu: `m${i}` }));
     expect(await http.chatbot("Salut", historique)).toEqual({
       reponse: "Bonjour !",
       corrections: [],
+      traduction: "Bonjour !",
+      explication: "Salutation utilisée pour commencer un échange.",
       quotaRestant: null,
       versionPrompt: null,
     });

@@ -53,8 +53,10 @@ async function intercepterChatbot(page: Page, requetes: CorpsChatbot[], sessions
           explication: "« Aller » se conjugue avec l'auxiliaire être au passé composé.",
         },
       ],
+      traduction: "Très bien ! Et ensuite, qu'as-tu fait ?",
+      explication: "« Et après » sert à demander la suite d'un récit.",
       quota_restant: 19,
-      version_prompt: "chatbot/conversation@1.1.0",
+      version_prompt: "chatbot/conversation@1.2.0",
     });
   });
   await page.route("**/api/v1/chatbot/session/*", async (route: Route) => {
@@ -80,6 +82,10 @@ test.describe("Chat apprenant — envoi réel et corrections en marge", () => {
     await expect(page.getByTestId("corrections-marge")).toContainText("j'ai allé");
     await expect(page.getByTestId("corrections-marge")).toContainText("je suis allé");
     await expect(page.getByRole("log")).toContainText("Très bien ! Et après, qu'avez-vous fait ?");
+    const marge = page.getByTestId("traduction-explication");
+    await expect(marge).toHaveAttribute("aria-label", "Traduction et explication en français");
+    await expect(marge.getByTestId("traduction-chat")).toContainText("Très bien ! Et ensuite, qu'as-tu fait ?");
+    await expect(marge.getByTestId("explication-chat")).toContainText("demander la suite d'un récit");
     await expect(page.getByTestId("quota-chat")).toContainText("Messages restants dans cette session : 19");
     await expect(page.getByPlaceholder("Écrivez ou dictez votre réponse…")).toBeEnabled();
 
