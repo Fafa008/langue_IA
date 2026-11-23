@@ -3,8 +3,8 @@
 Le service expose ``GET /health``, ``POST /chatbot/message`` (US67, tuteur v2 CECRL/Assimil), les routes internes
 de correction et de traduction du chatbot, ``POST /diagnostic/evaluer`` (PRE-05),
 ``POST /correction/reponse-libre`` (US157) et ``POST /recommandation/actions``. Le client LLM unique, le Harness et
-ses agents Diagnostic, chatbot, correction, traduction et recommandation sont enregistrés au démarrage : une
-configuration LLM invalide empêche le service de démarrer, et les ressources partagées sont fermées proprement à
+ses agents Diagnostic, chatbot, correction, traduction, mémoire, exercice et recommandation sont enregistrés au
+démarrage : une configuration LLM invalide empêche le service de démarrer, et les ressources partagées sont fermées à
 l'arrêt. Le service ne persiste rien : c'est le
 backend qui valide et enregistre l'analyse du diagnostic, le feedback des réponses libres et les propositions de
 recommandation.
@@ -21,6 +21,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent.conversation import definir_agent_conversation_chatbot
 from app.agent.correction import definir_agent_correction_chatbot
+from app.agent.exercice import definir_agent_exercice_chatbot
+from app.agent.memoire import definir_agent_memoire_chatbot
 from app.agent.traduction import definir_agent_traduction_chatbot
 from app.agents.chatbot import definir_agent_chatbot
 from app.agents.correction import definir_agent_correction
@@ -69,6 +71,8 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     registre_agents.enregistrer(definir_agent_conversation_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_correction_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_traduction_chatbot(registre_prompts))
+    registre_agents.enregistrer(definir_agent_memoire_chatbot(registre_prompts))
+    registre_agents.enregistrer(definir_agent_exercice_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_correction(registre_prompts))
     registre_agents.enregistrer(definir_agent_recommandation(registre_prompts))
 

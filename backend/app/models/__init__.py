@@ -1,7 +1,14 @@
 """Tous les modèles, importés ici pour qu'Alembic et SQLAlchemy connaissent chaque table."""
 
 from app.models.ateliers import Atelier
-from app.models.chatbot import JournalChatbot, MessageChatbot, QuotaChatbot
+from app.models.chatbot import (
+    ErreurRecurrenteChatbot,
+    JournalChatbot,
+    MessageChatbot,
+    ProfilMemoireChatbot,
+    QuotaChatbot,
+    SessionMemoireChatbot,
+)
 from app.models.diagnostic import Reponse, TestDiagnostic
 from app.models.enums import (
     Role,
@@ -39,12 +46,15 @@ __all__ = [
     "Langue",
     "MessageChatbot",
     "Niveau",
+    "ErreurRecurrenteChatbot",
     "Exercice",
     "Parcours",
     "ParcoursExercice",
     "Permission",
     "ProgressionLecon",
+    "ProfilMemoireChatbot",
     "QuotaChatbot",
+    "SessionMemoireChatbot",
     "Question",
     "Reponse",
     "Role",

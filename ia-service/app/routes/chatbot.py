@@ -1,4 +1,4 @@
-"""Routes du chatbot (US67, US-IA-CHAT-02/03) : dialogue, correction et traduction.
+"""Routes du chatbot (US67, US-IA-CHAT-02/03/04) : dialogue, correction, traduction et mémoire long terme.
 
 ``POST /chatbot/message`` sert le tuteur v2 (CECRL/Assimil, mémoire courte) mais garde la forme de résultat
 consommée par le frontend (``reponse``, ``corrections``, ``traduction``, ``explication``).
@@ -12,15 +12,21 @@ from fastapi.responses import JSONResponse
 
 from app.agent.chatbot import CODE_AGENT_CHATBOT
 from app.agent.correction import CODE_AGENT_CORRECTION_CHATBOT
+from app.agent.exercice import CODE_AGENT_EXERCICE_CHATBOT
+from app.agent.memoire import CODE_AGENT_MEMOIRE_CHATBOT
 from app.agent.traduction import CODE_AGENT_TRADUCTION_CHATBOT
 from app.core.codes_erreur import STATUTS_HTTP
 from app.memory import clefs
 from app.schemas.chatbot import (
+    ChargeMemoireLongTerme,
     EntreeChatbot,
+    EntreeClotureSession,
     EntreeConversation,
+    EntreeExercice,
     EntreeTraduction,
     ResultatChatbot,
     ResultatCorrection,
+    ResultatExercice,
     ResultatTraduction,
 )
 from app.schemas.commun import ErreurAgent, ReponseAgent, ReponseErreur, RequeteAgent
@@ -90,6 +96,38 @@ async def traduire_message(
     # Le préfixe de clé Redis est dérivé de cet identifiant : il doit être validé avant tout accès au cache.
     clefs.valider_identifiant_session(requete.entree.identifiant_session)
     reponse = await request.app.state.harness.executer(CODE_AGENT_TRADUCTION_CHATBOT, requete)
+    if isinstance(reponse, ReponseErreur):
+        return _reponse_erreur(reponse)
+    return reponse
+
+
+@router.post(
+    "/session/close",
+    response_model=ReponseAgent[ChargeMemoireLongTerme],
+    responses=_REPONSES_ERREUR,
+)
+async def clore_session(
+    requete: RequeteAgent[EntreeClotureSession], request: Request
+) -> ReponseAgent[ChargeMemoireLongTerme] | JSONResponse:
+    """Produire la charge utile de mémoire long terme que le backend persistera à la clôture."""
+    clefs.valider_identifiant_session(requete.entree.identifiant_session)
+    reponse = await request.app.state.harness.executer(CODE_AGENT_MEMOIRE_CHATBOT, requete)
+    if isinstance(reponse, ReponseErreur):
+        return _reponse_erreur(reponse)
+    return reponse
+
+
+@router.post(
+    "/exercice",
+    response_model=ReponseAgent[ResultatExercice],
+    responses=_REPONSES_ERREUR,
+)
+async def generer_exercice(
+    requete: RequeteAgent[EntreeExercice], request: Request
+) -> ReponseAgent[ResultatExercice] | JSONResponse:
+    """Générer un exercice ciblé à partir d'une erreur récurrente du profil."""
+    clefs.valider_identifiant_session(requete.entree.identifiant_session)
+    reponse = await request.app.state.harness.executer(CODE_AGENT_EXERCICE_CHATBOT, requete)
     if isinstance(reponse, ReponseErreur):
         return _reponse_erreur(reponse)
     return reponse

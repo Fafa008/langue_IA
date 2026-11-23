@@ -101,7 +101,8 @@ class Exercice(Base):
         CheckConstraint("usage IN ('diagnostic', 'parcours', 'les deux')", name="ck_exercice_usage"),
         CheckConstraint("statut IN ('brouillon', 'publié')", name="ck_exercice_statut"),
         CheckConstraint(
-            "origine IN ('humain', 'systeme:seed_parcours', 'systeme:seed_diagnostic')", name="ck_exercice_origine"
+            "origine IN ('humain', 'systeme:seed_parcours', 'systeme:seed_diagnostic', 'systeme:ia_chat')",
+            name="ck_exercice_origine",
         ),
         CheckConstraint("framework IN ('CECRL', 'HSK')", name="ck_exercice_framework"),
     )

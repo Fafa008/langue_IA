@@ -251,6 +251,94 @@ class ReponseChatbotIA(_ModeleIA):
     meta: MetaExecutionIA
 
 
+# --- Chat : mémoire long terme et exercice ciblé (US-IA-CHAT-04) ---
+
+TypeErreurChatbotIA = Literal["grammaire", "orthographe", "syntaxe"]
+
+
+class ProfilMemoireIA(_ModeleIA):
+    """Profil pseudonyme : aucun nom, e-mail ou identifiant d'apprenant ne traverse la frontière."""
+
+    profil_id: str = Field(min_length=1, max_length=128)
+    code_langue: CodeLangueIA
+    niveau_effectif: str = Field(min_length=1, max_length=20)
+
+
+class ErreurRecurrenteIA(_ModeleIA):
+    type: TypeErreurChatbotIA
+    erreur: str = Field(min_length=1, max_length=120)
+    frequence: int = Field(ge=1, le=10_000)
+    derniere_occurrence: str = Field(min_length=1, max_length=40)
+
+
+class SessionMemoireIA(_ModeleIA):
+    identifiant_session: str = Field(min_length=1, max_length=64)
+    nombre_tours: int = Field(ge=0, le=1000)
+    phase_atteinte: PhaseAssimilIA
+    resume: str = Field(min_length=1, max_length=2000)
+
+
+class ChargeMemoireLongTermeIA(_ModeleIA):
+    """Miroir de la charge utile produite par l'agent de clôture ; le backend décide de la persistance."""
+
+    profil: ProfilMemoireIA
+    erreurs: list[ErreurRecurrenteIA] = Field(default_factory=list, max_length=20)
+    session: SessionMemoireIA
+
+
+class EntreeClotureIA(_ModeleIA):
+    identifiant_session: str = Field(min_length=1, max_length=64)
+    profil: ProfilMemoireIA
+
+
+class RequeteClotureIA(_ModeleIA):
+    request_id: UUID
+    version_agent: str | None = None
+    contexte: ContexteApprenantIA
+    entree: EntreeClotureIA
+
+
+class ReponseClotureIA(_ModeleIA):
+    request_id: UUID
+    agent: Literal["chatbot-memoire"]
+    version_agent: str = Field(min_length=1, max_length=32)
+    version_prompt: str = Field(min_length=1, max_length=128)
+    statut: Literal["succes"] = "succes"
+    resultat: ChargeMemoireLongTermeIA
+    meta: MetaExecutionIA
+
+
+class EntreeExerciceIA(_ModeleIA):
+    identifiant_session: str = Field(min_length=1, max_length=64)
+    type_erreur: TypeErreurChatbotIA
+    erreur: str = Field(min_length=1, max_length=120)
+    niveau: str = Field(min_length=1, max_length=20)
+
+
+class RequeteExerciceIA(_ModeleIA):
+    request_id: UUID
+    version_agent: str | None = None
+    contexte: ContexteApprenantIA
+    entree: EntreeExerciceIA
+
+
+class ResultatExerciceIA(_ModeleIA):
+    enonce: str = Field(min_length=1, max_length=4000)
+    consigne: str = Field(min_length=1, max_length=4000)
+    descripteur_id: str = Field(min_length=1, max_length=128)
+    niveau: str = Field(min_length=1, max_length=20)
+
+
+class ReponseExerciceIA(_ModeleIA):
+    request_id: UUID
+    agent: Literal["chatbot-exercice"]
+    version_agent: str = Field(min_length=1, max_length=32)
+    version_prompt: str = Field(min_length=1, max_length=128)
+    statut: Literal["succes"] = "succes"
+    resultat: ResultatExerciceIA
+    meta: MetaExecutionIA
+
+
 # --- REC-00 : recommandation de parcours (``POST /recommandation/actions``) ---
 
 TypeExerciceRecommandationIA = Literal["GRAMMAIRE", "VOCABULAIRE", "COMPREHENSION", "ECOUTE", "ORAL"]

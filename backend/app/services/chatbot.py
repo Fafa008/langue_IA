@@ -6,26 +6,47 @@ session et un journal sans texte brut. Aucun contenu n'est journalisé. La ``tra
 françaises sont revalidées avec la réponse du tuteur avant d'être transmises au frontend.
 """
 
+import json
 import logging
 import time
 from enum import StrEnum
 from uuid import uuid4
 
+from sqlalchemy import select
+
 from app.core.config import get_settings
 from app.core.database import SessionLocal
+from app.models import Exercice, Langue, Niveau, TypeExercice
 from app.models.chatbot import JournalChatbot
-from app.schemas.chatbot import ChatbotMessageIn, ChatbotMessageOut, ChatbotSessionSupprimeeOut
+from app.schemas.chatbot import (
+    ChatbotMessageIn,
+    ChatbotMessageOut,
+    ChatbotSessionSupprimeeOut,
+    ExerciceCibleChatbotIn,
+    ExerciceCibleChatbotOut,
+)
 from app.schemas.ia import (
     ContexteApprenantIA,
     EntreeChatbotIA,
+    EntreeClotureIA,
+    EntreeExerciceIA,
     MessageHistoriqueChatbotIA,
+    ProfilMemoireIA,
     RequeteChatbotIA,
+    RequeteClotureIA,
+    RequeteExerciceIA,
     ResultatChatbotIA,
 )
 from app.services.analyse_diagnostic import LANGUES_IA, NIVEAUX_IA
 from app.services.historique_chatbot import ajouter_tours, lire, supprimer
-from app.services.ia import ErreurServiceIA, envoyer_message_chatbot
+from app.services.ia import (
+    ErreurServiceIA,
+    clore_session_chatbot,
+    envoyer_message_chatbot,
+    generer_exercice_chatbot,
+)
 from app.services.lecture_parcours import parcours_en_cours
+from app.services.memoire_chatbot import identifiant_profil, persister_charge
 from app.services.parcours import niveau_estime, referentiel_de_langue
 from app.services.quota_chatbot import QuotaDepasseChatbot, consommer_echange, terminer_session
 
@@ -153,10 +174,145 @@ def envoyer_message(id_user: int, corps: ChatbotMessageIn) -> ChatbotMessageOut:
     )
 
 
-def terminer_session_chat(id_user: int, identifiant_session: str) -> ChatbotSessionSupprimeeOut:
-    """Supprimer l'historique et le quota d'une session ; le journal anonymisé reste intact."""
+def _contexte_pour_cloture(id_user: int) -> tuple[ContexteApprenantIA | None, ProfilMemoireIA | None]:
+    """Construire le contexte pseudonyme transmis à l'agent de clôture, sans donnée personnelle."""
     with SessionLocal() as db:
+        parcours = parcours_en_cours(db, id_user)
+        if parcours is None:
+            return None, None
+        code_langue = parcours.langue.code
+        referentiel = referentiel_de_langue(code_langue)
+        niveau = niveau_estime(parcours.test_diagnostic).code
+        if code_langue not in LANGUES_IA or niveau not in NIVEAUX_IA[referentiel]:
+            return None, None
+        niveau_confirme = parcours.test_diagnostic.niveau_final is not None
+        niveau_effectif = niveau if niveau_confirme else NIVEAUX_IA[referentiel][0]
+
+    contexte = ContexteApprenantIA(
+        code_langue=code_langue,
+        referentiel=referentiel,
+        niveau_preliminaire=niveau,
+        niveau_confirme=niveau_confirme,
+    )
+    profil = ProfilMemoireIA(
+        profil_id=identifiant_profil(id_user),
+        code_langue=code_langue,
+        niveau_effectif=niveau_effectif,
+    )
+    return contexte, profil
+
+
+def terminer_session_chat(id_user: int, identifiant_session: str) -> ChatbotSessionSupprimeeOut:
+    """Clôturer la session : synthèse IA persistée si possible, puis historique et quota supprimés.
+
+    Une panne du service IA ne bloque jamais la fermeture : les données volatiles sont supprimées et seule la
+    mémoire long terme est absente. Le journal anonymisé reste intact dans tous les cas.
+    """
+    contexte, profil = _contexte_pour_cloture(id_user)
+    charge = None
+    if contexte is not None and profil is not None:
+        requete = RequeteClotureIA(
+            request_id=uuid4(),
+            contexte=contexte,
+            entree=EntreeClotureIA(identifiant_session=identifiant_session, profil=profil),
+        )
+        try:
+            charge = clore_session_chatbot(requete).resultat
+        except ErreurServiceIA as erreur:
+            logger.warning("Clôture IA indisponible (code=%s) ; mémoire long terme non enregistrée", erreur.code)
+
+    with SessionLocal() as db:
+        if charge is not None:
+            persister_charge(db, id_user, charge)
         supprimer(db, id_apprenant=id_user, identifiant_session=identifiant_session)
         terminer_session(db, id_apprenant=id_user, identifiant_session=identifiant_session)
         db.commit()
     return ChatbotSessionSupprimeeOut()
+
+
+def _difficulte(niveau: str, referentiel: str) -> int:
+    niveaux = NIVEAUX_IA[referentiel]
+    return min(5, niveaux.index(niveau) + 1) if niveau in niveaux else 3
+
+
+def generer_exercice_cible(id_user: int, corps: ExerciceCibleChatbotIn) -> ExerciceCibleChatbotOut:
+    """Demander un exercice ciblé à l'IA et l'enregistrer en brouillon dans la banque du backend."""
+    with SessionLocal() as db:
+        parcours = parcours_en_cours(db, id_user)
+        if parcours is None:
+            raise ErreurChatbot(CodeErreurChatbot.PARCOURS_INCONNU)
+        code_langue = parcours.langue.code
+        referentiel = referentiel_de_langue(code_langue)
+        niveau = niveau_estime(parcours.test_diagnostic).code
+        if code_langue not in LANGUES_IA or niveau not in NIVEAUX_IA[referentiel]:
+            raise ErreurChatbot(CodeErreurChatbot.LANGUE_NON_PRISE_EN_CHARGE)
+        niveau_confirme = parcours.test_diagnostic.niveau_final is not None
+        contexte = ContexteApprenantIA(
+            code_langue=code_langue,
+            referentiel=referentiel,
+            niveau_preliminaire=niveau,
+            niveau_confirme=niveau_confirme,
+        )
+        niveau_effectif = niveau if niveau_confirme else NIVEAUX_IA[referentiel][0]
+
+    requete = RequeteExerciceIA(
+        request_id=uuid4(),
+        contexte=contexte,
+        entree=EntreeExerciceIA(
+            identifiant_session=corps.identifiant_session,
+            type_erreur=corps.type_erreur,
+            erreur=corps.erreur,
+            niveau=niveau_effectif,
+        ),
+    )
+    try:
+        resultat = generer_exercice_chatbot(requete).resultat
+    except ErreurServiceIA as erreur:
+        logger.warning("Exercice ciblé IA indisponible (code=%s)", erreur.code)
+        raise ErreurChatbot(_code_pour_erreur_ia(erreur.code)) from None
+
+    if resultat.niveau not in NIVEAUX_IA[referentiel]:
+        logger.warning("Niveau d'exercice IA hors référentiel refusé")
+        raise ErreurChatbot(CodeErreurChatbot.IA_REPONSE_INVALIDE)
+
+    with SessionLocal() as db:
+        langue = db.scalar(select(Langue).where(Langue.code == code_langue))
+        niveau_ligne = db.scalar(select(Niveau).where(Niveau.code == resultat.niveau))
+        if langue is None or niveau_ligne is None:
+            raise ErreurChatbot(CodeErreurChatbot.IA_REPONSE_INVALIDE)
+        contenu = json.dumps(
+            {
+                "format": "redaction",
+                "intitule": f"Exercice ciblé — {corps.type_erreur}",
+                "consigne": resultat.consigne,
+                "enonce": resultat.enonce,
+                "mots_minimum": 5,
+                "descripteur_id": resultat.descripteur_id,
+            },
+            ensure_ascii=False,
+        )
+        exercice = Exercice(
+            type=TypeExercice.GRAMMAIRE,
+            contenu=contenu,
+            difficulte=_difficulte(resultat.niveau, referentiel),
+            langue=langue,
+            niveau=niveau_ligne,
+            numero_lecon=None,
+            usage="parcours",
+            statut="brouillon",
+            origine="systeme:ia_chat",
+            auteur="systeme:ia_chat",
+            framework=referentiel,
+            level=resultat.niveau,
+        )
+        db.add(exercice)
+        db.commit()
+        db.refresh(exercice)
+
+    return ExerciceCibleChatbotOut(
+        id_exercice=exercice.id_exercice,
+        enonce=resultat.enonce,
+        consigne=resultat.consigne,
+        descripteur_id=resultat.descripteur_id,
+        niveau=resultat.niveau,
+    )

@@ -1,4 +1,4 @@
-"""Routes du chat apprenant (US67/US74) : relais IA, quota, historique et fin de session."""
+"""Routes du chat apprenant (US67/US74, US-IA-CHAT-04) : relais IA, quota, mémoire, exercices et fin de session."""
 
 from typing import Annotated
 
@@ -6,8 +6,20 @@ from fastapi import APIRouter, HTTPException, Path, status
 
 from app.api.deps import UtilisateurConnecte
 from app.models import Role
-from app.schemas.chatbot import ChatbotMessageIn, ChatbotMessageOut, ChatbotSessionSupprimeeOut
-from app.services.chatbot import CodeErreurChatbot, ErreurChatbot, envoyer_message, terminer_session_chat
+from app.schemas.chatbot import (
+    ChatbotMessageIn,
+    ChatbotMessageOut,
+    ChatbotSessionSupprimeeOut,
+    ExerciceCibleChatbotIn,
+    ExerciceCibleChatbotOut,
+)
+from app.services.chatbot import (
+    CodeErreurChatbot,
+    ErreurChatbot,
+    envoyer_message,
+    generer_exercice_cible,
+    terminer_session_chat,
+)
 
 router = APIRouter(prefix="/chatbot", tags=["chatbot"])
 
@@ -60,6 +72,17 @@ def fermer_session(
     identifiant_session: Annotated[str, Path(min_length=1, max_length=64)],
     utilisateur: UtilisateurConnecte,
 ) -> ChatbotSessionSupprimeeOut:
-    """Supprimer l'historique et le quota de la session ; le journal anonymisé reste conservé."""
+    """Persister la mémoire long terme puis supprimer l'historique et le quota de la session."""
     _exiger_apprenant(utilisateur)
     return terminer_session_chat(utilisateur.id_user, identifiant_session)
+
+
+@router.post("/exercice", response_model=ExerciceCibleChatbotOut)
+def poster_exercice_cible(corps: ExerciceCibleChatbotIn, utilisateur: UtilisateurConnecte) -> ExerciceCibleChatbotOut:
+    """Générer un exercice ciblé depuis une erreur et l'enregistrer comme brouillon."""
+    _exiger_apprenant(utilisateur)
+    try:
+        return generer_exercice_cible(utilisateur.id_user, corps)
+    except ErreurChatbot as erreur:
+        code, detail = _ERREURS_HTTP[erreur.code]
+        raise HTTPException(code, detail) from None
