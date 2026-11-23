@@ -1106,7 +1106,8 @@ Réponse `200` : `{ "reponse": "…", "corrections": [{ "extrait": "…", "corre
 "quota_restant": 19, "version_prompt": "chatbot/conversation@1.1.0" }`. `corrections` contient au plus trois éléments
 et s'affiche en marge sans interrompre la conversation.
 
-Erreurs : `403` (pas apprenant), `404` (aucun parcours), `422` (langue/niveau non pris en charge), `429` (quota
+Erreurs : `403` (pas apprenant), `404` (aucun parcours : le détail du backend est affiché tel quel, avec un accès au
+test de positionnement), `422` (langue/niveau non pris en charge), `429` (quota
 dépassé), `502`/`503`/`504` (réponse IA invalide, indisponible ou lente — le frontend propose de renvoyer).
 
 ### `DELETE /chatbot/session/{identifiant_session}`

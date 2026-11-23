@@ -132,7 +132,7 @@ export function messageErreurParcours(error: unknown, quoi: string): string {
     if (error.status === 0) return "Le serveur est injoignable : vérifiez votre connexion, puis réessayez.";
     if (error.status === 401) return "Votre session a expiré. Reconnectez-vous.";
     if (error.status === 403) return error.detail ?? "Ce contenu n'est pas encore disponible.";
-    if (error.status === 404) return "Ce contenu n'existe pas.";
+    if (error.status === 404) return error.detail ?? "Ce contenu n'existe pas.";
     if (error.status === 429) return "Le quota de messages est atteint pour cette session. Commencez une nouvelle conversation.";
     // FE-D6 : le professeur IA est indisponible (503) ou trop lent (504), messages distincts sans détail technique
     if (error.status === 503) return `${quoi} n'est pas disponible pour le moment. Réessayez dans un instant.`;

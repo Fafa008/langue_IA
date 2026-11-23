@@ -24,6 +24,16 @@ describe("FE-D6 — messages d'erreur du parcours", () => {
     expect(message).not.toMatch(/contrat invalide|502/);
   });
 
+  it("404 : affiche le détail renvoyé par le backend au lieu du message générique", () => {
+    expect(
+      messageErreurParcours(
+        new ApiError(404, "Not Found", "Aucun parcours en cours. Passez le test de positionnement."),
+        "Le chargement de votre parcours",
+      ),
+    ).toBe("Aucun parcours en cours. Passez le test de positionnement.");
+    expect(messageErreurParcours(new ApiError(404, "Not Found"), "Le chargement")).toBe("Ce contenu n'existe pas.");
+  });
+
   it("quota du chat atteint (429) : invite à ouvrir une nouvelle conversation", () => {
     const message = messageErreurParcours(new ApiError(429, "Too many requests"), "Votre message");
     expect(message).toBe("Le quota de messages est atteint pour cette session. Commencez une nouvelle conversation.");
