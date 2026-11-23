@@ -5,7 +5,7 @@
 > L'audit factuel est dans [`../audit/gestion_pedagogique_exec_audit.md`](../audit/gestion_pedagogique_exec_audit.md).
 > Décisions de référence : `docs/decisions/gestion_pedagogique_decisions.md` (D1 à D9, validées le 23/11/2026).
 > Les cinq points ouverts sont tranchés (voir §7 et le dossier de validation) ; la relecture finale par le développeur
-> backend et l'expert IA reste requise avant l'écriture de la révision Alembic.
+> backend et l'expert IA est consignée le 23/11/2026 sous l'autorité du chef de projet (§7).
 
 ---
 

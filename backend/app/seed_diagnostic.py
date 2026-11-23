@@ -159,7 +159,11 @@ def charger_questions_demo(db: Session) -> int:
     """Ajoute les questions absentes (même langue, niveau et énoncé) et retourne le nombre de questions créées."""
     langues = {langue.code: langue for langue in db.scalars(select(Langue))}
     niveaux = {niveau.code: niveau for niveau in db.scalars(select(Niveau))}
-    existantes = set(db.execute(select(Question.id_langue, Question.id_niveau, Question.enonce)).tuples())
+    # `enonce` vit dans le contenu JSON depuis la banque unique : la lecture se fait côté Python.
+    existantes = {
+        (exercice.id_langue, exercice.id_niveau, exercice.enonce)
+        for exercice in db.scalars(select(Question).where(Question.usage.in_(("diagnostic", "les deux")))).all()
+    }
     creees = 0
     for code_langue, questions in QUESTIONS_DEMO.items():
         langue = langues.get(code_langue)

@@ -83,17 +83,22 @@ def terminer_tentative(
     if tentative.statut != StatutDiagnostic.EN_COURS:
         raise ErreurScoring(CodeErreurScoring.TENTATIVE_TERMINEE)
 
-    questions = list(
-        db.scalars(
-            select(Question)
-            .where(
-                Question.id_langue == tentative.id_langue,
-                Question.id_niveau == tentative.id_niveau,
-                Question.type_reponse == "choix",
-            )
-            .order_by(Question.id_question)
-        ).all()
-    )
+    exercices = db.scalars(
+        select(Question)
+        .where(
+            Question.id_langue == tentative.id_langue,
+            Question.id_niveau == tentative.id_niveau,
+        )
+        .order_by(Question.id_question)
+    ).all()
+    # D1/D3 : le scoring ne retient que les exercices publiés, proposables au diagnostic et à choix.
+    questions = [
+        exercice
+        for exercice in exercices
+        if exercice.statut == "publié"
+        and exercice.usage in ("diagnostic", "les deux")
+        and exercice.type_reponse == "choix"
+    ]
     if not questions or any(
         not question.choix or question.reponse_correcte is None or question.reponse_correcte not in question.choix
         for question in questions

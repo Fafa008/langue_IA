@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -26,6 +26,14 @@ class CodeErreurDiagnostic(str, Enum):
 
 TYPES_ENREGISTRABLES = ("choix", "texte")
 """Types de réponses enregistrables : l'audio est refusé, faute de stockage de médias pour les réponses."""
+
+USAGES_DIAGNOSTIC = ("diagnostic", "les deux")
+"""D3 : un exercice peut servir au diagnostic seul ou aux deux usages."""
+
+
+def _exercices_de_diagnostic(exercices: list[Question]) -> list[Question]:
+    """D1/D3 : seuls les exercices publiés proposables au diagnostic sont retenus."""
+    return [exercice for exercice in exercices if exercice.statut == "publié" and exercice.usage in USAGES_DIAGNOSTIC]
 
 
 @dataclass(frozen=True)
@@ -57,26 +65,31 @@ def lister_questions(db: Session, code_langue: str, code_niveau: str) -> tuple[N
     if niveau.id_niveau not in {niveau_ouvert.id_niveau for niveau_ouvert in langue.niveaux}:
         raise ErreurDiagnostic(CodeErreurDiagnostic.NIVEAU_NON_OUVERT)
 
-    questions = db.scalars(
+    exercices = db.scalars(
         select(Question)
         .where(Question.id_langue == langue.id_langue, Question.id_niveau == niveau.id_niveau)
         .order_by(Question.id_question)
     ).all()
-    return niveau, list(questions)
+    return niveau, _exercices_de_diagnostic(list(exercices))
 
 
 def _questions_par_niveau(db: Session, langue: Langue) -> dict[int, int]:
     """Nombre de questions enregistrables de la langue, pour chacun de ses niveaux ouverts."""
-    lignes = db.execute(
-        select(Question.id_niveau, func.count())
-        .where(
-            Question.id_langue == langue.id_langue,
-            Question.id_niveau.in_([niveau.id_niveau for niveau in langue.niveaux]),
-            Question.type_reponse.in_(TYPES_ENREGISTRABLES),
+    exercices = _exercices_de_diagnostic(
+        list(
+            db.scalars(
+                select(Question).where(
+                    Question.id_langue == langue.id_langue,
+                    Question.id_niveau.in_([niveau.id_niveau for niveau in langue.niveaux]),
+                )
+            ).all()
         )
-        .group_by(Question.id_niveau)
-    ).all()
-    return {id_niveau: nombre for id_niveau, nombre in lignes}
+    )
+    comptes: dict[int, int] = {}
+    for exercice in exercices:
+        if exercice.type_reponse in TYPES_ENREGISTRABLES:
+            comptes[exercice.id_niveau] = comptes.get(exercice.id_niveau, 0) + 1
+    return comptes
 
 
 def _niveau_de_depart(db: Session, langue: Langue) -> tuple[Niveau | None, int]:
@@ -161,7 +174,10 @@ def enregistrer_reponse(
         db.rollback()
         code_postgres = getattr(erreur.orig, "sqlstate", None) or getattr(erreur.orig, "pgcode", None)
         nom_contrainte = getattr(getattr(erreur.orig, "diag", None), "constraint_name", None)
-        if code_postgres != "23505" or nom_contrainte != "reponse_id_tentative_id_question_key":
+        if code_postgres != "23505" or nom_contrainte not in (
+            "reponse_id_tentative_id_question_key",
+            "uq_reponse_tentative_exercice",
+        ):
             raise
 
         precedente = db.scalar(

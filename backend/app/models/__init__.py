@@ -2,7 +2,7 @@
 
 from app.models.ateliers import Atelier
 from app.models.chatbot import JournalChatbot, MessageChatbot, QuotaChatbot
-from app.models.diagnostic import Question, Reponse, TestDiagnostic
+from app.models.diagnostic import Reponse, TestDiagnostic
 from app.models.enums import (
     Role,
     StatutAbonnement,
@@ -24,6 +24,9 @@ from app.models.utilisateurs import (
     apprenant_langue,
     formateur_langue,
 )
+
+# Alias transitoire (US-N01) : la table `question` n'existe plus, le contrat IA garde `id_question` (T2).
+Question = Exercice
 
 __all__ = [
     "Abonnement",
