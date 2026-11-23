@@ -7,6 +7,9 @@ devient vide et il est refusé par ``min_length``.
 
 Depuis la consigne 1.1.0, l'agent peut renvoyer jusqu'à trois corrections en marge. Elles ne coupent jamais la
 conversation : la ``reponse`` reste obligatoire et les ``corrections`` sont optionnelles.
+
+Depuis la consigne 1.2.0, le tuteur IA joint à **chaque** réponse une ``traduction`` et une ``explication`` en
+français, affichées à côté de la réponse. Elles sont obligatoires dans le contrat de sortie.
 """
 
 from typing import Literal
@@ -21,6 +24,8 @@ HISTORIQUE_CHATBOT_MAX = 20
 CORRECTIONS_CHATBOT_MAX = 3
 EXTRAIT_CORRECTION_MAX = 120
 EXPLICATION_CORRECTION_MAX = 300
+TRADUCTION_CHATBOT_MAX = 4000
+EXPLICATION_CHATBOT_MAX = 4000
 
 
 class MessageHistorique(ModeleStrict):
@@ -46,7 +51,9 @@ class EntreeChatbot(ModeleStrict):
 
 
 class ResultatChatbot(ModeleStrict):
-    """Réponse de l'assistant et corrections éventuelles, en texte brut."""
+    """Réponse du tuteur, corrections éventuelles et traduction/explication françaises (texte brut)."""
 
     reponse: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
     corrections: list[CorrectionChatbot] = Field(default_factory=list, max_length=CORRECTIONS_CHATBOT_MAX)
+    traduction: str = Field(min_length=1, max_length=TRADUCTION_CHATBOT_MAX)
+    explication: str = Field(min_length=1, max_length=EXPLICATION_CHATBOT_MAX)

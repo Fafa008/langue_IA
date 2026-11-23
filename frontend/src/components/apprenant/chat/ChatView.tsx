@@ -13,8 +13,9 @@ import type { MessageChatbot } from "@/types/parcours-personnalise";
 import RapportConversation from "./RapportConversation";
 
 /**
- * US72/US73-FE — Page du chat avec le professeur IA : la langue vient du parcours de l'apprenant, jamais d'un
- * choix manuel. Chaque conversation ouvre et ferme sa propre session backend.
+ * US72/US73/US74-FE — Page du chat avec le tuteur IA : la langue vient du parcours de l'apprenant, jamais d'un
+ * choix manuel ; chaque réponse affiche à côté sa traduction et son explication en français.
+ * Chaque conversation ouvre et ferme sa propre session backend.
  */
 export default function ChatView() {
   const [scenarioId, setScenarioId] = useState(SCENARIOS_CHAT[0].id);
@@ -47,7 +48,7 @@ export default function ChatView() {
       <div className="mx-auto max-w-3xl space-y-6">
         <header>
           <p className="eyebrow">Espace apprenant</p>
-          <h1 className="mt-2">Professeur IA</h1>
+          <h1 className="mt-2">Tuteur IA</h1>
         </header>
         <section role="alert" data-testid="alerte-sans-parcours" className="card space-y-3">
           <p>{messageErreurParcours(parcours.error, "Le chargement de votre parcours")}</p>
@@ -78,7 +79,7 @@ export default function ChatView() {
     <div className="mx-auto max-w-3xl space-y-6">
       <header>
         <p className="eyebrow">Espace apprenant</p>
-        <h1 className="mt-2">Professeur IA</h1>
+        <h1 className="mt-2">Tuteur IA</h1>
       </header>
 
       <div>
@@ -120,7 +121,7 @@ export default function ChatView() {
             key={`${scenario.id}-${cleConversation}`}
             contenu={{
               format: "conversation",
-              consigne: "Discutez avec le professeur IA, à l'écrit ou à la voix.",
+              consigne: "Discutez avec le tuteur IA, à l'écrit ou à la voix.",
               sujet: scenario.sujet,
               messageInitial: scenario.messageInitial,
               echangesMinimum: 3,

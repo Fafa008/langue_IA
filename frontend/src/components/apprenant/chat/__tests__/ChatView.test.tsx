@@ -53,7 +53,12 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("US73-FE — page du chat : scénario et langue du parcours", () => {
+describe("US73/US74-FE — page du chat : scénario et langue du parcours", () => {
+  it("présente l'agent comme le tuteur IA", () => {
+    afficherChat();
+    expect(screen.getByRole("heading", { level: 1, name: "Tuteur IA" })).toBeInTheDocument();
+  });
+
   it("affiche le contexte par défaut et le met à jour au choix du scénario", () => {
     afficherChat();
     expect(screen.getByTestId("contexte-chat")).toHaveTextContent("Contexte : Se présenter · Français");

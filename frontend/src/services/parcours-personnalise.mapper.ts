@@ -135,6 +135,9 @@ export interface CorrectionChatbotDto {
 export interface ReponseChatbotDto {
   reponse: string;
   corrections?: CorrectionChatbotDto[];
+  /** Fournis par le backend depuis le contrat 1.2.0 ; absents d'un relais plus ancien. */
+  traduction?: string;
+  explication?: string;
   quota_restant?: number;
   version_prompt?: string;
 }
@@ -142,6 +145,8 @@ export interface ReponseChatbotDto {
 export const toReponseChatbot = (dto: ReponseChatbotDto): ReponseChatbot => ({
   reponse: dto.reponse,
   corrections: dto.corrections ?? [],
+  traduction: dto.traduction ?? "",
+  explication: dto.explication ?? "",
   quotaRestant: dto.quota_restant ?? null,
   versionPrompt: dto.version_prompt ?? null,
 });

@@ -105,10 +105,10 @@ describe("Page d'une leçon", () => {
     expect(within(exercice).getByLabelText("Votre phrase")).toBeInTheDocument();
   });
 
-  it("converse avec le professeur IA (écrit et dictée) puis fait évaluer l'échange", async () => {
+  it("converse avec le tuteur IA (écrit et dictée) puis fait évaluer l'échange", async () => {
     afficher(<LeconVue numero={23} />);
     const exercice = await screen.findByRole("region", { name: "Faire connaissance" });
-    const log = within(exercice).getByRole("log", { name: "Conversation avec le professeur IA" });
+    const log = within(exercice).getByRole("log", { name: "Conversation avec le tuteur IA" });
     expect(log).toHaveTextContent("Comment vous appelez-vous ?");
     const terminer = within(exercice).getByRole("button", { name: "Terminer et évaluer la conversation" });
     expect(terminer).toBeDisabled();
@@ -122,7 +122,8 @@ describe("Page d'une leçon", () => {
     act(() => FausseReconnaissance.derniere?.dire("Je viens de Madagascar"));
     expect(within(exercice).getByLabelText("Votre message")).toHaveValue("Je viens de Madagascar");
     fireEvent.click(within(exercice).getByRole("button", { name: "Envoyer" }));
-    await within(log).findByText(/que faites-vous dans la vie/);
+    // La relance apparaît dans la bulle et dans la traduction de démonstration : findAllByText tolère les deux.
+    expect((await within(log).findAllByText(/que faites-vous dans la vie/)).length).toBeGreaterThan(0);
 
     fireEvent.click(terminer);
     expect(await within(exercice).findByText(/Belle conversation/)).toBeInTheDocument();

@@ -39,6 +39,8 @@ REPONSE_MODELE = {
             ),
         }
     ],
+    "traduction": "Bonne question ! On dit : « J'étudie l'anglais depuis deux ans ».",
+    "explication": "Le present perfect continu relie une action passée qui continue encore aujourd'hui.",
 }
 
 
@@ -99,13 +101,26 @@ def test_entree_hors_contrat_refusee(donnees: dict[str, object]) -> None:
 
 def test_resultat_vide_refuse() -> None:
     with pytest.raises(ValidationError):
-        ResultatChatbot.model_validate({"reponse": " "})
+        ResultatChatbot.model_validate({"reponse": " ", "traduction": "Traduction.", "explication": "Explication."})
 
 
 def test_resultat_sans_corrections_est_valide() -> None:
-    resultat = ResultatChatbot.model_validate({"reponse": "Très bien !"})
+    resultat = ResultatChatbot.model_validate(
+        {"reponse": "Très bien !", "traduction": "Très bien !", "explication": "Encouragement."}
+    )
 
     assert resultat.corrections == []
+
+
+@pytest.mark.parametrize("champ", ["traduction", "explication"])
+def test_resultat_sans_traduction_ou_explication_refuse(champ: str) -> None:
+    donnees = {"reponse": "Très bien !", "traduction": "Très bien !", "explication": "Encouragement."}
+    donnees.pop(champ)
+    with pytest.raises(ValidationError):
+        ResultatChatbot.model_validate(donnees)
+    donnees[champ] = "  "
+    with pytest.raises(ValidationError):
+        ResultatChatbot.model_validate(donnees)
 
 
 def test_resultat_refuse_plus_de_trois_corrections() -> None:
@@ -115,13 +130,25 @@ def test_resultat_refuse_plus_de_trois_corrections() -> None:
     ]
 
     with pytest.raises(ValidationError):
-        ResultatChatbot.model_validate({"reponse": "Très bien !", "corrections": corrections})
+        ResultatChatbot.model_validate(
+            {
+                "reponse": "Très bien !",
+                "corrections": corrections,
+                "traduction": "Très bien !",
+                "explication": "Encouragement.",
+            }
+        )
 
 
 def test_correction_hors_contrat_refusee() -> None:
     with pytest.raises(ValidationError):
         ResultatChatbot.model_validate(
-            {"reponse": "Très bien !", "corrections": [{"extrait": "", "correction": "mot", "explication": "..."}]}
+            {
+                "reponse": "Très bien !",
+                "corrections": [{"extrait": "", "correction": "mot", "explication": "..."}],
+                "traduction": "Très bien !",
+                "explication": "Encouragement.",
+            }
         )
 
 
@@ -138,15 +165,18 @@ def test_rend_le_prompt_de_conversation_versionne() -> None:
     rendu = RegistrePrompts().rendre_conversation_chatbot(variables)
 
     assert [message.role for message in rendu.messages] == ["system", "user"]
-    assert rendu.version_prompt == "chatbot/conversation@1.1.0"
+    assert rendu.version_prompt == "chatbot/conversation@1.2.0"
     assert rendu.empreinte_prompt.startswith("sha256:")
     assert (
         rendu.empreinte_prompt
         != RegistrePrompts().definition("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC)[1]
     )
     assert rendu.temperature == 0.5
+    assert "tuteur IA" in rendu.messages[0].contenu
     assert "corrections" in rendu.messages[0].contenu
     assert "au plus trois corrections" in rendu.messages[0].contenu
+    assert "traduction" in rendu.messages[0].contenu
+    assert "explication" in rendu.messages[0].contenu
     corps = donnees_prompt(rendu.messages[1].contenu)
     assert corps["message"] == "How are you?"
     assert [tour["role"] for tour in corps["historique"]] == ["apprenant", "assistant"]
@@ -188,10 +218,12 @@ def test_agent_chatbot_via_le_harness() -> None:
 
     assert isinstance(reponse, ReponseAgent)
     assert reponse.agent == "chatbot"
-    assert VERSION_AGENT_CHATBOT == "1.1.0"
+    assert VERSION_AGENT_CHATBOT == "1.2.0"
     assert reponse.version_agent == VERSION_AGENT_CHATBOT
-    assert reponse.version_prompt == "chatbot/conversation@1.1.0"
+    assert reponse.version_prompt == "chatbot/conversation@1.2.0"
     assert reponse.resultat.reponse == REPONSE_MODELE["reponse"]
+    assert reponse.resultat.traduction == REPONSE_MODELE["traduction"]
+    assert reponse.resultat.explication == REPONSE_MODELE["explication"]
     assert [c.extrait for c in reponse.resultat.corrections] == ["How long I study"]
     assert reponse.meta.modele == "modele-test"
     # Le modèle reçoit le prompt système puis le bloc de données contenant le message.
@@ -233,7 +265,7 @@ def test_post_message_retourne_la_reponse_du_modele(client_http: TestClient) -> 
     assert corps["statut"] == "succes"
     assert corps["request_id"] == REQUEST_ID
     assert corps["agent"] == "chatbot"
-    assert corps["version_prompt"] == "chatbot/conversation@1.1.0"
+    assert corps["version_prompt"] == "chatbot/conversation@1.2.0"
     assert corps["resultat"] == REPONSE_MODELE
     assert corps["meta"]["fournisseur"] == "factice"
     assert corps["meta"]["modele"] == "modele-test"

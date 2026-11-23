@@ -44,7 +44,7 @@ export interface ParcoursPersonnaliseService {
   corriger(idParcours: number, idParcoursExercice: number, reponse: ReponseExercice): Promise<CorrectionExercice>;
   /** Recommandations pédagogiques : POST explicite, idempotent ; PARTIEL se traduit par une liste vide. */
   recommandations(idParcours: number): Promise<RecommandationParcours>;
-  /** Message au professeur IA, avec l'historique récent de la conversation. */
+  /** Message au tuteur IA, avec l'historique récent de la conversation. */
   chatbot(message: string, historique: MessageChatbot[]): Promise<ReponseChatbot>;
   /** Ferme la session en cours : le backend supprime l'historique et le quota (le journal reste anonyme). */
   fermerSession(): Promise<void>;

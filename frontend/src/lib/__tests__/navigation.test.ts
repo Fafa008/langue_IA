@@ -30,9 +30,9 @@ describe("navigation par rôle", () => {
     expect(parcours?.bientot).toBeUndefined();
   });
 
-  it("le professeur IA est accessible depuis le menu, avec sa page (US73-FE)", () => {
+  it("le tuteur IA est accessible depuis le menu, avec sa page (US73-FE/US74)", () => {
     const chat = NAVIGATION.APPRENANT.find((item) => item.href === ROUTES.apprenant.chat);
-    expect(chat).toMatchObject({ label: "Professeur IA" });
+    expect(chat).toMatchObject({ label: "Tuteur IA" });
     expect(chat?.bientot).toBeUndefined();
   });
 

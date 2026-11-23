@@ -13,7 +13,9 @@ au contrat v2 (phase passive ou active), qui ne vérifie que la majuscule initia
 longueur, et le dit dans son commentaire.
 
 US67/US74 : le chat reçoit aussi une réponse de démonstration déterministe, avec au plus trois corrections en
-marge uniquement sur des règles visibles (majuscule, ponctuation, espaces) ; elle annonce toujours son origine.
+marge uniquement sur des règles visibles (majuscule, ponctuation, espaces), ainsi qu'une traduction et une
+explication françaises indicatives. Le commentaire est rédigé dans la langue du parcours ; son origine non fiable
+est toujours annoncée.
 """
 
 import json
@@ -27,6 +29,7 @@ from app.schemas.chatbot import (
     CORRECTIONS_CHATBOT_MAX,
     EXPLICATION_CORRECTION_MAX,
     EXTRAIT_CORRECTION_MAX,
+    TRADUCTION_CHATBOT_MAX,
     CorrectionChatbot,
     ResultatChatbot,
 )
@@ -218,9 +221,42 @@ def resultat_correction_demonstration(messages: Sequence[MessageLLM]) -> Resulta
     )
 
 
-COMMENTAIRE_CHATBOT = "Réponse de démonstration sans modèle de langue (fournisseur factice)."
+# Le fournisseur factice n'a pas de modèle : il annonce son origine dans la langue du parcours (US73). La
+# traduction et l'explication restent en français, conformément au contrat 1.2.0.
+CHATBOT_DEMONSTRATION_PAR_LANGUE = {
+    "fr": (
+        "Réponse de démonstration sans modèle de langue (fournisseur factice).",
+        "Forme(s) proposée(s) : {}.",
+        "Réessayez avec la forme corrigée ; la conversation continue normalement.",
+    ),
+    "en": (
+        "Demonstration response without a language model (fake provider).",
+        "Suggested form(s): {}.",
+        "Try again with the corrected form; the conversation continues normally.",
+    ),
+    "it": (
+        "Risposta dimostrativa senza modello linguistico (fornitore fittizio).",
+        "Forma(e) suggerita(e): {}.",
+        "Riprova con la forma corretta; la conversazione continua normalmente.",
+    ),
+    "de": (
+        "Demonstrationsantwort ohne Sprachmodell (Pseudo-Anbieter).",
+        "Vorgeschlagene Form(en): {}.",
+        "Versuchen Sie es mit der korrigierten Form; das Gespräch läuft normal weiter.",
+    ),
+    "zh": (
+        "无语言模型的演示回复（模拟服务商）。",
+        "建议形式：{}。",
+        "请用修改后的形式再试一次；对话会正常继续。",
+    ),
+}
 EXPLICATION_CORRECTION_CHATBOT = (
     "Vérification simple de démonstration : un modèle de langue confirmerait cette correction."
+)
+TRADUCTION_DEMONSTRATION_CHATBOT = "Traduction française indicative (démonstration) : "
+EXPLICATION_DEMONSTRATION_CHATBOT = (
+    "Explication de démonstration sans modèle de langue : cette traduction est indicative ; "
+    "un fournisseur de langue fournit une traduction et une explication réelles."
 )
 
 
@@ -311,13 +347,24 @@ def resultat_chatbot_demonstration(messages: Sequence[MessageLLM]) -> ResultatCh
             "Un seul espace suffit entre deux mots.",
         )
 
+    contexte = donnees.get("contexte_apprenant")
+    code_langue = str(contexte.get("code_langue", "fr")) if isinstance(contexte, dict) else "fr"
+    commentaire, forme_proposee, reprise = CHATBOT_DEMONSTRATION_PAR_LANGUE.get(
+        code_langue, CHATBOT_DEMONSTRATION_PAR_LANGUE["fr"]
+    )
     propositions = ", ".join(correction.correction for correction in corrections)
-    reponse = COMMENTAIRE_CHATBOT
+    reponse = commentaire
     if propositions:
-        reponse += f" Forme(s) proposée(s) : {propositions}."
-    reponse += " Réessayez avec la forme corrigée ; la conversation continue normalement."
+        reponse += " " + forme_proposee.format(propositions)
+    reponse += " " + reprise
 
-    return ResultatChatbot(reponse=reponse, corrections=corrections)
+    traduction = f"{TRADUCTION_DEMONSTRATION_CHATBOT}« {texte[:500]} »."
+    return ResultatChatbot(
+        reponse=reponse,
+        corrections=corrections,
+        traduction=traduction[:TRADUCTION_CHATBOT_MAX],
+        explication=EXPLICATION_DEMONSTRATION_CHATBOT,
+    )
 
 
 def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseModel]) -> BaseModel | None:

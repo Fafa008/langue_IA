@@ -82,7 +82,7 @@ const CONVERSATIONS = [
   {
     intitule: "Faire connaissance",
     sujet: "Se présenter",
-    message_initial: "Bonjour ! Je suis votre professeur IA. Comment vous appelez-vous ?",
+    message_initial: "Bonjour ! Je suis votre tuteur IA. Comment vous appelez-vous ?",
     relances: ["Enchanté ! D'où venez-vous ?", "Et que faites-vous dans la vie ?", "Qu'aimez-vous faire le week-end ?"],
   },
   {
@@ -157,7 +157,7 @@ function exerciceMock(lecon: number, rang: number): ExerciceMock {
       const c = pick(CONVERSATIONS);
       return {
         ligne: { ...base, type: "ORAL", intitule: c.intitule },
-        contenu: { format: "conversation", consigne: "Discutez avec le professeur IA, à l'écrit ou à la voix.", sujet: c.sujet, message_initial: c.message_initial, echanges_minimum: 3 },
+        contenu: { format: "conversation", consigne: "Discutez avec le tuteur IA, à l'écrit ou à la voix.", sujet: c.sujet, message_initial: c.message_initial, echanges_minimum: 3 },
         attendu: [],
       };
     }
@@ -328,6 +328,15 @@ export function corrigerRedaction(texte: string, motsMinimum: number, leconAttei
   };
 }
 
+/** Traduction et explication de démonstration : une paire par réponse du tuteur, sans modèle de langue. */
+function traductionDemo(reponse: string): Pick<ReponseChatbotDto, "traduction" | "explication"> {
+  return {
+    traduction: `Traduction française (démonstration) : « ${reponse} ».`,
+    explication:
+      "Explication (démonstration) : reformulez cette phrase avec vos propres mots ; un modèle de langue fournit une traduction et une explication détaillées.",
+  };
+}
+
 export const parcoursPersonnaliseMock = {
   async enCours(): Promise<ParcoursPersonnaliseDto> {
     await repondre();
@@ -438,20 +447,19 @@ export const parcoursPersonnaliseMock = {
     return recommandationDemo;
   },
 
-  /** Professeur IA simulé : réagit puis relance avec une question liée au sujet de la conversation. */
+  /** Tuteur IA simulé : réagit puis relance avec une question liée au sujet de la conversation. */
   async chatbot({ message, historique }: MessageChatbotDto): Promise<ReponseChatbotDto> {
     await delay(500);
     const conversation = CONVERSATIONS.find((c) => c.message_initial === historique[0]?.contenu) ?? CONVERSATIONS[0];
     const tour = historique.filter((m) => m.role === "apprenant").length;
     const corrections = repererErreurs(message).slice(0, 3);
     if (normaliserReponse(message).split(" ").length < 2) {
-      return {
-        reponse: "Pouvez-vous répondre avec une phrase complète ? Par exemple : « Je m'appelle… ».",
-        corrections,
-      };
+      const reponse = "Pouvez-vous répondre avec une phrase complète ? Par exemple : « Je m'appelle… ».";
+      return { reponse, corrections, ...traductionDemo(reponse) };
     }
     const reaction = ["Très bien !", "D'accord, merci.", "Intéressant !"][tour % 3];
     const relance = conversation.relances[tour] ?? "Merci pour cet échange, vous pouvez terminer la conversation.";
-    return { reponse: `${reaction} ${relance}`, corrections };
+    const reponse = `${reaction} ${relance}`;
+    return { reponse, corrections, ...traductionDemo(reponse) };
   },
 };

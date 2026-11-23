@@ -50,10 +50,10 @@ def messages(niveau: str = "B1", score: float = 64, reponses: list[dict] | None 
     return [MessageLLM(role="system", contenu="Système"), MessageLLM(role="user", contenu=contenu)]
 
 
-def messages_chatbot(message: str) -> list[MessageLLM]:
+def messages_chatbot(message: str, langue: str = "en") -> list[MessageLLM]:
     """Messages au format du prompt de conversation (bloc JSON entre balises)."""
     donnees = {
-        "contexte_apprenant": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "B1"},
+        "contexte_apprenant": {"code_langue": langue, "referentiel": "CECRL", "niveau_preliminaire": "B1"},
         "historique": [],
         "message": message,
     }
@@ -124,8 +124,22 @@ def test_chatbot_demonstration_deterministe_et_honnete() -> None:
 
     assert resultat is not None
     assert resultat == resultat_chatbot_demonstration(messages_chatbot("hello world"))
-    assert "démonstration" in resultat.reponse
+    assert "demonstration" in resultat.reponse.lower()
+    assert "Traduction française" in resultat.traduction
+    assert "Explication" in resultat.explication
     assert [correction.correction for correction in resultat.corrections] == ["Hello", "world."]
+
+
+def test_chatbot_demonstration_parle_la_langue_du_parcours() -> None:
+    anglais = resultat_chatbot_demonstration(messages_chatbot("Hello world", langue="en"))
+    francais = resultat_chatbot_demonstration(messages_chatbot("Bonjour monde", langue="fr"))
+
+    assert anglais is not None and francais is not None
+    assert "Demonstration response" in anglais.reponse
+    assert "Réponse de démonstration" in francais.reponse
+    # La traduction et l'explication restent en français quelle que soit la langue du parcours.
+    assert "Traduction française" in anglais.traduction
+    assert "Explication de démonstration" in francais.explication
 
 
 def test_chatbot_demonstration_sans_correction_observable() -> None:
