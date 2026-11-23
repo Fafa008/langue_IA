@@ -74,7 +74,7 @@ def test_chatbot_utilise_gemini_via_le_harness(env_propre: pytest.MonkeyPatch) -
     sdk.aio.models = Mock()
     sdk.aio.models.generate_content = AsyncMock(
         return_value=SimpleNamespace(
-            text='{"reponse":"Bonjour !"}',
+            text='{"reponse":"Bonjour !","corrections":[],"traduction":"Hello!","explication":"Salutation."}',
             usage_metadata=None,
             candidates=[SimpleNamespace(finish_reason=types.FinishReason.STOP)],
         )
@@ -95,7 +95,12 @@ def test_chatbot_utilise_gemini_via_le_harness(env_propre: pytest.MonkeyPatch) -
             )
 
     assert reponse.status_code == 200
-    assert reponse.json()["resultat"] == {"reponse": "Bonjour !", "corrections": []}
+    assert reponse.json()["resultat"] == {
+        "reponse": "Bonjour !",
+        "corrections": [],
+        "traduction": "Hello!",
+        "explication": "Salutation.",
+    }
     assert reponse.json()["meta"]["fournisseur"] == "gemini"
     assert reponse.json()["meta"]["modele"] == "modele-test"
     sdk.aio.models.generate_content.assert_awaited_once()
