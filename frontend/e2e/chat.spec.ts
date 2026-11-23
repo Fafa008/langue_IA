@@ -15,6 +15,30 @@ const APPRENANT: UtilisateurDto = {
 type TourHistorique = { role: string; contenu: string };
 type CorpsChatbot = { message: string; identifiant_session: string; historique: TourHistorique[] };
 
+/** La langue du chat vient du parcours : le test doit donc simuler GET /parcours/en-cours. */
+const PARCOURS_DTO = {
+  id_parcours: 4,
+  statut: "EN_COURS",
+  date_creation: "2026-10-02T09:30:00Z",
+  code_langue: "en",
+  libelle_langue: "Anglais",
+  cadre: "CECRL",
+  niveaux_cadre: ["A1", "A2", "B1", "B2", "C1", "C2"],
+  niveau_depart: "A1",
+  niveau_vise: "A2",
+  lecon_atteinte: 15,
+  phase: "ACTIVE",
+  est_lecon_de_revision: false,
+  modules: [],
+};
+
+async function intercepterParcours(page: Page, statut = 200, corps: unknown = PARCOURS_DTO) {
+  await page.route("**/api/v1/parcours/en-cours", async (route: Route) => {
+    if (await handlePreflight(route)) return;
+    await json(route, statut, corps);
+  });
+}
+
 async function intercepterChatbot(page: Page, requetes: CorpsChatbot[], sessionsFermees: string[] = []) {
   await page.route("**/api/v1/chatbot/message", async (route: Route) => {
     if (await handlePreflight(route)) return;
@@ -44,9 +68,11 @@ test.describe("Chat apprenant — envoi réel et corrections en marge", () => {
   test("envoie le message au backend et affiche la correction sans couper la conversation", async ({ page }) => {
     const requetes: CorpsChatbot[] = [];
     await loginAs(page, APPRENANT);
+    await intercepterParcours(page);
     await intercepterChatbot(page, requetes);
     await page.goto("/espace/apprenant/chat");
 
+    await expect(page.getByTestId("contexte-chat")).toContainText("Anglais");
     await expect(page.getByTestId("avertissement-chat-rg11")).toContainText("aucune donnée personnelle");
     await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("hier j'ai allé au cinéma");
     await page.getByRole("button", { name: "Envoyer" }).click();
@@ -68,6 +94,7 @@ test.describe("Chat apprenant — envoi réel et corrections en marge", () => {
     const requetes: CorpsChatbot[] = [];
     const sessionsFermees: string[] = [];
     await loginAs(page, APPRENANT);
+    await intercepterParcours(page);
     await intercepterChatbot(page, requetes, sessionsFermees);
     await page.goto("/espace/apprenant/chat");
 
@@ -87,5 +114,19 @@ test.describe("Chat apprenant — envoi réel et corrections en marge", () => {
     await page.getByRole("button", { name: "Envoyer" }).click();
     await expect(requetes).toHaveLength(2);
     expect(requetes[1].identifiant_session).not.toBe(requetes[0].identifiant_session);
+  });
+
+  test("sans parcours, affiche le détail du backend et propose le test de positionnement", async ({ page }) => {
+    await loginAs(page, APPRENANT);
+    await intercepterParcours(page, 404, { detail: "Aucun parcours en cours. Passez le test de positionnement." });
+    await page.goto("/espace/apprenant/chat");
+
+    const alerte = page.getByTestId("alerte-sans-parcours");
+    await expect(alerte).toContainText("Aucun parcours en cours. Passez le test de positionnement.");
+    await expect(alerte).not.toContainText("Ce contenu n'existe pas.");
+    await expect(alerte.getByRole("link", { name: /test de positionnement/i })).toHaveAttribute(
+      "href",
+      "/espace/apprenant/test-diagnostic",
+    );
   });
 });
