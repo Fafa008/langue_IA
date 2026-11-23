@@ -133,6 +133,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
         NEXT_PUBLIC_API_MOCK: ${NEXT_PUBLIC_API_MOCK:-false}
+        NEXT_PUBLIC_PARCOURS_MOCK: ${NEXT_PUBLIC_PARCOURS_MOCK:-false}
+        NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO: ${NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO:-passif}
     restart: unless-stopped
     depends_on:
       backend:
