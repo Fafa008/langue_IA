@@ -245,8 +245,10 @@ Ils ne deviennent actifs qu'après validation de D1–D9, du plan US et du plan 
 ## 9. Séquence avant implémentation
 
 1. **Valider D1 à D9** par les responsables désignés (PO, référent pédagogique, expert IA, développeurs).
-2. **Attribuer les numéros US dans ClickUp**, puis créer `docs/plan/gestion_pedagogique_plan.md` avec une US par
-   fonctionnalité (D9). Sans numéro, aucune branche `feature/US<numéro>-<nom-court>` n'est créée.
+2. **Attribuer les numéros US dans ClickUp**, puis renseigner
+   [`../plan/gestion_pedagogique_plan.md`](../plan/gestion_pedagogique_plan.md) : le brouillon contient déjà une US par
+   fonctionnalité, avec des numéros `US-??` à remplacer (D9). Sans numéro, aucune branche
+   `feature/US<numéro>-<nom-court>` n'est créée.
 3. **Valider le plan de migration** `docs/plan/migration_banque_exercices.md`, notamment ses cinq points ouverts.
 4. **Ensuite seulement** : ouvrir les branches US depuis `origin/develop`, commits `type(scope): ...`, PR titulées
    `[US-XX] ...` vers `develop`, CI verte, 1 reviewer (2 pour l'IA), sans fusion par l'auteur.
