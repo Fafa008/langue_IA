@@ -51,6 +51,9 @@ class ContexteApprenantIA(_ModeleIA):
     code_langue: CodeLangueIA
     referentiel: ReferentielIA
     niveau_preliminaire: str = Field(min_length=1, max_length=20)
+    # Tant que le diagnostic n'est pas clos, le service IA ramène le niveau à A1/HSK 1 et ouvre la conversation
+    # par une question de diagnostic (US-IA-CHAT-03).
+    niveau_confirme: bool = False
     lecon_atteinte: int | None = Field(default=None, ge=1, le=10_000)
 
 
@@ -212,6 +215,8 @@ class MessageHistoriqueChatbotIA(_ModeleIA):
 class EntreeChatbotIA(_ModeleIA):
     message: str = Field(min_length=1, max_length=2000)
     historique: list[MessageHistoriqueChatbotIA] = Field(default_factory=list, max_length=20)
+    # Clé de la mémoire courte Redis du service IA. Facultative pour rester compatible avec les appels v1.2.0.
+    identifiant_session: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 class RequeteChatbotIA(_ModeleIA):

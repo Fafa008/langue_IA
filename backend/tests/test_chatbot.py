@@ -133,9 +133,11 @@ def test_integration_relais_http_vers_service_ia(
         "code_langue": "en",
         "referentiel": "CECRL",
         "niveau_preliminaire": "B1",
+        "niveau_confirme": False,
     }
     assert corps_ia["entree"]["message"] == "How long I study English?"
     assert corps_ia["entree"]["historique"] == []
+    assert corps_ia["entree"]["identifiant_session"] == "session-a"
     assert [m.role for m in db.scalars(select(MessageChatbot)).all()] == ["apprenant", "assistant"]
 
 

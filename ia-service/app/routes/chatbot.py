@@ -1,6 +1,7 @@
-"""Routes du chatbot (US67, US-IA-CHAT-02) : dialogue, correction et traduction.
+"""Routes du chatbot (US67, US-IA-CHAT-02/03) : dialogue, correction et traduction.
 
-La route historique ``POST /chatbot/message`` reste inchangée : le frontend consomme encore son contrat 1.2.0.
+``POST /chatbot/message`` sert le tuteur v2 (CECRL/Assimil, mémoire courte) mais garde la forme de résultat
+consommée par le frontend (``reponse``, ``corrections``, ``traduction``, ``explication``).
 Les routes internes ajoutées ici séparent l'analyse grammaticale et la traduction, sans modifier le contrat public
 avant la bascule prévue en fin de programme. Elles ne contiennent aucune logique pédagogique : l'enveloppe validée
 est confiée au Harness, et une ``ReponseErreur`` est traduite en statut HTTP grâce au catalogue des codes (US-154).
@@ -16,6 +17,7 @@ from app.core.codes_erreur import STATUTS_HTTP
 from app.memory import clefs
 from app.schemas.chatbot import (
     EntreeChatbot,
+    EntreeConversation,
     EntreeTraduction,
     ResultatChatbot,
     ResultatCorrection,
@@ -50,9 +52,11 @@ def _reponse_erreur(reponse: ReponseErreur) -> JSONResponse:
     responses=_REPONSES_ERREUR,
 )
 async def envoyer_message(
-    requete: RequeteAgent[EntreeChatbot], request: Request
+    requete: RequeteAgent[EntreeConversation], request: Request
 ) -> ReponseAgent[ResultatChatbot] | JSONResponse:
     """Transmettre le message de l'apprenant au modèle et retourner la réponse de l'assistant."""
+    if requete.entree.identifiant_session:
+        clefs.valider_identifiant_session(requete.entree.identifiant_session)
     reponse = await request.app.state.harness.executer(CODE_AGENT_CHATBOT, requete)
     if isinstance(reponse, ReponseErreur):
         return _reponse_erreur(reponse)

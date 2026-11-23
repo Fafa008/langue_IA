@@ -85,6 +85,7 @@ def envoyer_message(id_user: int, corps: ChatbotMessageIn) -> ChatbotMessageOut:
         code_langue = parcours.langue.code
         referentiel = referentiel_de_langue(code_langue)
         niveau = niveau_estime(parcours.test_diagnostic).code
+        niveau_confirme = parcours.test_diagnostic.niveau_final is not None
         if code_langue not in LANGUES_IA or niveau not in NIVEAUX_IA[referentiel]:
             raise ErreurChatbot(CodeErreurChatbot.LANGUE_NON_PRISE_EN_CHARGE)
 
@@ -99,6 +100,7 @@ def envoyer_message(id_user: int, corps: ChatbotMessageIn) -> ChatbotMessageOut:
             code_langue=code_langue,
             referentiel=referentiel,
             niveau_preliminaire=niveau,
+            niveau_confirme=niveau_confirme,
         )
 
     requete = RequeteChatbotIA(
@@ -107,6 +109,7 @@ def envoyer_message(id_user: int, corps: ChatbotMessageIn) -> ChatbotMessageOut:
         entree=EntreeChatbotIA(
             message=corps.message,
             historique=[MessageHistoriqueChatbotIA(role=tour.role, contenu=tour.contenu) for tour in historique],
+            identifiant_session=corps.identifiant_session,
         ),
     )
     try:

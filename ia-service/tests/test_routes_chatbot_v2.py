@@ -15,7 +15,7 @@ from app.llm.adaptateurs.factice import FakeLLMClient, ScenarioLLM
 from app.main import app
 from app.memory.court import MemoireCourteVide
 from app.memory.redis import MemoireRedis
-from app.schemas.chatbot import ResultatTraduction
+from app.schemas.chatbot import ResultatTraduction, TourMemoire
 from tests.donnees import CONTEXTE_MINIMAL, REQUEST_ID
 
 SESSION = "session-7"
@@ -40,19 +40,41 @@ TRADUCTION_JSON = json.dumps(
         "explication": "Salutation suivie d'une proposition d'aide.",
     }
 )
+REPONSE_CHATBOT = {
+    "reponse": "Hello! How are you today?",
+    "corrections": [],
+    "traduction": "Bonjour ! Comment vas-tu aujourd'hui ?",
+    "explication": "Salutation simple et question ouverte.",
+}
 
 
 class MemoireFactice:
-    """Cache de traduction en mémoire, isolé par test."""
+    """Mémoire courte en mémoire, isolée par test."""
 
-    def __init__(self) -> None:
+    def __init__(self, tours: tuple[TourMemoire, ...] = ()) -> None:
         self.traductions: dict[tuple[str, UUID], ResultatTraduction] = {}
+        self.tours = list(tours)
+        self.resume: object | None = None
+        self.ajouts = 0
 
     async def lire_traduction(self, identifiant_session: str, id_message: UUID) -> ResultatTraduction | None:
         return self.traductions.get((identifiant_session, id_message))
 
     async def ecrire_traduction(self, identifiant_session: str, resultat: ResultatTraduction) -> None:
         self.traductions[(identifiant_session, resultat.id_message)] = resultat.model_copy(update={"cache_hit": False})
+
+    async def lire_tours(self, identifiant_session: str) -> tuple[TourMemoire, ...]:
+        return tuple(self.tours)
+
+    async def ajouter_tour(self, identifiant_session: str, tour: TourMemoire) -> None:
+        self.ajouts += 1
+        self.tours.append(tour)
+
+    async def lire_resume(self, identifiant_session: str) -> object | None:
+        return self.resume
+
+    async def ecrire_resume(self, identifiant_session: str, resume: object) -> None:
+        self.resume = resume
 
     async def fermer(self) -> None:
         return None
@@ -141,3 +163,65 @@ def test_post_traduction_refuse_un_identifiant_de_session_invalide(client_http: 
     assert reponse.status_code == 422
     assert reponse.json()["code"] == "ENTREE_INVALIDE"
     assert client_llm.appels == []
+
+
+def test_post_message_utilise_la_memoire_et_le_prompt_v2(client_http: TestClient) -> None:
+    tours_initiaux = tuple(
+        TourMemoire(role="apprenant" if rang % 2 == 0 else "assistant", contenu=f"Tour {rang}") for rang in range(4)
+    )
+    memoire = MemoireFactice(tours_initiaux)
+    client_llm = FakeLLMClient([ScenarioLLM(reponse=REPONSE_CHATBOT)])
+    brancher_harness(client_llm, memoire)
+
+    reponse = client_http.post(
+        "/chatbot/message",
+        json={
+            **requete({"identifiant_session": SESSION, "message": "How are you?"}),
+            "contexte": {**CONTEXTE_MINIMAL, "niveau_confirme": False},
+        },
+    )
+
+    assert reponse.status_code == 200
+    corps = reponse.json()
+    assert corps["resultat"] == REPONSE_CHATBOT
+    assert corps["version_agent"] == "2.0.0"
+    assert corps["version_prompt"] == "chatbot/conversation@1.3.0"
+    assert len(client_llm.appels) == 1
+    assert memoire.ajouts == 2
+    assert memoire.resume is not None
+    donnees = json.loads(
+        client_llm.appels[0][1]
+        .contenu.split("<donnees_conversation_non_fiables>\n", 1)[1]
+        .split("\n</donnees_conversation_non_fiables>", 1)[0]
+    )
+    assert donnees["phase_assimil"] == "activation"
+    assert donnees["niveau_effectif"] == "A1"
+
+
+def test_post_message_refuse_un_identifiant_de_session_invalide(client_http: TestClient) -> None:
+    client_llm = FakeLLMClient([ScenarioLLM(reponse=REPONSE_CHATBOT)])
+    brancher_harness(client_llm, MemoireFactice())
+
+    reponse = client_http.post(
+        "/chatbot/message",
+        json=requete({"identifiant_session": "../session-7", "message": "How are you?"}),
+    )
+
+    assert reponse.status_code == 422
+    assert reponse.json()["code"] == "ENTREE_INVALIDE"
+    assert client_llm.appels == []
+
+
+def test_post_message_peut_demander_la_version_historique(client_http: TestClient) -> None:
+    client_llm = FakeLLMClient([ScenarioLLM(reponse=REPONSE_CHATBOT)])
+    brancher_harness(client_llm, MemoireFactice())
+
+    reponse = client_http.post(
+        "/chatbot/message",
+        json={**requete({"message": "How are you?"}), "version_agent": "1.2.0"},
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["version_agent"] == "1.2.0"
+    assert reponse.json()["version_prompt"] == "chatbot/conversation@1.2.0"
+    assert len(client_llm.appels) == 1

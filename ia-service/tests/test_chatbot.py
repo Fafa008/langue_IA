@@ -265,7 +265,8 @@ def test_post_message_retourne_la_reponse_du_modele(client_http: TestClient) -> 
     assert corps["statut"] == "succes"
     assert corps["request_id"] == REQUEST_ID
     assert corps["agent"] == "chatbot"
-    assert corps["version_prompt"] == "chatbot/conversation@1.2.0"
+    assert corps["version_agent"] == "2.0.0"
+    assert corps["version_prompt"] == "chatbot/conversation@1.3.0"
     assert corps["resultat"] == REPONSE_MODELE
     assert corps["meta"]["fournisseur"] == "factice"
     assert corps["meta"]["modele"] == "modele-test"
