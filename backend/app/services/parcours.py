@@ -181,7 +181,13 @@ def selectionner_exercices(
     if not ids_niveaux:
         return []
 
-    filtres = [Exercice.id_langue == id_langue, Exercice.id_niveau.in_(ids_niveaux)]
+    # D1/D3 : la banque est unique, mais un exercice réservé au diagnostic n'entre pas dans un parcours.
+    filtres = [
+        Exercice.id_langue == id_langue,
+        Exercice.id_niveau.in_(ids_niveaux),
+        Exercice.statut == "publié",
+        Exercice.usage.in_(("parcours", "les deux")),
+    ]
     if numero_lecon is not None:
         filtres.append(or_(Exercice.numero_lecon.is_(None), Exercice.numero_lecon == numero_lecon))
     candidats = list(db.scalars(select(Exercice).where(*filtres)).all())
@@ -215,7 +221,12 @@ def exercices_de_lecon(db: Session, id_langue: int, numero_lecon: int) -> list[E
     return list(
         db.scalars(
             select(Exercice)
-            .where(Exercice.id_langue == id_langue, Exercice.numero_lecon == numero_lecon)
+            .where(
+                Exercice.id_langue == id_langue,
+                Exercice.numero_lecon == numero_lecon,
+                Exercice.statut == "publié",
+                Exercice.usage.in_(("parcours", "les deux")),
+            )
             .order_by(Exercice.difficulte, Exercice.id_exercice)
         ).all()
     )

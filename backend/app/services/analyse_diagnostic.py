@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import SessionLocal
-from app.models import Question, Reponse, StatutDiagnostic, TestDiagnostic
+from app.models import Reponse, StatutDiagnostic, TestDiagnostic
 from app.schemas.diagnostic import CompetenceResultatOut, PointFaibleOut
 from app.schemas.ia import (
     NIVEAUX_IA,
@@ -92,31 +92,27 @@ def _normaliser_competence(valeur: str) -> str | None:
 
 def _charger_lignes(db: Session, id_tentative: int) -> list[_Ligne]:
     """Lire les réponses et leurs questions, puis retourner des valeurs simples détachées de la session."""
-    lignes = db.execute(
-        select(
-            Question.id_question.label("id_question"),
-            Question.competence.label("competence"),
-            Question.type_reponse.label("type_reponse"),
-            Reponse.reponse_fournie.label("reponse"),
-            Question.reponse_correcte.label("correcte"),
-            Question.enonce.label("enonce"),
-        )
-        .select_from(Reponse)
-        .join(Question, Question.id_question == Reponse.id_question)
+    reponses = db.scalars(
+        select(Reponse)
+        .options(selectinload(Reponse.exercice))
         .where(Reponse.id_tentative == id_tentative)
-        .order_by(Question.id_question)
-    ).mappings()
-    return [
-        _Ligne(
-            id_question=ligne["id_question"],
-            competence=ligne["competence"],
-            type_reponse=ligne["type_reponse"],
-            reponse=ligne["reponse"],
-            correcte=ligne["correcte"],
-            enonce=(ligne["enonce"] or "").strip()[:ENONCE_MAX] or None,
+        .order_by(Reponse.id_question)
+    ).all()
+    lignes: list[_Ligne] = []
+    for reponse in reponses:
+        exercice = reponse.exercice
+        enonce = (exercice.enonce or "").strip()[:ENONCE_MAX] or None
+        lignes.append(
+            _Ligne(
+                id_question=exercice.id_question,
+                competence=exercice.competence or "",
+                type_reponse=exercice.type_reponse,
+                reponse=reponse.reponse_fournie,
+                correcte=exercice.reponse_correcte,
+                enonce=enonce,
+            )
         )
-        for ligne in lignes
-    ]
+    return lignes
 
 
 def _calculer_competences(lignes: list[_Ligne]) -> list[CompetenceResultatOut]:

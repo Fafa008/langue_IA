@@ -17,6 +17,12 @@ def _compter(db, modele) -> int:
     return db.scalar(select(func.count()).select_from(modele))
 
 
+def _compter_questions_diagnostic(db) -> int:
+    """Depuis US-N01, `Question` est un alias de la banque `exercice` : on ne compte que son usage diagnostic."""
+    db.expire_all()
+    return db.scalar(select(func.count()).select_from(Question).where(Question.usage.in_(("diagnostic", "les deux"))))
+
+
 class TestSeed:
     def test_sans_seed_demo_seul_le_referentiel_est_charge(self, db, monkeypatch):
         monkeypatch.setenv("SEED_DEMO", "false")
@@ -26,16 +32,16 @@ class TestSeed:
         assert _compter(db, Langue) == len(seed.LANGUES)
         assert _compter(db, Formule) == len(seed.FORMULES)
         assert _compter(db, Utilisateur) == 0
-        assert _compter(db, Question) == 0
+        assert _compter_questions_diagnostic(db) == 0
 
     def test_seed_demo_charge_comptes_et_questions_sans_doublon(self, db, monkeypatch):
         monkeypatch.setenv("SEED_DEMO", "true")
 
         seed.main()
-        premier = (_compter(db, Utilisateur), _compter(db, Question), _compter(db, Niveau))
+        premier = (_compter(db, Utilisateur), _compter_questions_diagnostic(db), _compter(db, Niveau))
         seed.main()  # second démarrage du conteneur
 
-        assert premier == (_compter(db, Utilisateur), _compter(db, Question), _compter(db, Niveau))
+        assert premier == (_compter(db, Utilisateur), _compter_questions_diagnostic(db), _compter(db, Niveau))
         assert premier[0] == len(seed.COMPTES_DEMO)
         assert premier[1] == sum(len(questions) for questions in QUESTIONS_DEMO.values())
 

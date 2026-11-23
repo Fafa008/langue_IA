@@ -155,13 +155,13 @@ class TestContraintes:
         assert db.scalars(select(Niveau).where(Niveau.code == "A1")).one_or_none() is not None
 
     def test_une_question_utilisee_ne_peut_pas_etre_supprimee(self, db: Session):
-        """ON DELETE RESTRICT : supprimer une question n'emporterait pas l'historique des réponses."""
+        """ON DELETE RESTRICT : supprimer un exercice n'emporterait pas l'historique des réponses."""
         question = _question(db)
         _reponse(db, _tentative(db), question)
         with pytest.raises(IntegrityError):
-            db.execute(text("DELETE FROM question WHERE id_question = :id"), {"id": question.id_question})
+            db.execute(text("DELETE FROM exercice WHERE id_exercice = :id"), {"id": question.id_exercice})
         db.rollback()
-        assert db.get(Question, question.id_question) is not None
+        assert db.get(Question, question.id_exercice) is not None
 
     def test_une_reponse_ne_peut_pas_pointer_vers_un_element_inconnu(self, db: Session):
         """Clés étrangères : ni tentative inconnue ni question inconnue ne passent en base."""
@@ -182,10 +182,111 @@ class TestContraintes:
 
 
 class TestMigration:
+    def test_migration_sans_perte_et_reversibilite(self, db: Session):
+        """Une question et sa réponse survivent à upgrade → downgrade → upgrade avec leur correspondance exacte."""
+        creer_utilisateur(db)  # titulaire de la tentative, avant le downgrade (tables utilisateur inchangées)
+        config = Config("alembic.ini")
+        command.downgrade(config, "dfbf0715302a")
+        try:
+            id_langue = db.scalar(text("SELECT id_langue FROM langue WHERE code = 'fr'"))
+            id_niveau = db.scalar(text("SELECT id_niveau FROM niveau WHERE code = 'A1'"))
+            id_apprenant = db.scalar(text("SELECT id_user FROM apprenant LIMIT 1"))
+            valeurs = {"langue": id_langue, "niveau": id_niveau, "apprenant": id_apprenant}
+            db.execute(
+                text(
+                    """
+                    INSERT INTO question (id_question, enonce, competence, id_langue, id_niveau,
+                                          type_reponse, choix, reponse_correcte)
+                    VALUES (777, 'Question migrée', 'grammaire', :langue, :niveau, 'choix', '["a", "b"]', 'a')
+                    """
+                ),
+                valeurs,
+            )
+            db.execute(
+                text(
+                    """
+                    INSERT INTO test_diagnostic (id_test, id_apprenant, id_langue, id_niveau, statut)
+                    VALUES (555, :apprenant, :langue, :niveau, 2)
+                    """
+                ),
+                valeurs,
+            )
+            db.execute(
+                text(
+                    """
+                    INSERT INTO reponse (id_reponse, id_tentative, id_question, reponse_fournie)
+                    VALUES (999, 555, 777, 'a')
+                    """
+                )
+            )
+            db.commit()
+
+            command.upgrade(config, "head")
+            db.commit()
+            id_exercice = db.scalar(text("SELECT id_exercice FROM migration_question_exercice WHERE id_question = 777"))
+            assert id_exercice is not None
+            assert db.scalar(text("SELECT id_exercice FROM reponse WHERE id_reponse = 999")) == id_exercice
+            assert db.scalar(text("SELECT count(*) FROM reponse WHERE id_exercice IS NULL")) == 0
+            ligne = db.execute(
+                text(
+                    """
+                    SELECT id_question_originel, contenu::jsonb ->> 'enonce' AS enonce,
+                           usage, statut, difficulte, framework
+                    FROM exercice WHERE id_exercice = :id
+                    """
+                ),
+                {"id": id_exercice},
+            ).one()
+            assert ligne.id_question_originel == 777
+            assert ligne.enonce == "Question migrée"
+            assert (ligne.usage, ligne.statut, ligne.difficulte, ligne.framework) == (
+                "diagnostic",
+                "publié",
+                3,
+                "CECRL",
+            )
+
+            # Alembic utilise sa propre connexion : aucune transaction ouverte ne doit retenir un verrou DDL.
+            db.commit()
+            command.downgrade(config, "dfbf0715302a")
+            db.commit()
+            assert db.scalar(text("SELECT id_question FROM reponse WHERE id_reponse = 999")) == 777
+            assert db.scalar(text("SELECT enonce FROM question WHERE id_question = 777")) == "Question migrée"
+            assert db.scalar(text("SELECT count(*) FROM reponse")) == 1
+        finally:
+            db.commit()
+            command.upgrade(config, "head")
+            db.commit()
+
     def test_la_migration_cree_les_tables_du_diagnostic(self, db: Session):
-        """conftest applique `alembic upgrade head` (donc cette migration) avant chaque session."""
+        """conftest applique `alembic upgrade head` : le diagnostic vit dans la banque `exercice` (US-N01)."""
         tables = db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")).scalars().all()
-        assert {"question", "test_diagnostic", "reponse"} <= set(tables)
+        assert {"exercice", "test_diagnostic", "reponse", "migration_question_exercice"} <= set(tables)
+        assert "question" not in tables
+
+        colonnes_exercice = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'exercice'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert {"usage", "statut", "version", "origine", "framework", "level", "audio_ref"} <= set(colonnes_exercice)
+        colonnes_reponse = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'reponse'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert "id_exercice" in colonnes_reponse
+        assert "id_question" not in colonnes_reponse
 
     def test_la_migration_du_diagnostic_est_reversible(self, db: Session):
         """Chaque migration du diagnostic peut être annulée puis rejouée sans toucher aux autres tables."""
@@ -202,7 +303,7 @@ class TestMigration:
         )
         assert {"analyse_ia", "score"} <= set(colonnes_tentative)
 
-        # PRE-05 : la colonne d'analyse IA est la dernière ajoutée, donc annulée en premier.
+        # US-N01 puis PRE-05 : la banque unique est annulée avant l'analyse IA, sans perdre les réponses.
         command.downgrade(config, "20261110_us45_parcours")
         colonnes_tentative = (
             db.execute(
@@ -279,12 +380,13 @@ class TestMigration:
 
         command.upgrade(config, "head")
         tables = db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")).scalars().all()
-        assert {"question", "test_diagnostic", "reponse"} <= set(tables)
-        colonnes_question = (
+        assert {"exercice", "test_diagnostic", "reponse", "migration_question_exercice"} <= set(tables)
+        assert "question" not in tables
+        colonnes_exercice = (
             db.execute(
                 text(
                     "SELECT column_name FROM information_schema.columns "
-                    "WHERE table_schema = 'public' AND table_name = 'question'"
+                    "WHERE table_schema = 'public' AND table_name = 'exercice'"
                 )
             )
             .scalars()
@@ -300,7 +402,17 @@ class TestMigration:
             .scalars()
             .all()
         )
-        assert {"type_reponse", "choix", "support", "audio_url", "audio_texte", "reponse_correcte"} <= set(
-            colonnes_question
-        )
+        assert {"usage", "statut", "origine", "framework", "level"} <= set(colonnes_exercice)
         assert "score" in colonnes_tentative
+        colonnes_reponse = (
+            db.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'reponse'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert "id_exercice" in colonnes_reponse
+        assert "id_question" not in colonnes_reponse
