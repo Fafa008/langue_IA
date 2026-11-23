@@ -192,13 +192,22 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
   });
 
   test("termine le test et affiche le résultat quand les 15 minutes sont écoulées", async ({ page }) => {
-    await page.clock.install();
     await ouvrir(page, "en");
     await demarrer(page);
     const terminaison = page.waitForResponse((response) =>
       response.url().includes("/api/v1/diagnostic/tentatives/1/terminer") && response.request().method() === "POST",
     );
-    await page.clock.fastForward("15:01");
+    // Reculer l'heure de début dans le store persisté plutôt que d'avancer l'horloge du navigateur :
+    // `clock.fastForward` fait expirer les timeouts de chargement de chunks Next et casse la navigation.
+    await page.evaluate(() => {
+      const cle = "digitheque-test-diagnostic";
+      const brut = sessionStorage.getItem(cle);
+      if (!brut) throw new Error("Le test n'est pas démarré");
+      const donnees = JSON.parse(brut) as { state: { etat: { debut: number } } };
+      donnees.state.etat.debut = Date.now() - 16 * 60_000;
+      sessionStorage.setItem(cle, JSON.stringify(donnees));
+    });
+    await page.reload();
     expect((await terminaison).status()).toBe(200);
     await expect(page).toHaveURL(`${URL_TEST}/resultats`);
     await expect(page.getByTestId("result-level")).toHaveText("A1");
