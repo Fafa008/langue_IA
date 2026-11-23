@@ -49,6 +49,11 @@ async function installerParcours(page: Page, utilisateur: UtilisateurDto = APPRE
 async function installerChat(page: Page, statutMessage = 200) {
   const requetes: { identifiant_session: string }[] = [];
   const sessionsFermees: string[] = [];
+  // Depuis US73, la langue du chat vient du parcours : sans ce mock, la page affiche l'alerte « sans parcours ».
+  await page.route("**/api/v1/parcours/en-cours", async (route: Route) => {
+    if (await handlePreflight(route)) return;
+    await json(route, 200, parcoursDto(23, "PASSIVE"));
+  });
   await page.route("**/api/v1/chatbot/message", async (route: Route) => {
     if (await handlePreflight(route)) return;
     requetes.push(route.request().postDataJSON() as { identifiant_session: string });
