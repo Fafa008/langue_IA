@@ -12,6 +12,8 @@ from app.prompts.bibliotheque_few_shot import BibliothequeFewShot
 from app.prompts.variables import (
     ExempleFewShot,
     VariablesConversationChatbot,
+    VariablesConversationChatbotV2,
+    VariablesCorrectionChatbot,
     VariablesCorrectionReponseLibre,
     VariablesEvaluationDiagnostic,
     VariablesRecommandation,
@@ -19,6 +21,8 @@ from app.prompts.variables import (
 
 VERSION_EVALUATION_DIAGNOSTIC = "1.1.0"
 VERSION_CONVERSATION_CHATBOT = "1.2.0"
+VERSION_CONVERSATION_CHATBOT_V2 = "1.3.0"
+VERSION_CORRECTION_CHATBOT = "1.0.0"
 VERSION_CORRECTION_REPONSE_LIBRE = "1.0.0"
 VERSION_ACTIONS_RECOMMANDATION = "1.0.0"
 _VARIABLES_TEMPLATE = frozenset(
@@ -33,6 +37,18 @@ _VARIABLES_TEMPLATE = frozenset(
     }
 )
 _VARIABLES_TEMPLATE_CHATBOT = frozenset({"contexte_apprenant", "historique", "message"})
+_VARIABLES_TEMPLATE_CHATBOT_V2 = frozenset(
+    {
+        "contexte_apprenant",
+        "historique",
+        "message",
+        "descripteurs_rag",
+        "phase_assimil",
+        "niveau_effectif",
+        "niveau_confirme",
+    }
+)
+_VARIABLES_TEMPLATE_CORRECTION_CHATBOT = frozenset({"message", "niveau_effectif", "phase_assimil", "resume_session"})
 _VARIABLES_TEMPLATE_CORRECTION = frozenset({"contexte_apprenant", "phase", "exercice", "descripteurs_rag"})
 _VARIABLES_TEMPLATE_RECOMMANDATION = frozenset({"contexte_apprenant", "points_faibles", "niveau_vise"})
 _NOMBRE_EXEMPLES_MAX = 3
@@ -77,6 +93,12 @@ class RegistrePrompts:
             ("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC): self._charger_evaluation_diagnostic(),
             ("chatbot", "conversation", VERSION_CONVERSATION_CHATBOT): self._charger_conversation_chatbot(),
             (
+                "chatbot",
+                "conversation",
+                VERSION_CONVERSATION_CHATBOT_V2,
+            ): self._charger_conversation_chatbot_v2(),
+            ("chatbot", "correction", VERSION_CORRECTION_CHATBOT): self._charger_correction_chatbot(),
+            (
                 "correction",
                 "reponse-libre",
                 VERSION_CORRECTION_REPONSE_LIBRE,
@@ -113,6 +135,55 @@ class RegistrePrompts:
             messages=(
                 MessageLLM(role="system", contenu=definition.systeme),
                 MessageLLM(role="user", contenu=contenu_utilisateur),
+            ),
+            version_prompt=definition.version_prompt,
+            empreinte_prompt=definition.empreinte_prompt,
+            temperature=definition.temperature,
+            max_tokens=definition.max_tokens,
+        )
+
+    def rendre_conversation_chatbot_v2(
+        self,
+        variables: VariablesConversationChatbotV2,
+        *,
+        version: str = VERSION_CONVERSATION_CHATBOT_V2,
+    ) -> PromptRendu:
+        """Rendre le prompt 1.3.0 : même réponse, avec CECRL et phase Assimil en contexte."""
+        definition = self._definitions.get(("chatbot", "conversation", version))
+        if definition is None:
+            raise ErreurPromptIntrouvable("La version du prompt de conversation du chatbot est introuvable.")
+
+        donnees = variables.model_dump(mode="json")
+        valeurs = {nom: _json_prompt(donnees[nom]) for nom in _VARIABLES_TEMPLATE_CHATBOT_V2}
+        contenu_utilisateur = definition.template_utilisateur.substitute(valeurs)
+        return PromptRendu(
+            messages=(
+                MessageLLM(role="system", contenu=definition.systeme),
+                MessageLLM(role="user", contenu=contenu_utilisateur),
+            ),
+            version_prompt=definition.version_prompt,
+            empreinte_prompt=definition.empreinte_prompt,
+            temperature=definition.temperature,
+            max_tokens=definition.max_tokens,
+        )
+
+    def rendre_correction_chatbot(
+        self,
+        variables: VariablesCorrectionChatbot,
+        *,
+        version: str = VERSION_CORRECTION_CHATBOT,
+    ) -> PromptRendu:
+        """Rendre le prompt de correction en marge du chat (JSON strict)."""
+        definition = self._definitions.get(("chatbot", "correction", version))
+        if definition is None:
+            raise ErreurPromptIntrouvable("La version du prompt de correction du chatbot est introuvable.")
+
+        donnees = variables.model_dump(mode="json")
+        valeurs = {nom: _json_prompt(donnees[nom]) for nom in _VARIABLES_TEMPLATE_CORRECTION_CHATBOT}
+        return PromptRendu(
+            messages=(
+                MessageLLM(role="system", contenu=definition.systeme),
+                MessageLLM(role="user", contenu=definition.template_utilisateur.substitute(valeurs)),
             ),
             version_prompt=definition.version_prompt,
             empreinte_prompt=definition.empreinte_prompt,
@@ -307,6 +378,42 @@ class RegistrePrompts:
             temperature=0.5,
             # La traduction et l'explication françaises s'ajoutent à la réponse et aux corrections en marge.
             max_tokens=900,
+        )
+
+    def _charger_conversation_chatbot_v2(self) -> _DefinitionPrompt:
+        nom = f"conversation@{VERSION_CONVERSATION_CHATBOT_V2}"
+        repertoire = self._repertoire / "chatbot"
+        systeme = self._lire(repertoire / f"{nom}.systeme.md")
+        texte_utilisateur = self._lire(repertoire / f"{nom}.utilisateur.md")
+        template = _valider_template(texte_utilisateur, _VARIABLES_TEMPLATE_CHATBOT_V2)
+
+        empreinte = hashlib.sha256(b"\0".join((systeme.encode("utf-8"), texte_utilisateur.encode("utf-8"))))
+        return _DefinitionPrompt(
+            version_prompt=f"chatbot/conversation@{VERSION_CONVERSATION_CHATBOT_V2}",
+            systeme=systeme.strip(),
+            template_utilisateur=template,
+            exemples=(),
+            empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
+            temperature=0.5,
+            max_tokens=900,
+        )
+
+    def _charger_correction_chatbot(self) -> _DefinitionPrompt:
+        nom = f"correction@{VERSION_CORRECTION_CHATBOT}"
+        repertoire = self._repertoire / "chatbot"
+        systeme = self._lire(repertoire / f"{nom}.systeme.md")
+        texte_utilisateur = self._lire(repertoire / f"{nom}.utilisateur.md")
+        template = _valider_template(texte_utilisateur, _VARIABLES_TEMPLATE_CORRECTION_CHATBOT)
+
+        empreinte = hashlib.sha256(b"\0".join((systeme.encode("utf-8"), texte_utilisateur.encode("utf-8"))))
+        return _DefinitionPrompt(
+            version_prompt=f"chatbot/correction@{VERSION_CORRECTION_CHATBOT}",
+            systeme=systeme.strip(),
+            template_utilisateur=template,
+            exemples=(),
+            empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
+            temperature=0.2,
+            max_tokens=600,
         )
 
     def _charger_correction_reponse_libre(self) -> _DefinitionPrompt:

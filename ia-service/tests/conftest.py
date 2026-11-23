@@ -20,12 +20,15 @@ VARIABLES_LLM = (
     "LLM_REPRISE_DELAI_S",
     "LLM_REPRISE_DELAI_MAX_S",
     "LLM_BUDGET_TOTAL_S",
+    "REDIS_URL",
+    "REDIS_TTL_S",
+    "REDIS_TOURS_MAX",
 )
 
 
 @pytest.fixture
 def env_propre(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
-    """Supprime les variables LLM de la machine pour rendre les tests déterministes."""
+    """Supprime les variables LLM et Redis de la machine pour rendre les tests déterministes."""
     for nom in VARIABLES_LLM:
         monkeypatch.delenv(nom, raising=False)
     return monkeypatch
