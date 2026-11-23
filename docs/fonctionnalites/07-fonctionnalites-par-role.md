@@ -4,6 +4,9 @@
 > `backend/app/api/routes/*.py`, `frontend/src/lib/navigation.ts`, `frontend/src/components/layout/RequireAuth.tsx`,
 > `frontend/src/app/espace/**/layout.tsx`.
 > Constat du **14 novembre 2026**, branche `develop` (`95543db`).
+> Note du **23 novembre 2026** : les routes `/parcours/*` et `/chatbot/*` sont désormais présentes dans
+> `backend/app/api/router.py` et branchées côté apprenant ; voir le chapitre 06 (matrice corrigée) et le chapitre 09
+> (spécification de la gestion pédagogique).
 
 ---
 

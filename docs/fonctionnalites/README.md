@@ -118,6 +118,7 @@ Le détail pas à pas est dans [`06-matrice-fonctionnalites.md`](06-matrice-fonc
 | [06-matrice-fonctionnalites.md](06-matrice-fonctionnalites.md) | Matrice fonctionnalité × couche, parcours de démo, checklist de vérification | Synthèse et preuves |
 | [07-fonctionnalites-par-role.md](07-fonctionnalites-par-role.md) | Tout ce que chaque rôle peut faire, les 32 routes par rôle, le parcours de démo par rôle | Droits réels vs droits apparents |
 | [08-taches-ia.md](08-taches-ia.md) | Backlog technique des tâches IA par couche (backend, frontend, Docker, service IA) : priorités, dépendances, critères d'acceptation, lots | Ce qui reste à faire sur l'IA, et dans quel ordre |
+| [09-gestion-pedagogique.md](09-gestion-pedagogique.md) | **Spécification de travail non implémentée** : banque unique, profil d'épreuve, création par le formateur, règles et critères d'acceptation | État cible ; D1–D9 `EN ATTENTE` |
 
 Ordre de lecture conseillé : **01 → 06** pour une démonstration, **01 → 02 → 03 → 04 → 05 → 06** pour comprendre.
 Le chapitre 07 est la synthèse « par rôle » : à lire après le 02 (backend) et le 04 (frontend), ou juste avant
@@ -141,7 +142,9 @@ une démonstration pour savoir qui peut montrer quoi. Le chapitre 08 est le **ba
 
 ## 6. Ce que ce dossier n'est pas
 
-- Ce n'est pas une spécification : les besoins futurs sont dans le backlog et `docs/uml/evolutions.md`.
+- Ce n'est pas une spécification, **sauf le chapitre 09** : celui-ci est explicitement une spécification de travail
+  non implémentée, dépendante de D1–D9 et du plan de migration. Les autres besoins futurs sont dans le backlog et
+  `docs/uml/evolutions.md`.
 - Ce n'est pas un tutoriel d'installation détaillé : le pas à pas minimal est dans le `README.md` racine.
 - Ce n'est pas un audit de sécurité complet : les risques sont signalés, mais aucun test d'intrusion n'a été mené.
 

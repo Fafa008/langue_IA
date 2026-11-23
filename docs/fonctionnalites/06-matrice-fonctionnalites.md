@@ -1,6 +1,8 @@
 # 06 — Matrice des fonctionnalités
 
 > Synthèse des chapitres 01 à 05. Constat du **14 novembre 2026**, branche `develop` (`95543db`).
+> Les lignes concernant le parcours et le chatbot ont été corrigées le **23 novembre 2026** d'après le code présent
+> dans `backend/app/api/router.py` et `frontend/src/services/endpoints.ts`.
 > Cette matrice répond à une seule question : **pour chaque fonctionnalité, quelle couche fait quoi, et
 > jusqu'où va-t-elle réellement ?**
 > La lecture **par rôle** (qui peut faire quoi, route par route) est dans
@@ -110,7 +112,7 @@ parfait et aucun écran reste 🔌.
 | Fournisseur `compatible-openai` | — | — | — | ✅ | ✅ | adaptateur testé |
 | Fournisseur `gemini` | — | — | — | ✅ | ✅ | adaptateur testé |
 | Fournisseur `factice` en démonstration | — | — | — | 🟡 | 🟡 | aucun scénario par défaut → `LLM_CONFIGURATION` (500) |
-| Chatbot `POST /chatbot/message` | ⛔ | ⛔ | — | ✅ | 🔌 | route IA + prompt + tests, **aucun appelant** |
+| Chatbot `POST /chatbot/message` | ✅ | ✅ | — | ✅ | ✅ | relais backend dans `router.py:31`, service + hook + `ExerciceConversation` côté frontend |
 | Mémoire de conversation | ⛔ | ⛔ | — | ⛔ | ⛔ | service sans état ; historique renvoyé à chaque appel |
 | RAG CECRL | — | — | — | 🔌 | 🔌 | `RAG_CORPUS_ACTIF=false`, corpus absent |
 | Modèles entraînés locaux | — | — | — | ⛔ | ⛔ | `ia-service/models/` vide |
@@ -121,8 +123,8 @@ parfait et aucun écran reste 🔌.
 
 | Fonctionnalité | Front | Back | Base | IA | Verdict | Preuve / limite |
 | --- | :-: | :-: | :-: | :-: | :-: | --- |
-| Parcours issu du diagnostic | ⛔ | ⛔ | 🔌 | — | ⛔ | 3 tables créées, 0 ligne, aucune route |
-| Exercices et progression | ⛔ | ⛔ | 🔌 | — | ⛔ | idem |
+| Parcours issu du diagnostic | ✅ | ✅ | ✅ | 🟡 | 🟡 | 5 routes `/parcours/*`, service de génération et écrans branchés ; catalogue encore figé par le seed |
+| Exercices et progression | ✅ | ✅ | ✅ | 🟡 | 🟡 | lecture des leçons atteintes, correction et recommandations ; aucune création par le formateur |
 | Ateliers | ⛔ | ⛔ | 🔌 | — | ⛔ | table vide ; seul le compteur admin la lit |
 | Réservations d'atelier | ⛔ | ⛔ | ⛔ | — | ⛔ | entrée « Bientôt » |
 | Formations | ⛔ | ⛔ | ⛔ | — | ⛔ | entrée « Bientôt » |
@@ -159,10 +161,10 @@ parfait et aucun écran reste 🔌.
    démonstration de chaîne complète.
 3. **L'IA est branchée mais facultative** : sans fournisseur configuré, tout continue, avec un « Résultat
    partiel ». C'est un choix d'architecture, pas un bug.
-4. **Trois fonctionnalités sont prêtes mais non branchées** : chatbot, RAG, administration des rôles. Le code
-   existe, l'appelant manque.
-5. **Tout le reste est explicitement absent** : ateliers, réservations, formations, parcours, paiement,
-   sauvegardes, rétention.
+4. **Le parcours et le chatbot sont branchés** : routes backend, services et composants apprenant présents. Le RAG
+   et l'administration des rôles restent prêts mais non branchés.
+5. **Tout le reste est explicitement absent** : ateliers, réservations, formations, paiement, sauvegardes,
+   rétention. La création pédagogique par le formateur est spécifiée au chapitre 09, mais non implémentée.
 
 ---
 
