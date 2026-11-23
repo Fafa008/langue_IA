@@ -99,6 +99,12 @@ class EntreeConversation(EntreeChatbot):
     phase_assimil: PhaseAssimil | None = None
 
 
+class EntreeCorrectionChatbot(EntreeChatbot):
+    """Entrée de la correction temps réel : la session est acceptée pour rester alignée avec le backend."""
+
+    identifiant_session: str | None = Field(default=None, max_length=IDENTIFIANT_SESSION_MAX)
+
+
 class ResumeSession(ModeleStrict):
     """Résumé glissant d'une session, stocké dans Redis sous ``session:{id}:summary``."""
 

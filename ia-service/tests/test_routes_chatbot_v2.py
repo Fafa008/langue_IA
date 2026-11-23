@@ -112,7 +112,7 @@ def test_post_correction_retourne_le_resultat_separe(client_http: TestClient) ->
     client_llm = FakeLLMClient([ScenarioLLM(reponse=CORRECTION_JSON)])
     brancher_harness(client_llm, MemoireCourteVide())
 
-    reponse = client_http.post("/chatbot/correction", json=requete({"message": PHRASE}))
+    reponse = client_http.post("/chatbot/correction", json=requete({"message": PHRASE, "identifiant_session": SESSION}))
 
     assert reponse.status_code == 200
     corps = reponse.json()
