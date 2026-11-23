@@ -71,6 +71,8 @@ describe("US73/US74-FE — page du chat : scénario et langue du parcours", () =
     afficherChat({ ...PARCOURS, langue: { code: "en", libelle: "Anglais" } });
     expect(screen.getByTestId("contexte-chat")).toHaveTextContent("Contexte : Se présenter · Anglais");
     expect(screen.queryByRole("combobox", { name: /Langue/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Hello! What is your name?")).toBeInTheDocument();
+    expect(screen.queryByText("Bonjour ! Comment vous appelez-vous ?")).not.toBeInTheDocument();
   });
 
   it("remet la conversation à zéro quand le scénario change", () => {

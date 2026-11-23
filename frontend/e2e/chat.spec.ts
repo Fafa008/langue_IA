@@ -75,6 +75,8 @@ test.describe("Chat apprenant — envoi réel et corrections en marge", () => {
     await page.goto("/espace/apprenant/chat");
 
     await expect(page.getByTestId("contexte-chat")).toContainText("Anglais");
+    await expect(page.getByRole("log")).toContainText("Hello! What is your name?");
+    await expect(page.getByRole("log")).not.toContainText("Comment vous appelez-vous ?");
     await expect(page.getByTestId("avertissement-chat-rg11")).toContainText("aucune donnée personnelle");
     await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("hier j'ai allé au cinéma");
     await page.getByRole("button", { name: "Envoyer" }).click();

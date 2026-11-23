@@ -1096,8 +1096,10 @@ dernière correction remplace la précédente, et la correction automatique vide
 
 Le navigateur n'appelle jamais `ia-service`. Le backend authentifie, borne l'historique à 20 tours, applique le
 quota de 20 échanges par session, appelle le service IA puis valide la réponse avant de la renvoyer. L'agent qui
-parle à l'apprenant est le **tuteur IA** (même agent `chatbot`, contrat 1.2.0) : chaque réponse porte sa traduction
-et son explication en français, affichées à côté de la réponse.
+parle à l'apprenant est le **tuteur IA** (même agent `chatbot`, contrat 1.2.0). La langue vient du parcours en cours,
+sans sélecteur manuel : le message d'ouverture du tuteur est dans cette langue, comme la synthèse vocale et la dictée.
+Chaque réponse porte sa traduction et son explication en français, affichées hors du fil de discussion dans un panneau
+à gauche (disposition TalkPal), et non dans la bulle du tuteur.
 
 ### `POST /chatbot/message`
 
@@ -1108,7 +1110,8 @@ Réponse `200` : `{ "reponse": "…", "corrections": [{ "extrait": "…", "corre
 "traduction": "…", "explication": "…", "quota_restant": 19, "version_prompt": "chatbot/conversation@1.2.0" }`.
 `corrections` contient au plus trois éléments et s'affiche en marge sans interrompre la conversation. `traduction`
 (traduction française de l'expression utile de la réponse) et `explication` (sens et usage en français) sont
-obligatoires et non vides pour chaque réponse ; elles s'affichent à côté de la réponse, sans la remplacer.
+obligatoires et non vides pour chaque réponse ; la dernière paire s'affiche dans le panneau latéral gauche, hors du
+fil, sans remplacer la réponse du tuteur.
 
 Erreurs : `403` (pas apprenant), `404` (aucun parcours : le détail du backend est affiché tel quel, avec un accès au
 test de positionnement), `422` (langue/niveau non pris en charge), `429` (quota

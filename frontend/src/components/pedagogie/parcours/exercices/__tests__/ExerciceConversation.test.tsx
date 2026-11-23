@@ -45,17 +45,17 @@ describe("US72/US74-FE — chat avec le tuteur IA", () => {
     expect(screen.getByText(/1\/3 échanges/)).toBeInTheDocument();
   });
 
-  it("affiche la traduction et l'explication françaises à côté de la réponse du tuteur", async () => {
+  it("affiche la traduction et l'explication françaises hors du fil, dans un panneau à gauche", async () => {
     rendre();
-    const journal = screen.getByRole("log", { name: "Conversation avec le tuteur IA" });
 
     fireEvent.change(screen.getByPlaceholderText(/Écrivez ou dictez/), { target: { value: "Je m'appelle Rova" } });
     fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
 
-    const marge = await within(journal).findByTestId("traduction-explication");
-    expect(marge).toHaveAccessibleName("Traduction et explication en français");
-    expect(within(marge).getByTestId("traduction-chat")).toHaveTextContent(/Traduction française \(démonstration\)/);
-    expect(within(marge).getByTestId("explication-chat")).toHaveTextContent(/Explication \(démonstration\)/);
+    const panneau = await screen.findByTestId("traduction-explication");
+    expect(panneau).toHaveAccessibleName("Traduction et explication en français");
+    expect(within(panneau).getByTestId("traduction-chat")).toHaveTextContent(/Traduction française \(démonstration\)/);
+    expect(within(panneau).getByTestId("explication-chat")).toHaveTextContent(/Explication \(démonstration\)/);
+    expect(within(screen.getByRole("log", { name: "Conversation avec le tuteur IA" })).queryByTestId("traduction-explication")).toBeNull();
   });
 
   it("n'envoie rien hors du navigateur : aucun appel réseau pendant l'échange", async () => {

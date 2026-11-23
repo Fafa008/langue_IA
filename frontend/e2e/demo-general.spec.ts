@@ -46,13 +46,18 @@ async function installerParcours(page: Page, utilisateur: UtilisateurDto = APPRE
 }
 
 /** Chat branché sur le relais backend, avec fermeture de session. */
-async function installerChat(page: Page, statutMessage = 200) {
+async function installerChat(page: Page, statutMessage = 200, codeLangue = "fr") {
   const requetes: { identifiant_session: string }[] = [];
   const sessionsFermees: string[] = [];
   // Depuis US73, la langue du chat vient du parcours : sans ce mock, la page affiche l'alerte « sans parcours ».
+  // US74-FE : le message d'ouverture suit cette langue, d'où le paramètre pour vérifier le cas anglais.
   await page.route("**/api/v1/parcours/en-cours", async (route: Route) => {
     if (await handlePreflight(route)) return;
-    await json(route, 200, parcoursDto(23, "PASSIVE"));
+    await json(route, 200, {
+      ...parcoursDto(23, "PASSIVE"),
+      code_langue: codeLangue,
+      libelle_langue: codeLangue === "en" ? "Anglais" : "Français",
+    });
   });
   await page.route("**/api/v1/chatbot/message", async (route: Route) => {
     if (await handlePreflight(route)) return;
@@ -186,12 +191,15 @@ test.describe("Démonstration générale — scénarios 1 à 15", () => {
 
   test("8. Tuteur IA : échange, traduction, quota, fermeture de session et synthèse", async ({ page }) => {
     await loginAs(page, APPRENANT);
-    const chat = await installerChat(page);
+    const chat = await installerChat(page, 200, "en");
     await aller(page, "/espace/apprenant/chat");
+    await expect(page.getByRole("log")).toContainText("Hello! What is your name?");
     await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("bonjour");
     await page.getByRole("button", { name: "Envoyer" }).click();
     await expect(page.getByTestId("quota-chat")).toContainText("19");
-    await expect(page.getByTestId("traduction-explication")).toContainText("Très bien ! Et ensuite ?");
+    const panneau = page.getByTestId("traduction-explication");
+    await expect(panneau).toContainText("Très bien ! Et ensuite ?");
+    await expect(page.getByRole("log")).not.toContainText("Très bien ! Et ensuite ?");
     await page.getByRole("button", { name: "Terminer et voir le rapport" }).click();
     await expect(page.getByTestId("rapport-chat")).toContainText("Synthèse indicative");
     expect(chat.sessionsFermees).toEqual([chat.requetes[0].identifiant_session]);
