@@ -465,7 +465,9 @@ class RegistrePrompts:
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.5,
             # La traduction et l'explication françaises s'ajoutent à la réponse et aux corrections en marge.
-            max_tokens=900,
+            # Les modèles à raisonnement (ex. gpt-oss sur Groq) consomment une part du budget avant le JSON :
+            # 900 jetons pouvaient être épuisés avant la fin du document, d'où un refus HTTP 400 en mode JSON.
+            max_tokens=1800,
         )
 
     def _charger_conversation_chatbot_v2(self) -> _DefinitionPrompt:
@@ -483,7 +485,7 @@ class RegistrePrompts:
             exemples=(),
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.5,
-            max_tokens=900,
+            max_tokens=1800,
         )
 
     def _charger_correction_chatbot(self) -> _DefinitionPrompt:
