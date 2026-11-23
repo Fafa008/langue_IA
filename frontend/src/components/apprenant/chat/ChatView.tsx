@@ -8,14 +8,14 @@ import { ApiError } from "@/lib/api-client";
 import { messageErreurParcours } from "@/lib/parcours-personnalise";
 import { ROUTES } from "@/lib/routes";
 import { nouvelleSessionChatbot } from "@/lib/session-chatbot";
-import { SCENARIOS_CHAT } from "@/lib/scenariosChat";
+import { messageInitialChat, SCENARIOS_CHAT } from "@/lib/scenariosChat";
 import type { MessageChatbot } from "@/types/parcours-personnalise";
 import RapportConversation from "./RapportConversation";
 
 /**
  * US72/US73/US74-FE — Page du chat avec le tuteur IA : la langue vient du parcours de l'apprenant, jamais d'un
- * choix manuel ; chaque réponse affiche à côté sa traduction et son explication en français.
- * Chaque conversation ouvre et ferme sa propre session backend.
+ * choix manuel ; le message d'ouverture du tuteur est dans cette langue. Chaque conversation ouvre et ferme sa propre
+ * session backend ; la traduction et l'explication françaises sont affichées dans un panneau hors du fil.
  */
 export default function ChatView() {
   const [scenarioId, setScenarioId] = useState(SCENARIOS_CHAT[0].id);
@@ -123,7 +123,7 @@ export default function ChatView() {
               format: "conversation",
               consigne: "Discutez avec le tuteur IA, à l'écrit ou à la voix.",
               sujet: scenario.sujet,
-              messageInitial: scenario.messageInitial,
+              messageInitial: messageInitialChat(scenario, langue),
               echangesMinimum: 3,
             }}
             langue={langue}
