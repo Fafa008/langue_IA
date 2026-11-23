@@ -203,6 +203,9 @@
 
 ## 4. Contrôles avant création de la première branche
 
+Le [`gestion_pedagogique_validation.md`](gestion_pedagogique_validation.md) regroupe les options recommandées et les
+points à signer ; il ne modifie aucun statut.
+
 - [ ] D1 à D9 portent `VALIDÉE` avec nom et date dans le registre des décisions.
 - [ ] Chaque `US-??` ci-dessus est remplacé par un numéro attribué dans ClickUp, sans modification de ClickUp par l'agent.
 - [ ] Le plan de migration `migration_banque_exercices.md` est validé, avec ses cinq points ouverts tranchés.

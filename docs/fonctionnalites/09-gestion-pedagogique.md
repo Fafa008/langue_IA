@@ -275,6 +275,7 @@ Ils ne deviennent actifs qu'après validation de D1–D9, du plan US et du plan 
 - `docs/decisions/gestion_pedagogique_decisions.md` (branche PR #103) — D1 à D9.
 - `docs/audit/gestion_pedagogique_exec_audit.md` — modèles, routes, IA, seed, tests, occurrences.
 - `docs/plan/migration_banque_exercices.md` — mapping champs, réversibilité, données, risques.
+- `docs/plan/gestion_pedagogique_validation.md` — options recommandées et points à signer (sans changement de statut).
 - `backend/app/models/diagnostic.py`, `backend/app/models/parcours.py`, `backend/app/models/enums.py`.
 - `backend/app/api/router.py`, `backend/app/api/routes/diagnostic.py`, `backend/app/api/routes/parcours.py`.
 - `backend/app/services/diagnostic.py`, `scoring.py`, `analyse_diagnostic.py`, `parcours.py`, `lecture_parcours.py`,
