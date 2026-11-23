@@ -26,6 +26,10 @@ export default function TableauDeBord() {
       <p className="eyebrow">Espace {ROLE_LABELS[utilisateur.role].toLowerCase()}</p>
       <h1 className="mt-2">Bonjour {utilisateur.prenom}</h1>
       <p className="mt-1 text-base text-content-secondary">{SOUS_TITRES[utilisateur.role]}</p>
+      <p role="note" data-testid="etat-modules" className="mt-3 text-small text-content-secondary">
+        Les rubriques « Bientôt » ne sont pas livrées : aucun lien actif ni donnée simulée n&apos;y est présenté. Les
+        écrans marqués « données simulées » servent uniquement à la démonstration.
+      </p>
 
       <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {rubriques.map(({ label, href, icon: Icon, bientot }) => {

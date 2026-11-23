@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api-client";
 import { PARCOURS_MOCK } from "@/lib/env";
+import { sessionChatbotCourante } from "@/lib/session-chatbot";
 import { parcoursPersonnaliseMock } from "@/mocks/parcours-personnalise.mock";
 import type {
   CorrectionExercice,
@@ -45,6 +46,8 @@ export interface ParcoursPersonnaliseService {
   recommandations(idParcours: number): Promise<RecommandationParcours>;
   /** Message au professeur IA, avec l'historique récent de la conversation. */
   chatbot(message: string, historique: MessageChatbot[]): Promise<ReponseChatbot>;
+  /** Ferme la session en cours : le backend supprime l'historique et le quota (le journal reste anonyme). */
+  fermerSession(): Promise<void>;
 }
 
 const parLecon = (a: ExerciceParcours, b: ExerciceParcours) =>
@@ -53,14 +56,9 @@ const parLecon = (a: ExerciceParcours, b: ExerciceParcours) =>
 const corpsReponse = (reponse: ReponseExercice) =>
   reponse.format === "conversation" ? { format: reponse.format, messages: reponse.messages } : reponse;
 
-const identifiantSessionChatbot =
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
 const corpsChatbot = (message: string, historique: MessageChatbot[]): MessageChatbotDto => ({
   message,
-  identifiant_session: identifiantSessionChatbot,
+  identifiant_session: sessionChatbotCourante(),
   historique: historique.slice(-HISTORIQUE_CHATBOT_MAX).map(({ role, contenu }) => ({ role, contenu })),
 });
 
@@ -98,6 +96,9 @@ export const httpParcoursPersonnaliseService: ParcoursPersonnaliseService = {
     });
     return toReponseChatbot(dto);
   },
+  async fermerSession() {
+    await apiRequest<void>(ENDPOINTS.chatbot.fermerSession(sessionChatbotCourante()), { method: "DELETE" });
+  },
 };
 
 export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
@@ -110,6 +111,7 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
   recommandations: async (idParcours) => toRecommandationParcours(await parcoursPersonnaliseMock.recommandations(idParcours)),
   chatbot: async (message, historique) =>
     toReponseChatbot(await parcoursPersonnaliseMock.chatbot(corpsChatbot(message, historique))),
+  fermerSession: async () => undefined,
 };
 
 export const parcoursPersonnaliseService = PARCOURS_MOCK ? mockParcoursPersonnaliseService : httpParcoursPersonnaliseService;

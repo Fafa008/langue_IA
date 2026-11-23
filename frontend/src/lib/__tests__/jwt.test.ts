@@ -25,4 +25,9 @@ describe("isJwtExpired", () => {
   it("accepte un token encore valable", () => {
     expect(isJwtExpired(jwt({ exp: now / 1000 + 3600 }), now)).toBe(false);
   });
+
+  it("considère un token illisible ou sans exp comme expiré", () => {
+    expect(isJwtExpired("pas-un-jwt", now)).toBe(true);
+    expect(isJwtExpired(jwt({ sub: "1" }), now)).toBe(true);
+  });
 });

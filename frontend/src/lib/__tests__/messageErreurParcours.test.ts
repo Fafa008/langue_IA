@@ -23,4 +23,10 @@ describe("FE-D6 — messages d'erreur du parcours", () => {
     expect(message).toBe("La correction n'a pas abouti. Réessayez dans un instant.");
     expect(message).not.toMatch(/contrat invalide|502/);
   });
+
+  it("quota du chat atteint (429) : invite à ouvrir une nouvelle conversation", () => {
+    const message = messageErreurParcours(new ApiError(429, "Too many requests"), "Votre message");
+    expect(message).toBe("Le quota de messages est atteint pour cette session. Commencez une nouvelle conversation.");
+    expect(message).not.toMatch(/429/);
+  });
 });

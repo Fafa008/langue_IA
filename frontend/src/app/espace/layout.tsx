@@ -2,11 +2,13 @@ import type { ReactNode } from "react";
 import Header from "@/components/Header";
 import AppSidebar from "@/components/layout/AppSidebar";
 import RequireAuth from "@/components/layout/RequireAuth";
+import SessionWatcher from "@/components/layout/SessionWatcher";
 
 /** Gabarit de l'espace connecté (apprenant, formateur, administrateur) : en-tête, navigation latérale et contenu. */
 export default function EspaceLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <SessionWatcher />
       <Header />
       <div className="flex flex-1">
         <AppSidebar />

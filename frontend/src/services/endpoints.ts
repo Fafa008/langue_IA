@@ -24,20 +24,21 @@ export const ENDPOINTS = {
   langue: (idLangue: number) => `${API}/langues/${idLangue}`,
   niveaux: `${API}/niveaux`,
   niveau: (idNiveau: number) => `${API}/niveaux/${idNiveau}`,
+  formules: `${API}/formules`,
   diagnostic: {
     langues: `${API}/diagnostic/langues`,
     tentatives: `${API}/diagnostic/tentatives`,
     terminerTentative: (idTentative: number) => `${API}/diagnostic/tentatives/${idTentative}/terminer`,
     /**
-     * Routes prévues par le contrat mais absentes du backend : elles répondent 404 hors mode mock.
-     * Vérifier backend/app/api/routes/diagnostic.py avant de les considérer comme opérationnelles.
+     * Routes du contrat encore absentes du backend (vérifié dans routes/diagnostic.py) : 404 hors mode mock.
+     * Démarrage, réponse et clôture existent ; la reprise et l'abandon ne sont pas exposés.
      */
     tentativeEnCours: `${API}/diagnostic/tentatives/en-cours`,
     abandonnerTentative: (idTentative: number) => `${API}/diagnostic/tentatives/${idTentative}/abandonner`,
     questions: `${API}/diagnostic/questions`,
     reponse: `${API}/diagnostic/reponse`,
   },
-  /** Parcours personnalisé de l'apprenant connecté (contrat frontend, routes à exposer par le backend). */
+  /** Parcours personnalisé de l'apprenant connecté : routes exposées par backend/app/api/routes/parcours.py. */
   parcours: {
     enCours: `${API}/parcours/en-cours`,
     exercices: (idParcours: number) => `${API}/parcours/${idParcours}/exercices`,
@@ -47,7 +48,7 @@ export const ENDPOINTS = {
     /** Recommandations pédagogiques (REC-03) : appel explicite, idempotent, jamais d'erreur visible. */
     recommandations: (idParcours: number) => `${API}/parcours/${idParcours}/recommandations`,
   },
-  /** Chat apprenant : relais backend authentifié du service IA (contrat frontend). */
+  /** Chat apprenant : relais backend authentifié du service IA (routes présentes dans routes/chatbot.py). */
   chatbot: {
     message: `${API}/chatbot/message`,
     fermerSession: (identifiantSession: string) => `${API}/chatbot/session/${identifiantSession}`,

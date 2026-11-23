@@ -17,7 +17,16 @@ describe("US51-FE — tableau de bord de l'apprenant", () => {
 
   it("étiquette les données comme simulées", () => {
     render(<ProgressionView />);
-    expect(screen.getByTestId("donnees-simulees")).toHaveTextContent("Données simulées");
+    expect(screen.getByTestId("donnees-simulees")).toHaveTextContent("Indicateurs simulés — démonstration");
+  });
+
+  it("affiche le vrai dernier résultat de positionnement quand il existe", () => {
+    render(<ProgressionView diagnostic={{ niveau: "B1", score: 17, total: 20 }} />);
+    expect(screen.getByTestId("positionnement-reel")).toHaveTextContent("Niveau B1 · 17/20 points");
+    expect(screen.getByRole("link", { name: /Refaire un test/ })).toHaveAttribute(
+      "href",
+      ROUTES.apprenant.testDiagnostic.demarrage,
+    );
   });
 
   it("trace une colonne par jour, décrite de façon accessible", () => {

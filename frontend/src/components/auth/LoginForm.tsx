@@ -29,14 +29,16 @@ const toCredentials = (v: LoginFormValues): LoginFormValues => ({ ...v, email: n
 
 interface LoginFormProps {
   passwordReset?: boolean;
+  sessionExpiree?: boolean;
 }
 
-export default function LoginForm({ passwordReset = false }: LoginFormProps) {
+export default function LoginForm({ passwordReset = false, sessionExpiree = false }: LoginFormProps) {
   const login = useLogin();
   const form = useForm({
     initialValues: INITIAL_VALUES,
     validate: validateLogin,
     onSubmit: (v) => login.mutate(toCredentials(v)),
+    submitting: login.isPending,
   });
   const { values, errors, handleSubmit } = form;
 
@@ -56,6 +58,11 @@ export default function LoginForm({ passwordReset = false }: LoginFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
+      {sessionExpiree && (
+        <Alert variant="error" className="mb-4">
+          Votre session a expiré ou votre compte a été suspendu. Reconnectez-vous pour continuer.
+        </Alert>
+      )}
       <AuthHeading title="Bon retour parmi nous" subtitle="Connectez-vous pour reprendre votre apprentissage." />
 
       {passwordReset && !login.isError && (

@@ -20,12 +20,14 @@ export default function Providers({ children }: { children: ReactNode }) {
     const queryClient = createQueryClient();
     configureApiClient({
       getToken: () => useAuthStore.getState().accessToken,
-      // JWT refusé (expiré, révoqué) : la session est effacée et les pages protégées
-      // redirigent vers la connexion (voir components/layout/RequireAuth)
+      // JWT refusé (expiré, compte suspendu) : session effacée, cache purgé et retour explicite à la connexion.
       onUnauthorized: () => {
         useAuthStore.getState().clearSession();
         useTestDiagnosticStore.getState().reinitialiser();
         queryClient.clear();
+        if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+          window.location.assign("/login?session=expiree");
+        }
       },
     });
     return queryClient;

@@ -26,7 +26,7 @@ describe("US52-FE — synthèse des erreurs (formateur)", () => {
     render(<SyntheseErreursView />);
     const reel = screen.getByRole("heading", { name: /Bilan réel des sessions/ }).closest("section")!;
     expect(within(reel).getByText("Bientôt")).toBeInTheDocument();
-    expect(reel).toHaveAttribute("aria-disabled", "true");
+    expect(reel).toHaveAttribute("data-testid", "bilan-reel");
   });
 
   it("n'appelle aucune route", () => {

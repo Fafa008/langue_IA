@@ -1,19 +1,47 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { PROGRESSION_SIMULEE, type ProgressionApprenant } from "@/mocks/progression-apprenant.mock";
 import { graduations, pourcentage } from "@/lib/graphique";
+import { ROUTES } from "@/lib/routes";
 
-/** US51-FE — Tableau de bord de l'apprenant : progression, score, dernière leçon, série, graphique simple. */
-export default function ProgressionView({ progression = PROGRESSION_SIMULEE }: { progression?: ProgressionApprenant | null }) {
+/**
+ * US51-FE — Vue de progression. Les indicateurs détaillés restent simulés (aucun endpoint historique côté backend) ;
+ * le dernier résultat de positionnement, lui, vient de la session locale et peut être affiché en toute transparence.
+ */
+export default function ProgressionView({
+  progression = PROGRESSION_SIMULEE,
+  diagnostic,
+}: {
+  progression?: ProgressionApprenant | null;
+  /** Dernier résultat de test enregistré dans cette session, transmis par la page. */
+  diagnostic?: { niveau: string; score: number; total: number } | null;
+}) {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <header>
         <p className="eyebrow">Espace apprenant</p>
         <h1 className="mt-2">Ma progression</h1>
         <p role="note" data-testid="donnees-simulees" className="mt-3 inline-block rounded-full bg-warning/15 px-3 py-1 text-small font-semibold text-warning-dark">
-          Données simulées
+          Indicateurs simulés — démonstration
         </p>
       </header>
+
+      {diagnostic && (
+        <section aria-labelledby="titre-positionnement" data-testid="positionnement-reel" className="card border-primary/30">
+          <h2 id="titre-positionnement" className="text-h3 text-primary">Votre dernier positionnement</h2>
+          <p className="mt-2 text-content">
+            Niveau <strong>{diagnostic.niveau}</strong> · {diagnostic.score}/{diagnostic.total} points
+          </p>
+          <p className="mt-1 text-small text-content-secondary">
+            Résultat de votre test de positionnement réalisé dans cette session.
+          </p>
+          <Link href={ROUTES.apprenant.testDiagnostic.demarrage} className="mt-3 inline-flex min-h-11 items-center gap-1 font-semibold text-primary hover:underline">
+            Refaire un test <ArrowRight size={16} aria-hidden />
+          </Link>
+        </section>
+      )}
 
       {!progression ? (
         <p className="card text-content-secondary">Votre progression apparaîtra dès votre premier exercice.</p>

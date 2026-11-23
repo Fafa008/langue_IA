@@ -15,8 +15,9 @@ export function getJwtExpiry(token: string): number | null {
   }
 }
 
-/** Un token sans date d'expiration lisible est considéré comme valide : le backend le refusera si besoin. */
+/** Un token illisible ou sans date d'expiration ne peut pas être considéré comme valide côté navigateur. */
 export function isJwtExpired(token: string, now: number = Date.now()): boolean {
   const expiry = getJwtExpiry(token);
-  return expiry !== null && expiry <= now;
+  if (expiry === null) return true;
+  return expiry <= now;
 }

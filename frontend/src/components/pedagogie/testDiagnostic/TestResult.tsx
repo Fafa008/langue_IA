@@ -87,7 +87,7 @@ export default function TestResult() {
         </div>
         <div className="md:col-span-2 [&>section]:h-full">
           <PointsFaibles points={pointsFaiblesDe(resultat)}>
-            <Link href={ROUTES.apprenant.dashboard} className="btn-primary w-full">
+            <Link href={ROUTES.apprenant.parcours.accueil} className="btn-primary w-full">
               Commencer mon parcours
             </Link>
             <button type="button" className="btn-secondary w-full" onClick={test.recommencer}>

@@ -85,7 +85,7 @@ describe("TestResult", () => {
   it("propose de commencer le parcours ou de refaire le test", () => {
     afficher(complet);
 
-    expect(screen.getByRole("link", { name: "Commencer mon parcours" })).toHaveAttribute("href", ROUTES.apprenant.dashboard);
+    expect(screen.getByRole("link", { name: "Commencer mon parcours" })).toHaveAttribute("href", ROUTES.apprenant.parcours.accueil);
     fireEvent.click(screen.getByRole("button", { name: "Refaire le test" }));
     expect(recommencer).toHaveBeenCalled();
   });

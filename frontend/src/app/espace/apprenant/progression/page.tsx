@@ -1,8 +1,13 @@
-import type { Metadata } from "next";
-import ProgressionView from "@/components/apprenant/progression/ProgressionView";
+"use client";
 
-export const metadata: Metadata = { title: "Ma progression – Digithèque" };
+import ProgressionView from "@/components/apprenant/progression/ProgressionView";
+import { useTestDiagnosticStore } from "@/store/test-diagnostic.store";
 
 export default function ProgressionPage() {
-  return <ProgressionView />;
+  const resultat = useTestDiagnosticStore((s) => s.etat.resultat);
+  return (
+    <ProgressionView
+      diagnostic={resultat ? { niveau: resultat.niveau, score: resultat.score, total: resultat.total } : null}
+    />
+  );
 }

@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import Alert from "@/components/ui/Alert";
 import Button from "@/components/ui/Button";
 import Checkbox from "@/components/ui/Checkbox";
 import FormField from "@/components/ui/FormField";
+import FormSection from "@/components/ui/FormSection";
 import Input from "@/components/ui/Input";
 import PasswordInput from "@/components/ui/PasswordInput";
 import { useRegister } from "@/hooks/useAuth";
@@ -46,15 +46,6 @@ function toPayload(v: RegisterFormValues): RegisterPayload {
   };
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <fieldset className="mt-6 first-of-type:mt-0">
-      <legend className="eyebrow">{title}</legend>
-      {children}
-    </fieldset>
-  );
-}
-
 /** Date du jour au format AAAA-MM-JJ, en heure locale (toISOString() renvoie la date UTC). */
 function today(): string {
   const now = new Date();
@@ -69,6 +60,7 @@ export default function RegisterForm() {
     initialValues: INITIAL_VALUES,
     validate: (v) => validateRegister(v, formules),
     onSubmit: (v) => register.mutate(toPayload(v)),
+    submitting: register.isPending,
   });
   const { values, errors, handleSubmit } = form;
 
@@ -94,7 +86,7 @@ export default function RegisterForm() {
         </Alert>
       )}
 
-      <Section title="Vos informations">
+      <FormSection title="Vos informations">
         <div className="grid gap-x-3 sm:grid-cols-2">
           <FormField id="prenom" label="Prénom" error={errors.prenom}>
             {(field) => (
@@ -153,14 +145,14 @@ export default function RegisterForm() {
             />
           )}
         </FormField>
-      </Section>
+      </FormSection>
 
-      <Section title="Votre apprentissage">
+      <FormSection title="Votre apprentissage">
         <LanguePicker value={values.langues} onChange={(v) => setField("langues", v)} error={errors.langues} />
         <FormulePicker value={values.idFormule} onChange={(v) => setField("idFormule", v)} error={errors.idFormule} />
-      </Section>
+      </FormSection>
 
-      <Section title="Sécurité">
+      <FormSection title="Sécurité">
         <FormField
           id="motDePasse"
           label="Mot de passe"
@@ -189,7 +181,7 @@ export default function RegisterForm() {
             />
           )}
         </FormField>
-      </Section>
+      </FormSection>
 
       <Checkbox
         id="accepteConditions"
