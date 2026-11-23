@@ -1,0 +1,26 @@
+{
+  "request_id": "9c25e67a-13bd-4f80-a6c1-7b2d3e4f5a6b",
+  "version_agent": "1.2.0",
+  "contexte": {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_preliminaire": "B1"
+  },
+  "entree": {
+    "reponses": [
+      {
+        "id_question": "ex-18",
+        "competence": "oral",
+        "type_reponse": "audio",
+        "contenu": "Hello.",
+        "format": "parler",
+        "difficulte": 3,
+        "justesse": false,
+        "score_competence": 40.0,
+        "temps_reponse_secondes": 8.0,
+        "confiance_stt": 1.5
+      }
+    ],
+    "score_preliminaire": 64
+  }
+}

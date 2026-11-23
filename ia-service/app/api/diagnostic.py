@@ -8,17 +8,21 @@ Harness, pour que le backend retrouve ``request_id`` et ``retryable``.
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from app.agents.diagnostic import CODE_AGENT, EntreeDiagnostic
+from app.agents.diagnostic import CODE_AGENT, VERSION_AGENT, EntreeDiagnostic, EntreeDiagnosticPositionnement
 from app.core.codes_erreur import STATUTS_HTTP
 from app.schemas.commun import ErreurAgent, ReponseAgent, ReponseErreur, RequeteAgent
-from app.schemas.diagnostic import ResultatDiagnostic
+from app.schemas.diagnostic import ResultatDiagnostic, ResultatDiagnosticPositionnement
+
+# Les deux contrats coexistent sur la même route : la v1 reste le défaut, la v2 est sélectionnée par version_agent.
+EntreeDiagnosticContrat = EntreeDiagnostic | EntreeDiagnosticPositionnement
+ResultatDiagnosticContrat = ResultatDiagnostic | ResultatDiagnosticPositionnement
 
 router = APIRouter(prefix="/diagnostic", tags=["diagnostic"])
 
 
 @router.post(
     "/evaluer",
-    response_model=ReponseAgent[ResultatDiagnostic],
+    response_model=ReponseAgent[ResultatDiagnosticContrat],
     responses={
         # Corps refusé avant d'atteindre le Harness : pas encore d'enveloppe, seulement {code, message, retryable}.
         422: {"model": ErreurAgent, "description": "Entrée hors contrat (ENTREE_INVALIDE)"},
@@ -30,10 +34,15 @@ router = APIRouter(prefix="/diagnostic", tags=["diagnostic"])
     },
 )
 async def evaluer(
-    requete: RequeteAgent[EntreeDiagnostic], request: Request
-) -> ReponseAgent[ResultatDiagnostic] | JSONResponse:
-    """Transmettre les réponses du test au modèle et retourner l'estimation validée du diagnostic."""
-    reponse = await request.app.state.harness.executer(CODE_AGENT, requete)
+    requete: RequeteAgent[EntreeDiagnosticContrat], request: Request
+) -> ReponseAgent[ResultatDiagnosticContrat] | JSONResponse:
+    """Transmettre les réponses du test au modèle et retourner l'estimation validée du diagnostic.
+
+    Sans ``version_agent``, la v1 reste le défaut pour ne pas changer le contrat des clients existants.
+    """
+    reponse = await request.app.state.harness.executer(
+        CODE_AGENT, requete, version_agent=requete.version_agent or VERSION_AGENT
+    )
     if isinstance(reponse, ReponseErreur):
         return JSONResponse(
             status_code=STATUTS_HTTP[reponse.erreur.code],

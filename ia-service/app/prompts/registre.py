@@ -11,6 +11,7 @@ from app.llm.base import MessageLLM
 from app.prompts.bibliotheque_few_shot import BibliothequeFewShot
 from app.prompts.variables import (
     ExempleFewShot,
+    ExempleFewShotPositionnement,
     VariablesConversationChatbot,
     VariablesConversationChatbotV2,
     VariablesCorrectionChatbot,
@@ -23,6 +24,7 @@ from app.prompts.variables import (
 )
 
 VERSION_EVALUATION_DIAGNOSTIC = "1.1.0"
+VERSION_EVALUATION_POSITIONNEMENT = "1.2.0"
 VERSION_CONVERSATION_CHATBOT = "1.2.0"
 VERSION_CONVERSATION_CHATBOT_V2 = "1.3.0"
 VERSION_CORRECTION_CHATBOT = "1.0.0"
@@ -104,6 +106,11 @@ class RegistrePrompts:
         self._bibliotheque_few_shot = bibliotheque_few_shot or BibliothequeFewShot()
         self._definitions = {
             ("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC): self._charger_evaluation_diagnostic(),
+            (
+                "diagnostic",
+                "evaluation",
+                VERSION_EVALUATION_POSITIONNEMENT,
+            ): self._charger_evaluation_positionnement(),
             ("chatbot", "conversation", VERSION_CONVERSATION_CHATBOT): self._charger_conversation_chatbot(),
             (
                 "chatbot",
@@ -446,6 +453,43 @@ class RegistrePrompts:
             empreinte_prompt=f"sha256:{empreinte}",
             temperature=0.2,
             max_tokens=900,
+        )
+
+    def _charger_evaluation_positionnement(self) -> _DefinitionPrompt:
+        """Charger la version 1.2.0 du prompt : mêmes variables, faits enrichis et sortie avec statut."""
+        nom = f"evaluation@{VERSION_EVALUATION_POSITIONNEMENT}"
+        repertoire = self._repertoire / "diagnostic"
+        systeme = self._lire(repertoire / f"{nom}.systeme.md")
+        texte_utilisateur = self._lire(repertoire / f"{nom}.utilisateur.md")
+        texte_exemples = self._lire(repertoire / f"{nom}.jsonl")
+        template = _valider_template(texte_utilisateur)
+        exemples: list[ExempleFewShotPositionnement] = []
+        try:
+            for ligne in texte_exemples.splitlines():
+                if ligne.strip():
+                    exemples.append(ExempleFewShotPositionnement.model_validate_json(ligne))
+        except (ValueError, TypeError):
+            raise ErreurRegistre("Le fichier few-shot positionnement contient un exemple invalide.") from None
+        if not exemples or len(exemples) > _NOMBRE_EXEMPLES_MAX:
+            raise ErreurRegistre(f"Le fichier few-shot doit contenir de 1 à {_NOMBRE_EXEMPLES_MAX} exemples valides.")
+
+        empreinte = hashlib.sha256(
+            b"\0".join(
+                (
+                    systeme.encode("utf-8"),
+                    texte_utilisateur.encode("utf-8"),
+                    texte_exemples.encode("utf-8"),
+                )
+            )
+        ).hexdigest()
+        return _DefinitionPrompt(
+            version_prompt=f"diagnostic/evaluation@{VERSION_EVALUATION_POSITIONNEMENT}",
+            systeme=systeme.strip(),
+            template_utilisateur=template,
+            exemples=tuple(exemples),
+            empreinte_prompt=f"sha256:{empreinte}",
+            temperature=0.2,
+            max_tokens=1000,
         )
 
     def _charger_conversation_chatbot(self) -> _DefinitionPrompt:

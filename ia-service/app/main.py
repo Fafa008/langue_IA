@@ -26,7 +26,7 @@ from app.agent.memoire import definir_agent_memoire_chatbot
 from app.agent.traduction import definir_agent_traduction_chatbot
 from app.agents.chatbot import definir_agent_chatbot
 from app.agents.correction import definir_agent_correction
-from app.agents.diagnostic import construire_definition
+from app.agents.diagnostic import construire_definition, construire_definition_positionnement
 from app.agents.recommandation import definir_agent_recommandation
 from app.api import chatbot, correction, diagnostic, recommandation
 from app.core.config import charger_config_memoire
@@ -67,6 +67,7 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
         memoire = MemoireCourteVide()
 
     registre_agents.enregistrer(construire_definition(registre_prompts))
+    registre_agents.enregistrer(construire_definition_positionnement(registre_prompts))
     registre_agents.enregistrer(definir_agent_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_conversation_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_correction_chatbot(registre_prompts))

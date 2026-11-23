@@ -17,6 +17,7 @@ Garde-fous P0 :
 import logging
 import unicodedata
 from dataclasses import dataclass
+from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -28,14 +29,21 @@ from app.schemas.diagnostic import CompetenceResultatOut, PointFaibleOut
 from app.schemas.ia import (
     NIVEAUX_IA,
     VERSION_AGENT_DIAGNOSTIC,
+    VERSION_AGENT_POSITIONNEMENT,
+    VERSION_PROMPT_POSITIONNEMENT,
     ContexteApprenantIA,
     EntreeDiagnosticIA,
+    EntreePositionnementIA,
     PreuveDiagnosticIA,
+    PreuvePositionnementIA,
     ReponseDiagnosticIA,
+    ReponsePositionnementIA,
     RequeteDiagnosticIA,
+    RequetePositionnementIA,
     ResultatDiagnosticIA,
+    ResultatPositionnementIA,
 )
-from app.services.ia import ErreurServiceIA, evaluer_diagnostic
+from app.services.ia import ErreurServiceIA, evaluer_diagnostic, evaluer_positionnement
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +200,79 @@ def _preparer(tentative: TestDiagnostic, lignes: list[_Ligne]) -> RequeteDiagnos
     )
 
 
+def _preparer_positionnement(
+    tentative: TestDiagnostic,
+    lignes: list[_Ligne],
+    donnees_analyse: list[dict],
+) -> RequetePositionnementIA | None:
+    """Construire la requête v2 à partir du dossier factuel produit par le scoring."""
+    requete_v1 = _preparer(tentative, lignes)
+    if requete_v1 is None:
+        return None
+
+    par_question = {str(item.get("id_question")): item for item in donnees_analyse}
+    par_competence: dict[str, list[bool]] = {}
+    for fait in donnees_analyse:
+        competence = fait.get("competence")
+        justesse = fait.get("justesse")
+        if competence in COMPETENCES_IA and isinstance(justesse, bool):
+            par_competence.setdefault(competence, []).append(justesse)
+
+    reponses: list[PreuvePositionnementIA] = []
+    for preuve in requete_v1.entree.reponses:
+        fait = par_question.get(preuve.id_question)
+        if fait is None:
+            continue
+        notes = par_competence.get(preuve.competence, [])
+        score_competence = round(100 * sum(notes) / len(notes), 2) if notes else 0.0
+        try:
+            reponses.append(
+                PreuvePositionnementIA(
+                    **preuve.model_dump(exclude_none=True),
+                    format=fait["format"],
+                    difficulte=fait["difficulte"],
+                    justesse=fait["justesse"],
+                    score_competence=score_competence,
+                    temps_reponse_secondes=fait["temps_reponse_secondes"],
+                    transcription=fait.get("transcription"),
+                    confiance_stt=fait.get("confiance_stt"),
+                )
+            )
+        except (KeyError, ValueError, TypeError):
+            logger.warning(
+                "Analyse IA v2 : fait ignoré, donnée incomplète (tentative=%s, question=%s)",
+                tentative.id_test,
+                preuve.id_question,
+            )
+    if not reponses:
+        return None
+    return RequetePositionnementIA(
+        request_id=uuid4(),
+        version_agent=VERSION_AGENT_POSITIONNEMENT,
+        contexte=requete_v1.contexte,
+        entree=EntreePositionnementIA(
+            scenario=requete_v1.entree.scenario,
+            reponses=reponses,
+            score_preliminaire=requete_v1.entree.score_preliminaire,
+        ),
+    )
+
+
+def verifier_reponse_diagnostic_v2(
+    enveloppe: ReponsePositionnementIA,
+    requete: RequetePositionnementIA,
+) -> bool:
+    """Vérifier l'enveloppe v2 : mêmes contrôles que la v1, plus les versions publiées."""
+    if (
+        enveloppe.version_agent != VERSION_AGENT_POSITIONNEMENT
+        or enveloppe.version_prompt != VERSION_PROMPT_POSITIONNEMENT
+    ):
+        return False
+    # Les champs contrôlés par la v1 sont identiques dans la v2 ; l'adaptateur évite de dupliquer les garde-fous.
+    adaptateur = SimpleNamespace(request_id=enveloppe.request_id, agent=enveloppe.agent, resultat=enveloppe.resultat)
+    return verifier_reponse_diagnostic(adaptateur, requete)  # type: ignore[arg-type]
+
+
 def _preuve_directe(domaine: str, preuve: PreuveDiagnosticIA) -> bool:
     """Miroir backend de ``preuve_directe`` du service IA : une réponse à choix ne prouve rien seule."""
     production = preuve.type_reponse in ("texte", "audio")
@@ -255,22 +336,34 @@ def verifier_reponse_diagnostic(enveloppe: ReponseDiagnosticIA, requete: Requete
 
 
 def _analyser_document(document: dict) -> AnalyseDiagnostic:
-    """Relire l'enveloppe persistée et produire les champs du contrat public."""
-    resultat = ResultatDiagnosticIA.model_validate(document["resultat"])
+    """Relire l'enveloppe persistée et produire les champs du contrat public.
+
+    Une réponse v2 marquée ``a_verifier`` donne un résultat partiel : les points faibles sont écartés plutôt que
+    présentés comme fiables, sans jamais exposer le détail technique (seuil STT, justification brute).
+    """
+    donnees = document["resultat"]
+    version_v2 = "justification" in donnees and "statut" in donnees
+    resultat = (
+        ResultatPositionnementIA.model_validate(donnees) if version_v2 else ResultatDiagnosticIA.model_validate(donnees)
+    )
+    points = [] if version_v2 and resultat.statut == "a_verifier" else resultat.points_faibles
     return AnalyseDiagnostic(
         competences=[],
-        points_faibles=[
-            PointFaibleOut(domaine=point.domaine, detail=point.justification) for point in resultat.points_faibles
-        ],
+        points_faibles=[PointFaibleOut(domaine=point.domaine, detail=point.justification) for point in points],
         phase_assimil=resultat.phase_assimil,
     )
 
 
-def analyser_tentative(id_tentative: int) -> AnalyseDiagnostic | None:
+def analyser_tentative(
+    id_tentative: int,
+    donnees_analyse: list[dict] | None = None,
+) -> AnalyseDiagnostic | None:
     """Analyser une tentative terminée, sans jamais bloquer la réponse HTTP.
 
     L'appel HTTP se fait entre deux sessions : aucune connexion PostgreSQL n'est immobilisée pendant l'attente du
     service IA. L'analyse déjà persistée est retournée telle quelle, ce qui rend la clôture idempotente.
+    Quand le scoring fournit un dossier factuel enrichi, l'agent Diagnostic v2 est appelé ; la banque historique
+    continue d'utiliser le contrat v1.
     """
     with SessionLocal() as db:
         tentative = db.scalar(select(TestDiagnostic).where(TestDiagnostic.id_test == id_tentative))
@@ -284,17 +377,27 @@ def analyser_tentative(id_tentative: int) -> AnalyseDiagnostic | None:
                 points_faibles=analyse.points_faibles,
                 phase_assimil=analyse.phase_assimil,
             )
-        requete = _preparer(tentative, lignes)
+        requete = (
+            _preparer_positionnement(tentative, lignes, donnees_analyse)
+            if donnees_analyse
+            else _preparer(tentative, lignes)
+        )
 
     if requete is None:
         return None
 
+    est_v2 = isinstance(requete, RequetePositionnementIA)
     try:
-        enveloppe = evaluer_diagnostic(requete)
+        enveloppe = evaluer_positionnement(requete) if est_v2 else evaluer_diagnostic(requete)
     except ErreurServiceIA as erreur:
         logger.warning("Analyse IA indisponible (tentative=%s, code=%s)", id_tentative, erreur.code)
         return None
-    if not verifier_reponse_diagnostic(enveloppe, requete):
+    valide = (
+        verifier_reponse_diagnostic_v2(enveloppe, requete)
+        if est_v2
+        else verifier_reponse_diagnostic(enveloppe, requete)
+    )
+    if not valide:
         logger.warning("Analyse IA incohérente avec la requête (tentative=%s)", id_tentative)
         return None
 

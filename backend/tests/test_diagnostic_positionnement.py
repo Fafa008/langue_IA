@@ -133,3 +133,8 @@ def test_score_sur_100_et_dossier_factuel_par_exercice(db: Session, client):
 
     db.refresh(tentative)
     assert tentative.statut == StatutDiagnostic.TERMINE
+    assert tentative.analyse_ia["version_agent"] == "1.2.0"
+    assert tentative.analyse_ia["version_prompt"] == "diagnostic/evaluation@1.2.0"
+    assert "justification" in tentative.analyse_ia["resultat"]
+    assert isinstance(donnees["points_faibles"], list)
+    assert "justification" not in donnees

@@ -231,7 +231,7 @@ def terminer_tentative(
     competences_deterministes, donnees_analyse = resultat_detaille(db, id_test)
     # Libérer la connexion PostgreSQL avant l'appel HTTP : le service IA peut prendre plusieurs dizaines de secondes.
     db.close()
-    analyse = analyser_tentative(id_test)
+    analyse = analyser_tentative(id_test, donnees_analyse)
     generer_parcours_pour_tentative(id_test)
 
     return ScoreDiagnosticOut(
