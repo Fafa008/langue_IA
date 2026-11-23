@@ -21,3 +21,16 @@ export function nouvelleSessionChatbot(): string {
   identifiantCourant = creerIdentifiant();
   return identifiantCourant;
 }
+
+/**
+ * Identifiant d'un message du tuteur, utilisé comme clé de cache de la traduction côté service IA.
+ * Il doit être généré une seule fois par réponse, puis réutilisé si la traduction est demandée à nouveau.
+ */
+export function creerIdentifiantMessage(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  // Repli pour les navigateurs sans Web Crypto : la forme UUID est exigée par le contrat backend.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (caractere) => {
+    const hasard = (Math.random() * 16) | 0;
+    return (caractere === "x" ? hasard : (hasard & 0x3) | 0x8).toString(16);
+  });
+}

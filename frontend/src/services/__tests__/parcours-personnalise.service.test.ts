@@ -362,6 +362,89 @@ describe("service HTTP (prêt pour le backend)", () => {
     expect(options.body.historique[0].contenu).toBe("m5");
   });
 
+  it("demande la correction via une route distincte et conserve le type d'erreur", async () => {
+    apiRequest.mockResolvedValueOnce({
+      corrections: [
+        {
+          type: "grammaire",
+          extrait: "I go yesterday",
+          correction: "I went yesterday",
+          explication: "Le prétérit s'impose.",
+        },
+      ],
+      version_prompt: "chatbot/correction@1.0.0",
+    });
+
+    const resultat = await http.corrigerChatbot("I go yesterday", []);
+
+    expect(resultat).toEqual({
+      corrections: [
+        {
+          type: "grammaire",
+          extrait: "I go yesterday",
+          correction: "I went yesterday",
+          explication: "Le prétérit s'impose.",
+        },
+      ],
+      versionPrompt: "chatbot/correction@1.0.0",
+    });
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/api/v1/chatbot/correction",
+      expect.objectContaining({ method: "POST", body: expect.objectContaining({ message: "I go yesterday" }) }),
+    );
+  });
+
+  it("demande la traduction avec un identifiant de message UUID et renvoie la paire française", async () => {
+    const idMessage = "3f1c9b7e-6a2d-4f0e-9c1a-2b7d5e8f4a10";
+    apiRequest.mockResolvedValueOnce({
+      id_message: idMessage,
+      traduction: "Hier, je suis allé au marché.",
+      explication: "« Went » est le prétérit de « go ».",
+      version_prompt: "chatbot/traduction@1.0.0",
+    });
+
+    const resultat = await http.traduireChatbot(idMessage, "I went to the market yesterday.");
+
+    expect(resultat).toEqual({
+      idMessage,
+      traduction: "Hier, je suis allé au marché.",
+      explication: "« Went » est le prétérit de « go ».",
+      versionPrompt: "chatbot/traduction@1.0.0",
+    });
+    const [route, options] = apiRequest.mock.calls[0];
+    expect(route).toBe("/api/v1/chatbot/traduction");
+    expect(options.body.id_message).toBe(idMessage);
+    expect(options.body.message).toBe("I went to the market yesterday.");
+    expect(options.body.identifiant_session).toEqual(expect.any(String));
+  });
+
+  it("demande un exercice ciblé au backend, pas au service IA", async () => {
+    apiRequest.mockResolvedValueOnce({
+      id_exercice: 42,
+      enonce: "Yesterday, I ___ to the market.",
+      consigne: "Choisissez le passé.",
+      descripteur_id: "cecrl-a1-grammaire-1",
+      niveau: "A1",
+    });
+
+    const resultat = await http.exerciceChatbot("grammaire", "I go yesterday");
+
+    expect(resultat).toEqual({
+      idExercice: 42,
+      enonce: "Yesterday, I ___ to the market.",
+      consigne: "Choisissez le passé.",
+      descripteurId: "cecrl-a1-grammaire-1",
+      niveau: "A1",
+    });
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/api/v1/chatbot/exercice",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.objectContaining({ type_erreur: "grammaire", erreur: "I go yesterday" }),
+      }),
+    );
+  });
+
   it("ferme la session courante et en ouvre une nouvelle pour la conversation suivante", async () => {
     apiRequest.mockResolvedValueOnce({ reponse: "Bonjour !" });
     await http.chatbot("Salut", []);

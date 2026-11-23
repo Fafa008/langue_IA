@@ -15,16 +15,20 @@ from app.core.config import get_settings
 from app.schemas.ia import (
     ReponseChatbotIA,
     ReponseClotureIA,
+    ReponseCorrectionChatbotIA,
     ReponseCorrectionIA,
     ReponseDiagnosticIA,
     ReponseExerciceIA,
     ReponseRecommandationIA,
+    ReponseTraductionChatbotIA,
     RequeteChatbotIA,
     RequeteClotureIA,
+    RequeteCorrectionChatbotIA,
     RequeteCorrectionIA,
     RequeteDiagnosticIA,
     RequeteExerciceIA,
     RequeteRecommandationIA,
+    RequeteTraductionChatbotIA,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,6 +36,8 @@ logger = logging.getLogger(__name__)
 CHEMIN_EVALUATION = "/diagnostic/evaluer"
 CHEMIN_CORRECTION = "/correction/reponse-libre"
 CHEMIN_CHATBOT = "/chatbot/message"
+CHEMIN_CORRECTION_CHATBOT = "/chatbot/correction"
+CHEMIN_TRADUCTION_CHATBOT = "/chatbot/traduction"
 CHEMIN_CLOTURE_CHATBOT = "/chatbot/session/close"
 CHEMIN_EXERCICE_CHATBOT = "/chatbot/exercice"
 CHEMIN_RECOMMANDATION = "/recommandation/actions"
@@ -112,6 +118,24 @@ def envoyer_message_chatbot(
 ) -> ReponseChatbotIA:
     """Appeler l'agent Chatbot et retourner son enveloppe validée, corrections en marge comprises."""
     return _poster(CHEMIN_CHATBOT, requete, ReponseChatbotIA, transport)
+
+
+def corriger_message_chatbot(
+    requete: RequeteCorrectionChatbotIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseCorrectionChatbotIA:
+    """Appeler l'agent de correction séparée du tuteur, sans quitter la conversation."""
+    return _poster(CHEMIN_CORRECTION_CHATBOT, requete, ReponseCorrectionChatbotIA, transport)
+
+
+def traduire_message_chatbot(
+    requete: RequeteTraductionChatbotIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseTraductionChatbotIA:
+    """Appeler l'agent de traduction séparée ; la clé de cache IA est l'identifiant de message transmis."""
+    return _poster(CHEMIN_TRADUCTION_CHATBOT, requete, ReponseTraductionChatbotIA, transport)
 
 
 def clore_session_chatbot(

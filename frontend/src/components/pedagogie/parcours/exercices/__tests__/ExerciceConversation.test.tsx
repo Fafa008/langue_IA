@@ -58,6 +58,24 @@ describe("US72/US74-FE — chat avec le tuteur IA", () => {
     expect(within(screen.getByRole("log", { name: "Conversation avec le tuteur IA" })).queryByTestId("traduction-explication")).toBeNull();
   });
 
+  it("appelle le tuteur, la correction et la traduction via trois routes distinctes", async () => {
+    const chatbot = jest.spyOn(mockParcoursPersonnaliseService, "chatbot");
+    const correction = jest.spyOn(mockParcoursPersonnaliseService, "corrigerChatbot");
+    const traduction = jest.spyOn(mockParcoursPersonnaliseService, "traduireChatbot");
+    rendre();
+
+    fireEvent.change(screen.getByPlaceholderText(/Écrivez ou dictez/), { target: { value: "Je m'appelle Rova" } });
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
+
+    await screen.findByTestId("traduction-explication");
+    expect(chatbot).toHaveBeenCalledTimes(1);
+    expect(correction).toHaveBeenCalledTimes(1);
+    expect(traduction).toHaveBeenCalledTimes(1);
+    const idMessage = traduction.mock.calls[0][0];
+    expect(idMessage).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(traduction.mock.calls[0][1]).toMatch(/^(Très bien|D'accord|Intéressant)/);
+  });
+
   it("n'envoie rien hors du navigateur : aucun appel réseau pendant l'échange", async () => {
     const fetchMock = mockFetch({ body: {} });
     const chatbot = jest.spyOn(mockParcoursPersonnaliseService, "chatbot");

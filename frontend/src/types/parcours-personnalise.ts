@@ -173,12 +173,14 @@ export interface MessageChatbot {
 
 /** Correction en marge renvoyée par l'agent Chatbot (US74). */
 export interface CorrectionChatbot {
+  /** Type transmis par l'agent séparé ; absent des anciennes réponses groupées. */
+  type?: "grammaire" | "orthographe" | "syntaxe";
   extrait: string;
   correction: string;
   explication: string;
 }
 
-/** Réponse du tuteur IA : la conversation continue, corrections et traduction/explication s'affichent à côté. */
+/** Réponse du tuteur IA. Les champs groupés restent tolérés mais ne sont plus la source de l'affichage (PR 5). */
 export interface ReponseChatbot {
   reponse: string;
   corrections: CorrectionChatbot[];
@@ -189,3 +191,28 @@ export interface ReponseChatbot {
   quotaRestant: number | null;
   versionPrompt: string | null;
 }
+
+/** Résultat de `POST /chatbot/correction` : tâche LLM distincte de la réponse du tuteur. */
+export interface CorrectionSepareeChatbot {
+  corrections: CorrectionChatbot[];
+  versionPrompt: string | null;
+}
+
+/** Résultat de `POST /chatbot/traduction` : `idMessage` identifie la réponse mise en cache côté IA. */
+export interface TraductionSepareeChatbot {
+  idMessage: string;
+  traduction: string;
+  explication: string;
+  versionPrompt: string | null;
+}
+
+/** Résultat de `POST /chatbot/exercice` : exercice ciblé enregistré en brouillon par le backend. */
+export interface ExerciceCibleChatbot {
+  idExercice: number;
+  enonce: string;
+  consigne: string;
+  descripteurId: string;
+  niveau: string;
+}
+
+export type TypeErreurChatbot = "grammaire" | "orthographe" | "syntaxe";

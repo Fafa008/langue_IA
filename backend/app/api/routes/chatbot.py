@@ -1,4 +1,4 @@
-"""Routes du chat apprenant (US67/US74, US-IA-CHAT-04) : relais IA, quota, mémoire, exercices et fin de session."""
+"""Routes du chat apprenant (US67/US74, US-IA-CHAT-04/05) : relais IA, quota, mémoire, exercices et fin de session."""
 
 from typing import Annotated
 
@@ -10,15 +10,21 @@ from app.schemas.chatbot import (
     ChatbotMessageIn,
     ChatbotMessageOut,
     ChatbotSessionSupprimeeOut,
+    CorrectionChatbotIn,
+    CorrectionChatbotOut,
     ExerciceCibleChatbotIn,
     ExerciceCibleChatbotOut,
+    TraductionChatbotIn,
+    TraductionChatbotOut,
 )
 from app.services.chatbot import (
     CodeErreurChatbot,
     ErreurChatbot,
+    corriger_message,
     envoyer_message,
     generer_exercice_cible,
     terminer_session_chat,
+    traduire_message,
 )
 
 router = APIRouter(prefix="/chatbot", tags=["chatbot"])
@@ -83,6 +89,28 @@ def poster_exercice_cible(corps: ExerciceCibleChatbotIn, utilisateur: Utilisateu
     _exiger_apprenant(utilisateur)
     try:
         return generer_exercice_cible(utilisateur.id_user, corps)
+    except ErreurChatbot as erreur:
+        code, detail = _ERREURS_HTTP[erreur.code]
+        raise HTTPException(code, detail) from None
+
+
+@router.post("/correction", response_model=CorrectionChatbotOut)
+def poster_correction(corps: CorrectionChatbotIn, utilisateur: UtilisateurConnecte) -> CorrectionChatbotOut:
+    """Corriger séparément le dernier message : l'appel LLM est distinct de la réponse du tuteur."""
+    _exiger_apprenant(utilisateur)
+    try:
+        return corriger_message(utilisateur.id_user, corps)
+    except ErreurChatbot as erreur:
+        code, detail = _ERREURS_HTTP[erreur.code]
+        raise HTTPException(code, detail) from None
+
+
+@router.post("/traduction", response_model=TraductionChatbotOut)
+def poster_traduction(corps: TraductionChatbotIn, utilisateur: UtilisateurConnecte) -> TraductionChatbotOut:
+    """Traduire séparément une réponse du tuteur, avec cache IA indexé par ``id_message``."""
+    _exiger_apprenant(utilisateur)
+    try:
+        return traduire_message(utilisateur.id_user, corps)
     except ErreurChatbot as erreur:
         code, detail = _ERREURS_HTTP[erreur.code]
         raise HTTPException(code, detail) from None

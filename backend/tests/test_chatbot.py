@@ -1,8 +1,8 @@
-"""Tests de la route chat backend (US67/US74, US-IA-CHAT-04) : relais IA, quota, mémoire et historique."""
+"""Tests des routes chat backend (US67/US74, US-IA-CHAT-04/05) : relais IA, quota, mémoire et historique."""
 
 import json
 from collections.abc import Iterator
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -24,16 +24,22 @@ from app.models.chatbot import (
 from app.schemas.ia import (
     ChargeMemoireLongTermeIA,
     CorrectionChatbotIA,
+    CorrectionDetailleeChatbotIA,
     ErreurRecurrenteIA,
     MetaExecutionIA,
     ProfilMemoireIA,
     ReponseChatbotIA,
     ReponseClotureIA,
+    ReponseCorrectionChatbotIA,
     ReponseExerciceIA,
+    ReponseTraductionChatbotIA,
     RequeteChatbotIA,
     RequeteClotureIA,
+    RequeteCorrectionChatbotIA,
     ResultatChatbotIA,
+    ResultatCorrectionChatbotIA,
     ResultatExerciceIA,
+    ResultatTraductionChatbotIA,
     SessionMemoireIA,
 )
 from app.services import ia as service_ia
@@ -71,6 +77,57 @@ def enveloppe(
 
 def corps_chat(message: str = "How long I study English?", session: str = "session-a") -> dict[str, object]:
     return {"message": message, "identifiant_session": session, "historique": []}
+
+
+def enveloppe_correction(erreur: str = "I go yesterday") -> ReponseCorrectionChatbotIA:
+    return ReponseCorrectionChatbotIA(
+        request_id=uuid4(),
+        agent="chatbot-correction",
+        version_agent="1.0.0",
+        version_prompt="chatbot/correction@1.0.0",
+        resultat=ResultatCorrectionChatbotIA(
+            phrase_originale=f"{erreur} with my sister",
+            corrections=[
+                CorrectionDetailleeChatbotIA(
+                    type="grammaire",
+                    erreur=erreur,
+                    correction="I went yesterday",
+                    explication="Le repère temporel « yesterday » impose le prétérit.",
+                )
+            ],
+        ),
+        meta=MetaExecutionIA(
+            duree_ms=15,
+            fournisseur="factice",
+            modele="modele-test",
+            empreinte_prompt="sha256:test",
+        ),
+    )
+
+
+def enveloppe_traduction(id_message: UUID) -> ReponseTraductionChatbotIA:
+    return ReponseTraductionChatbotIA(
+        request_id=uuid4(),
+        agent="chatbot-traduction",
+        version_agent="1.0.0",
+        version_prompt="chatbot/traduction@1.0.0",
+        resultat=ResultatTraductionChatbotIA(
+            id_message=id_message,
+            traduction="Hier, je suis allé au marché avec ma sœur.",
+            explication="« Went » est le prétérit de « go », utilisé avec un repère passé.",
+            cache_hit=False,
+        ),
+        meta=MetaExecutionIA(
+            duree_ms=16,
+            fournisseur="factice",
+            modele="modele-test",
+            empreinte_prompt="sha256:test",
+        ),
+    )
+
+
+def corps_traduction(id_message: UUID, message: str = "I went to the market with my sister.") -> dict[str, object]:
+    return {"identifiant_session": "session-a", "id_message": str(id_message), "message": message}
 
 
 def enveloppe_cloture(session: str = "session-a", profil_id: str = "profil-pseudonyme") -> ReponseClotureIA:
@@ -476,3 +533,117 @@ def test_origine_ia_chat_autorisee_et_origine_inconnue_refusee(db: Session) -> N
         db.commit()
     db.rollback()
     assert db.scalars(select(Exercice)).all() == []
+
+
+# --- Routes séparées (US-IA-CHAT-05) ---
+
+
+def test_correction_separee_relaye_l_agent_dedie(
+    client: TestClient, db: Session, apprenant_avec_parcours, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    requetes: list[RequeteCorrectionChatbotIA] = []
+
+    def corriger(requete: RequeteCorrectionChatbotIA) -> ReponseCorrectionChatbotIA:
+        requetes.append(requete)
+        return enveloppe_correction()
+
+    monkeypatch.setattr("app.services.chatbot.corriger_message_chatbot", corriger)
+
+    reponse = client.post(
+        "/api/v1/chatbot/correction", headers=entete(apprenant_avec_parcours), json=corps_chat("I go yesterday")
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json() == {
+        "corrections": [
+            {
+                "type": "grammaire",
+                "extrait": "I go yesterday",
+                "correction": "I went yesterday",
+                "explication": "Le repère temporel « yesterday » impose le prétérit.",
+            }
+        ],
+        "version_prompt": "chatbot/correction@1.0.0",
+    }
+    assert len(requetes) == 1
+    assert requetes[0].entree.message == "I go yesterday"
+    assert requetes[0].entree.identifiant_session == "session-a"
+    assert requetes[0].contexte.niveau_confirme is False
+    assert db.scalars(select(JournalChatbot)).all() == []
+
+
+def test_correction_separee_refuse_un_extrait_hors_message(
+    client: TestClient, db: Session, apprenant_avec_parcours, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "app.services.chatbot.corriger_message_chatbot", lambda requete: enveloppe_correction("She eat apples")
+    )
+
+    reponse = client.post(
+        "/api/v1/chatbot/correction", headers=entete(apprenant_avec_parcours), json=corps_chat("I go yesterday")
+    )
+
+    assert reponse.status_code == 502
+
+
+def test_traduction_separee_relaye_l_agent_dedie(
+    client: TestClient, db: Session, apprenant_avec_parcours, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    id_message = uuid4()
+    requetes: list[object] = []
+
+    def traduire(requete: object) -> ReponseTraductionChatbotIA:
+        requetes.append(requete)
+        return enveloppe_traduction(id_message)
+
+    monkeypatch.setattr("app.services.chatbot.traduire_message_chatbot", traduire)
+
+    reponse = client.post(
+        "/api/v1/chatbot/traduction",
+        headers=entete(apprenant_avec_parcours),
+        json=corps_traduction(id_message),
+    )
+
+    assert reponse.status_code == 200
+    corps = reponse.json()
+    assert corps["id_message"] == str(id_message)
+    assert corps["traduction"].startswith("Hier, je suis allé")
+    assert corps["explication"].startswith("« Went »")
+    assert corps["version_prompt"] == "chatbot/traduction@1.0.0"
+    assert len(requetes) == 1
+    assert requetes[0].entree.id_message == id_message
+    assert requetes[0].entree.identifiant_session == "session-a"
+
+
+def test_traduction_separee_refuse_un_identifiant_incoherent(
+    client: TestClient, db: Session, apprenant_avec_parcours, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.services.chatbot.traduire_message_chatbot", lambda requete: enveloppe_traduction(uuid4()))
+
+    reponse = client.post(
+        "/api/v1/chatbot/traduction", headers=entete(apprenant_avec_parcours), json=corps_traduction(uuid4())
+    )
+
+    assert reponse.status_code == 502
+
+
+def test_traduction_separee_refuse_un_identifiant_de_message_invalide(
+    client: TestClient, db: Session, apprenant_avec_parcours
+) -> None:
+    reponse = client.post(
+        "/api/v1/chatbot/traduction",
+        headers=entete(apprenant_avec_parcours),
+        json={"identifiant_session": "session-a", "id_message": "pas-un-uuid", "message": "Hello"},
+    )
+
+    assert reponse.status_code == 422
+
+
+def test_routes_separees_reservees_aux_apprenants(client: TestClient, db: Session) -> None:
+    formateur = creer_utilisateur(db, role=Role.FORMATEUR, email="formateur@exemple.com")
+
+    correction = client.post("/api/v1/chatbot/correction", headers=entete(formateur), json=corps_chat("I go yesterday"))
+    traduction = client.post("/api/v1/chatbot/traduction", headers=entete(formateur), json=corps_traduction(uuid4()))
+
+    assert correction.status_code == 403
+    assert traduction.status_code == 403

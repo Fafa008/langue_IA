@@ -49,6 +49,7 @@ async function installerParcours(page: Page, utilisateur: UtilisateurDto = APPRE
 async function installerChat(page: Page, statutMessage = 200, codeLangue = "fr") {
   const requetes: { identifiant_session: string }[] = [];
   const sessionsFermees: string[] = [];
+  const traductions: { id_message: string; identifiant_session: string }[] = [];
   // Depuis US73, la langue du chat vient du parcours : sans ce mock, la page affiche l'alerte « sans parcours ».
   // US74-FE : le message d'ouverture suit cette langue, d'où le paramètre pour vérifier le cas anglais.
   await page.route("**/api/v1/parcours/en-cours", async (route: Route) => {
@@ -65,11 +66,37 @@ async function installerChat(page: Page, statutMessage = 200, codeLangue = "fr")
     if (statutMessage !== 200) return json(route, statutMessage, { detail: "Détail technique interne" });
     await json(route, 200, {
       reponse: "Très bien ! Et après ?",
-      corrections: [],
-      traduction: "Très bien ! Et ensuite ?",
-      explication: "« Et après » invite à poursuivre le récit.",
+      // US-IA-CHAT-05 : valeurs groupées périmées, le frontend doit lire les routes séparées.
+      corrections: [{ extrait: "ANCIEN extrait", correction: "ANCIENNE correction", explication: "ANCIENNE explication" }],
+      traduction: "ANCIENNE traduction groupée",
+      explication: "ANCIENNE explication groupée",
       quota_restant: 19,
       version_prompt: "chatbot/conversation@1.2.0",
+    });
+  });
+  await page.route("**/api/v1/chatbot/correction", async (route: Route) => {
+    if (await handlePreflight(route)) return;
+    await json(route, 200, {
+      corrections: [
+        {
+          type: "grammaire",
+          extrait: "j'ai allé",
+          correction: "je suis allé",
+          explication: "« Aller » se conjugue avec l'auxiliaire être au passé composé.",
+        },
+      ],
+      version_prompt: "chatbot/correction@1.0.0",
+    });
+  });
+  await page.route("**/api/v1/chatbot/traduction", async (route: Route) => {
+    if (await handlePreflight(route)) return;
+    const corps = route.request().postDataJSON() as { id_message: string; identifiant_session: string };
+    traductions.push(corps);
+    await json(route, 200, {
+      id_message: corps.id_message,
+      traduction: "Très bien ! Et ensuite ?",
+      explication: "« Et après » invite à poursuivre le récit.",
+      version_prompt: "chatbot/traduction@1.0.0",
     });
   });
   await page.route("**/api/v1/chatbot/session/*", async (route: Route) => {
@@ -77,7 +104,7 @@ async function installerChat(page: Page, statutMessage = 200, codeLangue = "fr")
     sessionsFermees.push(route.request().url().split("/session/")[1] ?? "");
     await json(route, 200, { supprime: true });
   });
-  return { requetes, sessionsFermees };
+  return { requetes, sessionsFermees, traductions };
 }
 
 /** Termine le test adaptatif jusqu'à l'écran de résultats (deux questions en anglais). */
@@ -189,7 +216,7 @@ test.describe("Démonstration générale — scénarios 1 à 15", () => {
     );
   });
 
-  test("8. Tuteur IA : échange, traduction, quota, fermeture de session et synthèse", async ({ page }) => {
+  test("8. Tuteur IA : échange, routes séparées, quota, fermeture de session et synthèse", async ({ page }) => {
     await loginAs(page, APPRENANT);
     const chat = await installerChat(page, 200, "en");
     await aller(page, "/espace/apprenant/chat");
@@ -197,9 +224,14 @@ test.describe("Démonstration générale — scénarios 1 à 15", () => {
     await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("bonjour");
     await page.getByRole("button", { name: "Envoyer" }).click();
     await expect(page.getByTestId("quota-chat")).toContainText("19");
+    await expect(page.getByTestId("corrections-marge")).toContainText("je suis allé");
     const panneau = page.getByTestId("traduction-explication");
     await expect(panneau).toContainText("Très bien ! Et ensuite ?");
     await expect(page.getByRole("log")).not.toContainText("Très bien ! Et ensuite ?");
+    await expect(page.locator("main")).not.toContainText("ANCIENNE");
+    expect(chat.traductions).toHaveLength(1);
+    expect(chat.traductions[0].id_message).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(chat.traductions[0].identifiant_session).toBe(chat.requetes[0].identifiant_session);
     await page.getByRole("button", { name: "Terminer et voir le rapport" }).click();
     await expect(page.getByTestId("rapport-chat")).toContainText("Synthèse indicative");
     expect(chat.sessionsFermees).toEqual([chat.requetes[0].identifiant_session]);

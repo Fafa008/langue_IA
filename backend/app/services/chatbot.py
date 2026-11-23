@@ -22,28 +22,39 @@ from app.schemas.chatbot import (
     ChatbotMessageIn,
     ChatbotMessageOut,
     ChatbotSessionSupprimeeOut,
+    CorrectionChatbotIn,
+    CorrectionChatbotOut,
+    CorrectionDetailleeChatbotOut,
     ExerciceCibleChatbotIn,
     ExerciceCibleChatbotOut,
+    TraductionChatbotIn,
+    TraductionChatbotOut,
 )
 from app.schemas.ia import (
     ContexteApprenantIA,
     EntreeChatbotIA,
     EntreeClotureIA,
     EntreeExerciceIA,
+    EntreeTraductionChatbotIA,
     MessageHistoriqueChatbotIA,
     ProfilMemoireIA,
     RequeteChatbotIA,
     RequeteClotureIA,
+    RequeteCorrectionChatbotIA,
     RequeteExerciceIA,
+    RequeteTraductionChatbotIA,
     ResultatChatbotIA,
+    ResultatCorrectionChatbotIA,
 )
 from app.services.analyse_diagnostic import LANGUES_IA, NIVEAUX_IA
 from app.services.historique_chatbot import ajouter_tours, lire, supprimer
 from app.services.ia import (
     ErreurServiceIA,
     clore_session_chatbot,
+    corriger_message_chatbot,
     envoyer_message_chatbot,
     generer_exercice_chatbot,
+    traduire_message_chatbot,
 )
 from app.services.lecture_parcours import parcours_en_cours
 from app.services.memoire_chatbot import identifiant_profil, persister_charge
@@ -315,4 +326,101 @@ def generer_exercice_cible(id_user: int, corps: ExerciceCibleChatbotIn) -> Exerc
         consigne=resultat.consigne,
         descripteur_id=resultat.descripteur_id,
         niveau=resultat.niveau,
+    )
+
+
+def _contexte_agent(id_user: int) -> ContexteApprenantIA:
+    """Construire le contexte pseudonyme des agents séparés, sans laisser fuir d'identité."""
+    with SessionLocal() as db:
+        parcours = parcours_en_cours(db, id_user)
+        if parcours is None:
+            raise ErreurChatbot(CodeErreurChatbot.PARCOURS_INCONNU)
+        code_langue = parcours.langue.code
+        referentiel = referentiel_de_langue(code_langue)
+        niveau = niveau_estime(parcours.test_diagnostic).code
+        if code_langue not in LANGUES_IA or niveau not in NIVEAUX_IA[referentiel]:
+            raise ErreurChatbot(CodeErreurChatbot.LANGUE_NON_PRISE_EN_CHARGE)
+        niveau_confirme = parcours.test_diagnostic.niveau_final is not None
+
+    return ContexteApprenantIA(
+        code_langue=code_langue,
+        referentiel=referentiel,
+        niveau_preliminaire=niveau,
+        niveau_confirme=niveau_confirme,
+    )
+
+
+def verifier_corrections_separees(resultat: ResultatCorrectionChatbotIA, message: str) -> bool:
+    """Chaque correction séparée doit citer le message de l'apprenant ; au plus trois sont renvoyées."""
+    if len(resultat.corrections) > 3:
+        return False
+    texte = _normaliser(message)
+    return all(_normaliser(correction.erreur) in texte for correction in resultat.corrections)
+
+
+def corriger_message(id_user: int, corps: CorrectionChatbotIn) -> CorrectionChatbotOut:
+    """Corriger le dernier message via l'agent dédié ; la conversation avec le tuteur n'est pas interrompue."""
+    contexte = _contexte_agent(id_user)
+    requete = RequeteCorrectionChatbotIA(
+        request_id=uuid4(),
+        contexte=contexte,
+        entree=EntreeChatbotIA(
+            message=corps.message,
+            historique=[MessageHistoriqueChatbotIA(role=tour.role, contenu=tour.contenu) for tour in corps.historique],
+            identifiant_session=corps.identifiant_session,
+        ),
+    )
+    try:
+        enveloppe = corriger_message_chatbot(requete)
+    except ErreurServiceIA as erreur:
+        logger.warning("Correction chat IA indisponible (code=%s)", erreur.code)
+        raise ErreurChatbot(_code_pour_erreur_ia(erreur.code)) from None
+
+    resultat = enveloppe.resultat
+    if not verifier_corrections_separees(resultat, corps.message):
+        logger.warning("Corrections IA séparées incohérentes refusées")
+        raise ErreurChatbot(CodeErreurChatbot.IA_REPONSE_INVALIDE)
+
+    return CorrectionChatbotOut(
+        corrections=[
+            CorrectionDetailleeChatbotOut(
+                type=correction.type,
+                extrait=correction.erreur,
+                correction=correction.correction,
+                explication=correction.explication,
+            )
+            for correction in resultat.corrections
+        ],
+        version_prompt=enveloppe.version_prompt,
+    )
+
+
+def traduire_message(id_user: int, corps: TraductionChatbotIn) -> TraductionChatbotOut:
+    """Traduire une réponse du tuteur via l'agent dédié, cache IA indexé par ``id_message``."""
+    contexte = _contexte_agent(id_user)
+    requete = RequeteTraductionChatbotIA(
+        request_id=uuid4(),
+        contexte=contexte,
+        entree=EntreeTraductionChatbotIA(
+            identifiant_session=corps.identifiant_session,
+            id_message=corps.id_message,
+            message=corps.message,
+        ),
+    )
+    try:
+        enveloppe = traduire_message_chatbot(requete)
+    except ErreurServiceIA as erreur:
+        logger.warning("Traduction chat IA indisponible (code=%s)", erreur.code)
+        raise ErreurChatbot(_code_pour_erreur_ia(erreur.code)) from None
+
+    resultat = enveloppe.resultat
+    if resultat.id_message != corps.id_message:
+        logger.warning("Traduction IA avec un identifiant de message incohérent refusée")
+        raise ErreurChatbot(CodeErreurChatbot.IA_REPONSE_INVALIDE)
+
+    return TraductionChatbotOut(
+        id_message=resultat.id_message,
+        traduction=resultat.traduction,
+        explication=resultat.explication,
+        version_prompt=enveloppe.version_prompt,
     )

@@ -4,6 +4,8 @@ import { sessionChatbotCourante } from "@/lib/session-chatbot";
 import { parcoursPersonnaliseMock } from "@/mocks/parcours-personnalise.mock";
 import type {
   CorrectionExercice,
+  CorrectionSepareeChatbot,
+  ExerciceCibleChatbot,
   ExerciceParcours,
   LeconParcours,
   MessageChatbot,
@@ -11,22 +13,30 @@ import type {
   RecommandationParcours,
   ReponseChatbot,
   ReponseExercice,
+  TraductionSepareeChatbot,
+  TypeErreurChatbot,
 } from "@/types/parcours-personnalise";
 import { ENDPOINTS } from "./endpoints";
 import {
   toCorrectionExercice,
+  toCorrectionSepareeChatbot,
+  toExerciceCibleChatbot,
   toExerciceParcours,
   toLeconParcours,
   toParcoursPersonnalise,
   toRecommandationParcours,
   toReponseChatbot,
+  toTraductionSepareeChatbot,
   type CorrectionExerciceDto,
+  type CorrectionSepareeChatbotDto,
+  type ExerciceCibleChatbotDto,
   type ExerciceParcoursDto,
   type LeconParcoursDto,
   type MessageChatbotDto,
   type ParcoursPersonnaliseDto,
   type RecommandationParcoursDto,
   type ReponseChatbotDto,
+  type TraductionSepareeChatbotDto,
 } from "./parcours-personnalise.mapper";
 
 /** Correction et chatbot passent par le LLM : délai plus long que les autres requêtes (budget IA de 30 s). */
@@ -46,6 +56,12 @@ export interface ParcoursPersonnaliseService {
   recommandations(idParcours: number): Promise<RecommandationParcours>;
   /** Message au tuteur IA, avec l'historique récent de la conversation. */
   chatbot(message: string, historique: MessageChatbot[]): Promise<ReponseChatbot>;
+  /** Correction séparée du dernier message, via l'agent dédié relayé par le backend. */
+  corrigerChatbot(message: string, historique: MessageChatbot[]): Promise<CorrectionSepareeChatbot>;
+  /** Traduction séparée d'une réponse du tuteur ; `idMessage` sert de clé de cache côté IA. */
+  traduireChatbot(idMessage: string, message: string): Promise<TraductionSepareeChatbot>;
+  /** Exercice ciblé généré depuis une erreur, enregistré en brouillon par le backend. */
+  exerciceChatbot(typeErreur: TypeErreurChatbot, erreur: string): Promise<ExerciceCibleChatbot>;
   /** Ferme la session en cours : le backend supprime l'historique et le quota (le journal reste anonyme). */
   fermerSession(): Promise<void>;
 }
@@ -96,6 +112,38 @@ export const httpParcoursPersonnaliseService: ParcoursPersonnaliseService = {
     });
     return toReponseChatbot(dto);
   },
+  async corrigerChatbot(message, historique) {
+    const dto = await apiRequest<CorrectionSepareeChatbotDto>(ENDPOINTS.chatbot.correction, {
+      method: "POST",
+      body: corpsChatbot(message, historique),
+      timeoutMs: DELAI_IA_MS,
+    });
+    return toCorrectionSepareeChatbot(dto);
+  },
+  async traduireChatbot(idMessage, message) {
+    const dto = await apiRequest<TraductionSepareeChatbotDto>(ENDPOINTS.chatbot.traduction, {
+      method: "POST",
+      body: {
+        identifiant_session: sessionChatbotCourante(),
+        id_message: idMessage,
+        message,
+      },
+      timeoutMs: DELAI_IA_MS,
+    });
+    return toTraductionSepareeChatbot(dto);
+  },
+  async exerciceChatbot(typeErreur, erreur) {
+    const dto = await apiRequest<ExerciceCibleChatbotDto>(ENDPOINTS.chatbot.exercice, {
+      method: "POST",
+      body: {
+        identifiant_session: sessionChatbotCourante(),
+        type_erreur: typeErreur,
+        erreur,
+      },
+      timeoutMs: DELAI_IA_MS,
+    });
+    return toExerciceCibleChatbot(dto);
+  },
   async fermerSession() {
     await apiRequest<void>(ENDPOINTS.chatbot.fermerSession(sessionChatbotCourante()), { method: "DELETE" });
   },
@@ -111,6 +159,12 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
   recommandations: async (idParcours) => toRecommandationParcours(await parcoursPersonnaliseMock.recommandations(idParcours)),
   chatbot: async (message, historique) =>
     toReponseChatbot(await parcoursPersonnaliseMock.chatbot(corpsChatbot(message, historique))),
+  corrigerChatbot: async (message, historique) =>
+    toCorrectionSepareeChatbot(await parcoursPersonnaliseMock.corrigerChatbot(corpsChatbot(message, historique))),
+  traduireChatbot: async (idMessage, message) =>
+    toTraductionSepareeChatbot(await parcoursPersonnaliseMock.traduireChatbot(idMessage, message)),
+  exerciceChatbot: async (typeErreur, erreur) =>
+    toExerciceCibleChatbot(await parcoursPersonnaliseMock.exerciceChatbot(typeErreur, erreur)),
   fermerSession: async () => undefined,
 };
 

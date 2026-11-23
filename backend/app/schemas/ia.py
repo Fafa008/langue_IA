@@ -339,6 +339,72 @@ class ReponseExerciceIA(_ModeleIA):
     meta: MetaExecutionIA
 
 
+# --- Chat : routes séparées correction / traduction (US-IA-CHAT-05) ---
+# Miroirs des agents ``chatbot-correction`` et ``chatbot-traduction``. Le backend valide ces enveloppes avant
+# de renvoyer quoi que ce soit au frontend : aucune réponse IA n'est relayée brute.
+
+
+class CorrectionDetailleeChatbotIA(_ModeleIA):
+    """Miroir de ``CorrectionDetaillee`` : l'extrait s'appelle ``erreur`` et porte un type côté service IA."""
+
+    type: TypeErreurChatbotIA
+    erreur: str = Field(min_length=1, max_length=120)
+    correction: str = Field(min_length=1, max_length=120)
+    explication: str = Field(min_length=1, max_length=300)
+
+
+class ResultatCorrectionChatbotIA(_ModeleIA):
+    phrase_originale: str = Field(min_length=1, max_length=2000)
+    corrections: list[CorrectionDetailleeChatbotIA] = Field(default_factory=list, max_length=3)
+
+
+class RequeteCorrectionChatbotIA(_ModeleIA):
+    request_id: UUID
+    version_agent: str | None = None
+    contexte: ContexteApprenantIA
+    entree: EntreeChatbotIA
+
+
+class ReponseCorrectionChatbotIA(_ModeleIA):
+    request_id: UUID
+    agent: Literal["chatbot-correction"]
+    version_agent: str = Field(min_length=1, max_length=32)
+    version_prompt: str = Field(min_length=1, max_length=128)
+    statut: Literal["succes"] = "succes"
+    resultat: ResultatCorrectionChatbotIA
+    meta: MetaExecutionIA
+
+
+class EntreeTraductionChatbotIA(_ModeleIA):
+    identifiant_session: str = Field(min_length=1, max_length=64)
+    id_message: UUID
+    message: str = Field(min_length=1, max_length=4000)
+
+
+class RequeteTraductionChatbotIA(_ModeleIA):
+    request_id: UUID
+    version_agent: str | None = None
+    contexte: ContexteApprenantIA
+    entree: EntreeTraductionChatbotIA
+
+
+class ResultatTraductionChatbotIA(_ModeleIA):
+    id_message: UUID
+    traduction: str = Field(min_length=1, max_length=4000)
+    explication: str = Field(min_length=1, max_length=4000)
+    cache_hit: bool = False
+
+
+class ReponseTraductionChatbotIA(_ModeleIA):
+    request_id: UUID
+    agent: Literal["chatbot-traduction"]
+    version_agent: str = Field(min_length=1, max_length=32)
+    version_prompt: str = Field(min_length=1, max_length=128)
+    statut: Literal["succes"] = "succes"
+    resultat: ResultatTraductionChatbotIA
+    meta: MetaExecutionIA
+
+
 # --- REC-00 : recommandation de parcours (``POST /recommandation/actions``) ---
 
 TypeExerciceRecommandationIA = Literal["GRAMMAIRE", "VOCABULAIRE", "COMPREHENSION", "ECOUTE", "ORAL"]

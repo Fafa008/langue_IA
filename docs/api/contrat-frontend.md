@@ -1124,12 +1124,14 @@ dernière correction remplace la précédente, et la correction automatique vide
 
 ## Chat apprenant (US67/US74) — rôle `APPRENANT`
 
-Le navigateur n'appelle jamais `ia-service`. Le backend authentifie, borne l'historique à 20 tours, applique le
-quota de 20 échanges par session, appelle le service IA puis valide la réponse avant de la renvoyer. L'agent qui
-parle à l'apprenant est le **tuteur IA** (même agent `chatbot`, contrat 1.2.0). La langue vient du parcours en cours,
-sans sélecteur manuel : le message d'ouverture du tuteur est dans cette langue, comme la synthèse vocale et la dictée.
-Chaque réponse porte sa traduction et son explication en français, affichées hors du fil de discussion dans un panneau
-à gauche (disposition TalkPal), et non dans la bulle du tuteur.
+Le navigateur n'appelle jamais `ia-service` : il passe uniquement par ces routes backend authentifiées. Le backend
+borne l'historique à 20 tours, applique le quota de 20 échanges par session, appelle le service IA puis valide chaque
+réponse avant de la renvoyer. L'agent qui parle à l'apprenant est le **tuteur IA**. La langue vient du parcours en
+cours, sans sélecteur manuel : le message d'ouverture est dans cette langue, comme la synthèse vocale et la dictée.
+
+Depuis US-IA-CHAT-05, les trois tâches (dialogue, correction, traduction) sont des **appels LLM distincts** ; le
+frontend enchaîne les routes séparées ci-dessous. La traduction et l'explication françaises s'affichent hors du fil
+dans un panneau à gauche (disposition TalkPal), et non dans la bulle du tuteur.
 
 ### `POST /chatbot/message`
 
@@ -1138,14 +1140,47 @@ L'`identifiant_session` est généré par le frontend ; l'`historique` transmis 
 
 Réponse `200` : `{ "reponse": "…", "corrections": [{ "extrait": "…", "correction": "…", "explication": "…" }],
 "traduction": "…", "explication": "…", "quota_restant": 19, "version_prompt": "chatbot/conversation@1.2.0" }`.
-`corrections` contient au plus trois éléments et s'affiche en marge sans interrompre la conversation. `traduction`
-(traduction française de l'expression utile de la réponse) et `explication` (sens et usage en français) sont
-obligatoires et non vides pour chaque réponse ; la dernière paire s'affiche dans le panneau latéral gauche, hors du
-fil, sans remplacer la réponse du tuteur.
+`corrections`, `traduction` et `explication` restent présents pour compatibilité mais **ne sont plus consommés par le
+frontend** : ils proviennent désormais des routes séparées. Le frontend lit `reponse` et `quota_restant`.
 
 Erreurs : `403` (pas apprenant), `404` (aucun parcours : le détail du backend est affiché tel quel, avec un accès au
 test de positionnement), `422` (langue/niveau non pris en charge), `429` (quota
 dépassé), `502`/`503`/`504` (réponse IA invalide, indisponible ou lente — le frontend propose de renvoyer).
+
+### `POST /chatbot/correction`
+
+Corps identique à `/chatbot/message` : `{ "message": "…", "identifiant_session": "<uuid>", "historique": […] }`.
+
+Réponse `200` : `{ "corrections": [{ "type": "grammaire", "extrait": "…", "correction": "…",
+"explication": "…" }], "version_prompt": "chatbot/correction@1.0.0" }`. `extrait` est le libellé historique du
+frontend ; il correspond au champ `erreur` du contrat interne de l'IA. La liste est vide si le message est correct et
+contient au plus trois éléments ; elle s'affiche en marge sans interrompre la conversation.
+
+Erreurs : `403`, `404`, `422` et `502`/`503`/`504` comme pour `/chatbot/message` (pas de quota consommé par cette route).
+
+### `POST /chatbot/traduction`
+
+Corps : `{ "identifiant_session": "<uuid>", "id_message": "<uuid>", "message": "…" }`. `id_message` est généré une
+seule fois par réponse du tuteur par le frontend ; il sert de clé de cache au sein du service IA, qui peut répondre
+sans nouvel appel LLM lors d'une demande identique.
+
+Réponse `200` : `{ "id_message": "<uuid>", "traduction": "…", "explication": "…",
+"version_prompt": "chatbot/traduction@1.0.0" }`. La dernière paire s'affiche dans le panneau latéral gauche, hors du
+fil, sans remplacer la réponse du tuteur.
+
+Erreurs : `403`, `404`, `422` (identifiant de message invalide) et `502`/`503`/`504`. Une panne de la traduction ne
+supprime pas la réponse du tuteur : le frontend continue sans panneau.
+
+### `POST /chatbot/exercice`
+
+Corps : `{ "identifiant_session": "<uuid>", "type_erreur": "grammaire" | "orthographe" | "syntaxe",
+"erreur": "…" }` ; `type_erreur` et `erreur` proviennent de la première correction affichée.
+
+Réponse `200` : `{ "id_exercice": 42, "enonce": "…", "consigne": "…", "descripteur_id": "cecrl-a1-grammaire-1",
+"niveau": "A1" }`. Le backend enregistre l'exercice en `brouillon` avec l'origine `systeme:ia_chat` et ne renvoie ni
+score ni correction. Le niveau et le descripteur sont validés côté backend avant persistance.
+
+Erreurs : `403`, `404` (aucun parcours), `422` (langue/niveau non pris en charge) et `502`/`503`/`504`.
 
 ### `DELETE /chatbot/session/{identifiant_session}`
 

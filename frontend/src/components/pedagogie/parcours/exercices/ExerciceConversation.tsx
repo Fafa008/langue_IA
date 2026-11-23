@@ -1,23 +1,37 @@
 "use client";
 
-import { Bot, Send, UserRound, Volume2 } from "lucide-react";
+import { Bot, Send, Sparkles, UserRound, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useChatbot } from "@/hooks/useParcoursPersonnalise";
+import {
+  useChatbot,
+  useCorrigerChatbot,
+  useExerciceChatbot,
+  useTraduireChatbot,
+} from "@/hooks/useParcoursPersonnalise";
 import { useReconnaissanceVocale } from "@/hooks/useReconnaissanceVocale";
 import { PARCOURS_MOCK } from "@/lib/env";
 import { messageErreurParcours } from "@/lib/parcours-personnalise";
+import { creerIdentifiantMessage } from "@/lib/session-chatbot";
 import { lireAVoixHaute, syntheseDisponible } from "@/lib/voix";
-import type { ContenuExercice, CorrectionChatbot, MessageChatbot, ReponseExercice } from "@/types/parcours-personnalise";
+import type {
+  ContenuExercice,
+  CorrectionChatbot,
+  ExerciceCibleChatbot,
+  MessageChatbot,
+  ReponseExercice,
+} from "@/types/parcours-personnalise";
 import BoutonMicro from "./BoutonMicro";
 
 /**
- * Message affiché : un message de l'apprenant peut porter les corrections renvoyées par le backend (US74-FE).
- * La traduction et l'explication du tuteur sont conservées sur le tour mais présentées hors du fil.
+ * Message affiché : un message de l'apprenant peut porter les corrections renvoyées par la route séparée
+ * `/chatbot/correction` (US-IA-CHAT-05). La traduction et l'explication viennent de `/chatbot/traduction` et sont
+ * présentées hors du fil, avec l'identifiant de message utilisé comme clé de cache côté IA.
  */
 type MessageEnChat = MessageChatbot & {
   corrections?: CorrectionChatbot[];
   traduction?: string;
   explication?: string;
+  idMessage?: string;
 };
 
 /**
@@ -45,13 +59,18 @@ export default function ExerciceConversation({
   const [messages, setMessages] = useState<MessageEnChat[]>([{ role: "assistant", contenu: contenu.messageInitial }]);
   const [brouillon, setBrouillon] = useState("");
   const [quotaRestant, setQuotaRestant] = useState<number | null>(null);
+  const [exerciceCible, setExerciceCible] = useState<ExerciceCibleChatbot | null>(null);
   const chatbot = useChatbot();
+  const correction = useCorrigerChatbot();
+  const traduction = useTraduireChatbot();
+  const exercice = useExerciceChatbot();
   const voix = useReconnaissanceVocale(langue);
   const finRef = useRef<HTMLDivElement>(null);
   const echanges = messages.filter((m) => m.role === "apprenant").length;
   const derniereTraduction = [...messages]
     .reverse()
     .find((message) => message.role === "assistant" && (message.traduction || message.explication));
+  const derniereCorrection = [...messages].reverse().find((message) => (message.corrections?.length ?? 0) > 0);
 
   // La dictée remplit la zone de saisie ; l'apprenant relit avant d'envoyer
   useEffect(() => {
@@ -62,33 +81,58 @@ export default function ExerciceConversation({
     finRef.current?.scrollIntoView?.({ block: "nearest" });
   }, [messages, chatbot.isPending]);
 
-  const envoyer = () => {
+  /**
+   * Un échange appelle trois routes backend distinctes : le tuteur répond, puis la correction et la traduction
+   * sont demandées en parallèle. Une panne de l'une des deux tâches ne supprime pas la réponse du tuteur.
+   */
+  const envoyer = async () => {
     const message = brouillon.trim();
     if (!message || chatbot.isPending) return;
     const historique = messages;
     setMessages([...historique, { role: "apprenant", contenu: message }]);
     setBrouillon("");
-    chatbot.mutate(
-      { message, historique },
-      {
-        onSuccess: (reponse) => {
-          setQuotaRestant(reponse.quotaRestant);
-          setMessages((liste) => [
-            ...liste.map((tour, index) =>
-              index === liste.length - 1 && reponse.corrections.length > 0
-                ? { ...tour, corrections: reponse.corrections }
-                : tour,
-            ),
-            {
-              role: "assistant",
-              contenu: reponse.reponse,
-              traduction: reponse.traduction,
-              explication: reponse.explication,
-            },
-          ]);
-        },
-      },
-    );
+    setExerciceCible(null);
+    const idMessage = creerIdentifiantMessage();
+    try {
+      const reponse = await chatbot.mutateAsync({ message, historique });
+      setQuotaRestant(reponse.quotaRestant);
+      const [resultatCorrection, resultatTraduction] = await Promise.allSettled([
+        correction.mutateAsync({ message, historique }),
+        traduction.mutateAsync({ idMessage, message: reponse.reponse }),
+      ]);
+      setMessages((liste) => {
+        const suivants = [...liste];
+        if (resultatCorrection.status === "fulfilled" && resultatCorrection.value.corrections.length > 0) {
+          const indexApprenant = suivants.length - 1;
+          suivants[indexApprenant] = {
+            ...suivants[indexApprenant],
+            corrections: resultatCorrection.value.corrections,
+          };
+        }
+        suivants.push({
+          role: "assistant",
+          contenu: reponse.reponse,
+          traduction: resultatTraduction.status === "fulfilled" ? resultatTraduction.value.traduction : "",
+          explication: resultatTraduction.status === "fulfilled" ? resultatTraduction.value.explication : "",
+          idMessage,
+        });
+        return suivants;
+      });
+    } catch {
+      // L'erreur du tuteur est déjà exposée par React Query ; le message de l'apprenant reste affiché.
+    }
+  };
+
+  const genererExerciceCible = async () => {
+    const premiere = derniereCorrection?.corrections?.[0];
+    if (!premiere) return;
+    try {
+      setExerciceCible(
+        await exercice.mutateAsync({ typeErreur: premiere.type ?? "grammaire", erreur: premiere.extrait }),
+      );
+    } catch {
+      // L'exercice ciblé est un complément : son échec n'interrompt pas la conversation.
+    }
   };
 
   return (
@@ -164,6 +208,42 @@ export default function ExerciceConversation({
         {voix.erreur && (
           <p role="alert" className="mt-2 text-small text-content-secondary">
             {voix.erreur} Le mode écrit reste disponible.
+          </p>
+        )}
+
+        {(correction.isPending || traduction.isPending) && (
+          <p role="status" className="mt-2 text-small text-content-secondary">
+            Correction et traduction en cours…
+          </p>
+        )}
+        {(correction.isError || traduction.isError) && (
+          <p role="status" className="mt-2 text-small text-content-secondary">
+            La correction et la traduction n&apos;ont pas pu être chargées ; la réponse du tuteur reste disponible.
+          </p>
+        )}
+
+        {derniereCorrection?.corrections?.length ? (
+          <button
+            type="button"
+            data-testid="exercice-cible"
+            onClick={genererExerciceCible}
+            disabled={exercice.isPending}
+            className="btn-secondary mt-3 min-h-11 px-4 py-2 disabled:opacity-50"
+          >
+            <Sparkles size={16} aria-hidden /> {exercice.isPending ? "Exercice en cours…" : "Générer un exercice ciblé"}
+          </button>
+        ) : null}
+        {exerciceCible && (
+          <section data-testid="exercice-cible-result" className="mt-2 rounded-card border border-border bg-surface p-3">
+            <p className="font-semibold text-primary">Exercice ciblé — {exerciceCible.niveau}</p>
+            <p lang={langue}>{exerciceCible.enonce}</p>
+            <p className="text-small text-content-secondary">{exerciceCible.consigne}</p>
+            <p className="text-small text-content-secondary">Descripteur : {exerciceCible.descripteurId}</p>
+          </section>
+        )}
+        {exercice.isError && (
+          <p role="status" className="mt-2 text-small text-content-secondary">
+            L&apos;exercice ciblé est momentanément indisponible.
           </p>
         )}
 
