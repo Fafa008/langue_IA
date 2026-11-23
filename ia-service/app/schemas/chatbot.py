@@ -92,6 +92,13 @@ class TourMemoire(ModeleStrict):
     phase: PhaseAssimil | None = None
 
 
+class EntreeConversation(EntreeChatbot):
+    """Entrée du tuteur v2 : la session clé la mémoire courte, absente pour les appels historiques."""
+
+    identifiant_session: str | None = Field(default=None, max_length=IDENTIFIANT_SESSION_MAX)
+    phase_assimil: PhaseAssimil | None = None
+
+
 class ResumeSession(ModeleStrict):
     """Résumé glissant d'une session, stocké dans Redis sous ``session:{id}:summary``."""
 

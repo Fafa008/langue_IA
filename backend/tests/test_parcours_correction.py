@@ -125,12 +125,14 @@ def test_corrige_en_phase_passive_et_enregistre(client, db, apprenant, faux_ia) 
         "lecon_atteinte": 23,
         "reformulation": None,
     }
-    # Contexte transmis : langue, référentiel, niveau du test et leçon atteinte, sans identité
+    # Contexte transmis : langue, référentiel, niveau du test et leçon atteinte, sans identité.
+    # ``niveau_confirme`` vaut False tant que le diagnostic n'a pas de niveau final (US-IA-CHAT-03).
     requete = faux_ia.requetes[0]
     assert requete.contexte.model_dump() == {
         "code_langue": "en",
         "referentiel": "CECRL",
         "niveau_preliminaire": "B1",
+        "niveau_confirme": False,
         "lecon_atteinte": 23,
     }
     assert requete.entree.consigne == CONTENU_REDACTION["consigne"]

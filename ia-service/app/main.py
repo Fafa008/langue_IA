@@ -1,10 +1,11 @@
 """Point d'entrée du service IA.
 
-Le service expose ``GET /health``, ``POST /chatbot/message`` (US67), les routes internes de correction et de
-traduction du chatbot, ``POST /diagnostic/evaluer`` (PRE-05), ``POST /correction/reponse-libre`` (US157) et
-``POST /recommandation/actions``. Le client LLM unique, le Harness et ses agents Diagnostic, chatbot, correction,
-traduction et recommandation sont enregistrés au démarrage : une configuration LLM invalide empêche le service de
-démarrer, et les ressources partagées sont fermées proprement à l'arrêt. Le service ne persiste rien : c'est le
+Le service expose ``GET /health``, ``POST /chatbot/message`` (US67, tuteur v2 CECRL/Assimil), les routes internes
+de correction et de traduction du chatbot, ``POST /diagnostic/evaluer`` (PRE-05),
+``POST /correction/reponse-libre`` (US157) et ``POST /recommandation/actions``. Le client LLM unique, le Harness et
+ses agents Diagnostic, chatbot, correction, traduction et recommandation sont enregistrés au démarrage : une
+configuration LLM invalide empêche le service de démarrer, et les ressources partagées sont fermées proprement à
+l'arrêt. Le service ne persiste rien : c'est le
 backend qui valide et enregistre l'analyse du diagnostic, le feedback des réponses libres et les propositions de
 recommandation.
 """
@@ -18,6 +19,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agent.conversation import definir_agent_conversation_chatbot
 from app.agent.correction import definir_agent_correction_chatbot
 from app.agent.traduction import definir_agent_traduction_chatbot
 from app.agents.chatbot import definir_agent_chatbot
@@ -64,6 +66,7 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
 
     registre_agents.enregistrer(construire_definition(registre_prompts))
     registre_agents.enregistrer(definir_agent_chatbot(registre_prompts))
+    registre_agents.enregistrer(definir_agent_conversation_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_correction_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_traduction_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_correction(registre_prompts))

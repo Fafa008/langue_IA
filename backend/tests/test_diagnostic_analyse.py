@@ -357,6 +357,12 @@ def test_ne_transmet_pas_l_identite_de_l_apprenant(client, db: Session, ia: Faux
     # L'enveloppe ne porte aucune identité : ni e-mail, ni identifiant d'utilisateur, ni champ libre.
     assert "rova@exemple.com" not in requete.model_dump_json()
     assert set(requete.model_dump()) == {"request_id", "version_agent", "contexte", "entree"}
-    # Ce qui part réellement (``exclude_none``) : la leçon atteinte (US157) ne concerne pas le diagnostic.
-    assert set(requete.contexte.model_dump(exclude_none=True)) == {"code_langue", "referentiel", "niveau_preliminaire"}
+    # Ce qui part réellement (``exclude_none``) : la leçon atteinte (US157) ne concerne pas le diagnostic ;
+    # ``niveau_confirme`` (US-IA-CHAT-03) est un booléen du contrat de contexte, pas une identité.
+    assert set(requete.contexte.model_dump(exclude_none=True)) == {
+        "code_langue",
+        "referentiel",
+        "niveau_preliminaire",
+        "niveau_confirme",
+    }
     assert "id_user" not in requete.model_dump_json()

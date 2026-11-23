@@ -99,7 +99,9 @@ def requete_diagnostic_reference() -> RequeteDiagnosticIA:
     return RequeteDiagnosticIA(
         request_id=UUID("8f14e45f-ea0c-4d2b-9f6e-1c2b3a4d5e6f"),
         version_agent=VERSION_AGENT_DIAGNOSTIC,
-        contexte=ContexteApprenantIA(code_langue="en", referentiel="CECRL", niveau_preliminaire="B1"),
+        contexte=ContexteApprenantIA(
+            code_langue="en", referentiel="CECRL", niveau_preliminaire="B1", niveau_confirme=False
+        ),
         entree=EntreeDiagnosticIA(
             scenario="quotidien",
             reponses=[

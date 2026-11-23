@@ -71,6 +71,9 @@ class ContexteApprenant(ModeleStrict):
     code_langue: CodeLangue
     referentiel: Referentiel
     niveau_preliminaire: CodeNiveau
+    # Le backend seul sait si le test diagnostic a été clôturé. Tant qu'il ne l'a pas été, le tuteur raisonne au
+    # premier niveau du référentiel et propose une courte question de diagnostic (US-IA-CHAT-03).
+    niveau_confirme: bool = False
     memoire_pedagogique: MemoirePedagogique | None = None
     # Contrat v2 (US157) : leçon atteinte du parcours (``parcours.lecon_atteinte``). Facultative pour le diagnostic,
     # obligatoire pour la correction d'une réponse libre, dont le retour dépend de la phase passive ou active.
