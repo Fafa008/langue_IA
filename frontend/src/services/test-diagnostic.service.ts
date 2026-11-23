@@ -5,9 +5,12 @@ import { DOMAINES, estLienSur, lacunesDe, PHASES } from "@/lib/resultatDiagnosti
 import { testDiagnosticMockService } from "@/mocks/test-diagnostic.mock";
 import {
   COMPETENCES_TEST,
+  FORMATS_EXERCICE,
   type CadreReference,
   type CompetenceResultat,
   type CompetenceTest,
+  type DonneeAnalyse,
+  type FormatExercice,
   type IssueTerminaison,
   type Justification,
   type PhaseAssimil,
@@ -29,6 +32,10 @@ interface QuestionDto {
   competence: CompetenceTest;
   type_reponse: "choix" | "texte" | "audio";
   enonce: string;
+  /** Champs du test de positionnement enrichi : facultatifs, absents sur les questions historiques. */
+  format?: FormatExercice | null;
+  lettres_melangees?: string[] | null;
+  duree_secondes?: number | null;
   choix?: string[];
   support?: string | null;
   audio_url?: string | null;
@@ -87,6 +94,19 @@ interface ScoreDiagnosticDto {
   points_faibles?: { domaine: string; detail?: string | null }[] | null;
   phase_assimil?: string | null;
   justification?: { resume?: string | null; sources?: SourceReferentielDto[] | null } | null;
+  /** Dossier par exercice pour l'agent diagnostic : facultatif, non calculé par le frontend. */
+  donnees_analyse?: DonneeAnalyseDto[] | null;
+}
+
+interface DonneeAnalyseDto {
+  id_question: string;
+  competence: CompetenceTest;
+  format: FormatExercice;
+  difficulte: number;
+  justesse: boolean;
+  temps_reponse_secondes: number;
+  transcription?: string | null;
+  confiance_stt?: number | null;
 }
 
 const texte = (valeur: unknown): string | undefined =>
@@ -116,6 +136,36 @@ function lirePointsFaibles(dto: ScoreDiagnosticDto["points_faibles"]): PointFaib
 }
 
 const lirePhase = (phase: unknown): PhaseAssimil | undefined => PHASES.find((p) => p === phase);
+
+/** Faits par exercice pour l'agent : on écarte les lignes invalides plutôt que d'en inventer. */
+function lireDonneesAnalyse(dto: ScoreDiagnosticDto["donnees_analyse"]): DonneeAnalyse[] | undefined {
+  if (!Array.isArray(dto)) return undefined;
+  const vues = new Set<string>();
+  return dto.flatMap((item): DonneeAnalyse[] => {
+    const idQuestion = texte(item?.id_question);
+    const competence = COMPETENCES_TEST.find((c) => c === item?.competence);
+    const format = FORMATS_EXERCICE.find((f) => f === item?.format);
+    const { difficulte, justesse, temps_reponse_secondes } = item ?? {};
+    const valide = idQuestion && competence && format && !vues.has(idQuestion)
+      && Number.isInteger(difficulte) && difficulte >= 1
+      && typeof justesse === "boolean"
+      && Number.isFinite(temps_reponse_secondes) && temps_reponse_secondes >= 0;
+    if (!valide) return [];
+    vues.add(idQuestion);
+    const transcription = texte(item.transcription);
+    const confiance = item.confiance_stt;
+    return [{
+      idQuestion,
+      competence,
+      format,
+      difficulte,
+      justesse,
+      tempsReponseSecondes: temps_reponse_secondes,
+      transcription,
+      confianceStt: typeof confiance === "number" && Number.isFinite(confiance) ? confiance : undefined,
+    }];
+  });
+}
 
 /**
  * Justification et sources du référentiel ; les sources incomplètes ou en double sont écartées,
@@ -209,6 +259,9 @@ const toQuestion = (dto: QuestionDto): Question => ({
   competence: dto.competence,
   typeReponse: dto.type_reponse,
   enonce: dto.enonce,
+  format: dto.format ?? undefined,
+  lettresMelangees: dto.lettres_melangees ?? undefined,
+  dureeSecondes: dto.duree_secondes ?? undefined,
   choix: dto.choix,
   support: dto.support ?? undefined,
   audioUrl: dto.audio_url ?? undefined,
@@ -251,6 +304,9 @@ export const httpTestDiagnosticService = {
   ): Promise<RetourReponse> {
     if (reponse.type === "audio") {
       throw new Error("L'enregistrement des réponses audio sera disponible après la mise en place du stockage des médias.");
+    }
+    if (reponse.type === "sans_reponse") {
+      throw new Error("Le passage automatique nécessite le service de diagnostic.");
     }
     const reponseFournie = reponse.type === "choix" ? valeurChoix : reponse.texte;
     if (!reponseFournie?.trim()) {
@@ -318,6 +374,7 @@ export const httpTestDiagnosticService = {
         pointsFaibles: lirePointsFaibles(dto.points_faibles),
         phaseAssimil: lirePhase(dto.phase_assimil),
         justification: lireJustification(dto.justification),
+        donneesAnalyse: lireDonneesAnalyse(dto.donnees_analyse),
       },
     };
   },

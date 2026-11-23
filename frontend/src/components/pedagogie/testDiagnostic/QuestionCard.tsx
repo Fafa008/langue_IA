@@ -1,11 +1,12 @@
 "use client";
 
-import { compterMots, DUREE_ORALE_MINIMALE_SECONDES, ETAPES, etapeDe, MOTS_ECRITS_MINIMUM } from "@/lib/etapesTest";
+import { compterMots, consigneDe, DUREE_ORALE_MINIMALE_SECONDES, etapeDe, MOTS_ECRITS_MINIMUM } from "@/lib/etapesTest";
 import type { Question } from "@/types/test-diagnostic";
 import AnalyseEnCours from "./AnalyseEnCours";
 import EnregistrementOral from "./EnregistrementOral";
 import ListeningAudio from "./ListeningAudio";
 import RedactionEcrite from "./RedactionEcrite";
+import TexteATrous from "./TexteATrous";
 
 interface QuestionCardProps {
   question: Question;
@@ -47,11 +48,14 @@ export default function QuestionCard({
   onValiderAudio,
 }: QuestionCardProps) {
   const etape = etapeDe(question.competence);
+  const format = question.format ?? "qcm";
   const verrouille = Boolean(retour) || envoiEnCours || bloquee;
   const coche = retour ? retour.choisie : choisie;
-  // Un sujet d'expression écrite attend un texte construit ; une autre question à texte, une réponse courte
-  const motsMinimum = etape === "expression_ecrite" ? question.motsMinimum ?? MOTS_ECRITS_MINIMUM : 1;
-  const sujet = etape === "expression_orale" || etape === "expression_ecrite";
+  // Un sujet d'expression écrite historique attend un texte construit ; les nouveaux formats ont une réponse courte
+  const motsMinimum = !question.format && etape === "expression_ecrite"
+    ? question.motsMinimum ?? MOTS_ECRITS_MINIMUM
+    : 1;
+  const sujet = !question.format && (etape === "expression_orale" || etape === "expression_ecrite");
 
   const reponsePrete =
     (question.typeReponse === "choix" && coche !== null)
@@ -72,7 +76,15 @@ export default function QuestionCard({
       data-language={langue}
       aria-labelledby={`question-${question.id}`}
     >
-      <p className="text-small font-medium text-content-secondary">{ETAPES[etape].consigne}</p>
+      <p className="text-small font-medium text-content-secondary">{consigneDe(question)}</p>
+      {format === "parler" && (
+        <p className="mt-2 text-small text-content-secondary" data-testid="consigne-parler">
+          (Durée minimale : {question.dureeMinimaleSecondes ?? DUREE_ORALE_MINIMALE_SECONDES} s)
+        </p>
+      )}
+      {question.typeReponse === "texte" && format === "texte_a_trous" && (
+        <p className="mt-3 text-h4 font-semibold text-content" data-testid="support-question">{question.enonce}</p>
+      )}
 
       {question.support && (
         <div className="mt-4 rounded-btn bg-background p-4 leading-relaxed" data-testid="question-support">
@@ -92,7 +104,7 @@ export default function QuestionCard({
         }`}
       >
         {sujet && <span className="text-primary">Sujet : </span>}
-        {question.enonce}
+        {format === "parler" ? "Répétez la phrase suivante." : question.enonce}
       </h2>
 
       {question.typeReponse === "choix" && (
@@ -127,7 +139,17 @@ export default function QuestionCard({
         </fieldset>
       )}
 
-      {!retour && question.typeReponse === "texte" && (
+      {!retour && question.typeReponse === "texte" && format === "texte_a_trous" && (
+        <TexteATrous
+          id={`response-${question.id}`}
+          lettres={question.lettresMelangees ?? []}
+          valeur={reponseLibre}
+          onChange={onTexteChange}
+          disabled={verrouille}
+        />
+      )}
+
+      {!retour && question.typeReponse === "texte" && format !== "texte_a_trous" && (
         <RedactionEcrite
           id={`response-${question.id}`}
           valeur={reponseLibre}
@@ -143,6 +165,9 @@ export default function QuestionCard({
           dureeMinimale={question.dureeMinimaleSecondes ?? DUREE_ORALE_MINIMALE_SECONDES}
           onChange={onAudioEnregistre}
           disabled={verrouille}
+          phraseACible={format === "parler" ? question.enonce : undefined}
+          afficherPhrase={format === "parler"}
+          titre={format === "parler" ? "Répétez la phrase suivante" : undefined}
         />
       )}
 

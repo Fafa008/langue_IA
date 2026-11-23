@@ -8,8 +8,10 @@ import {
   COMPETENCES_TEST,
   type CompetenceResultat,
   type CompetenceTest,
+  type DonneeAnalyse,
   type DomaineFaiblesse,
   type EtapePlan,
+  type FormatExercice,
   type IssueTerminaison,
   type LangueDiagnostic,
   type ObjectifFormation,
@@ -21,12 +23,16 @@ import {
   type TestInterrompu,
 } from "@/types/test-diagnostic";
 
-/** Plan visé d'un test de 15 minutes, réduit si la banque d'une langue n'a pas assez de questions. */
+/** 5 exercices par compétence × 4 compétences = 20 exercices, 5 points chacun → 100. */
+export const POINTS_PAR_EXERCICE = 5;
+const NOMBRE_PAR_ETAPE = 5;
+
+/** Plan visé, réduit si la banque d'une langue n'a pas assez d'exercices. */
 const PLAN_VISE: EtapePlan[] = [
-  { etape: "qcm", nombreQuestions: 8 },
-  { etape: "comprehension_orale", nombreQuestions: 2 },
-  { etape: "expression_orale", nombreQuestions: 1 },
-  { etape: "expression_ecrite", nombreQuestions: 1 },
+  { etape: "qcm", nombreQuestions: NOMBRE_PAR_ETAPE },
+  { etape: "comprehension_orale", nombreQuestions: NOMBRE_PAR_ETAPE },
+  { etape: "expression_orale", nombreQuestions: NOMBRE_PAR_ETAPE },
+  { etape: "expression_ecrite", nombreQuestions: NOMBRE_PAR_ETAPE },
 ];
 
 /** Banque de questions simulée d'une langue (vide pour une langue inconnue). */
@@ -56,8 +62,15 @@ interface SessionMock {
   /** Niveau estimé (indice dans `niveaux`) : il monte ou descend après chaque réponse à choix. */
   niveauVise: number;
   niveauxVises: number[];
+  /** Nombre de bonnes réponses, utilisé pour faire évoluer le niveau. */
+  bonnes: number;
+  /** Note sur 100 : POINTS_PAR_EXERCICE par bonne réponse. */
   score: number;
   scoresCompetences: Record<CompetenceTest, { score: number; total: number }>;
+  /** Début de la question courante, pour le temps de réponse transmis à l'analyse. */
+  debutQuestion: number;
+  /** Dossier par exercice destiné à l'agent diagnostic. */
+  donneesAnalyse: DonneeAnalyse[];
   terminee: boolean;
   derniereReponse: { idQuestion: string; reponse: ReponseTest; retour: RetourReponse } | null;
 }
@@ -65,6 +78,19 @@ interface SessionMock {
 /** Démonstration : l'analyse d'une réponse libre par le LLM prend un peu de temps. */
 const DUREE_ANALYSE_MS = 1200;
 const analyseSimulee = () => new Promise((resolve) => setTimeout(resolve, DUREE_ANALYSE_MS));
+
+/** Comparaison tolérante à la casse, aux accents et à la ponctuation (dictée et texte à trous). */
+function normaliser(texte: string): string {
+  return texte
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const formatDe = (question: QuestionMock): FormatExercice => question.format ?? "qcm";
 
 const sessions = new Map<string, SessionMock>();
 let prochainId = 1;
@@ -95,7 +121,7 @@ function choisirQuestion(session: SessionMock): QuestionMock | null {
   return plusProches.find((item) => session.scoresCompetences[item.competence].total === 0) ?? plusProches[0] ?? null;
 }
 
-function sansCorrection({ bonneReponse: _bonneReponse, ...question }: QuestionMock) {
+function sansCorrection({ bonneReponse: _bonneReponse, reponseAttendue: _reponseAttendue, ...question }: QuestionMock) {
   return question;
 }
 
@@ -142,9 +168,9 @@ function calculerResultat(session: SessionMock): ResultatTest {
   const repondues = session.niveauxVises.length;
   const valeursNiveau = [...session.niveauxVises.slice(-5), session.niveauVise];
   const indexNiveau = Math.round(valeursNiveau.reduce((sum, value) => sum + value, 0) / valeursNiveau.length);
-  const niveau = repondues > 0 && session.score === repondues
+  const niveau = repondues > 0 && session.bonnes === repondues
     ? session.niveaux[session.niveaux.length - 1]
-    : session.score === 0
+    : session.bonnes === 0
       ? session.niveaux[0]
       : session.niveaux[indexNiveau];
   const evaluees = COMPETENCES_TEST.filter((competence) => session.scoresCompetences[competence].total > 0);
@@ -161,14 +187,15 @@ function calculerResultat(session: SessionMock): ResultatTest {
   return appliquerModeAnalyse({
     niveau,
     score: session.score,
-    // Les questions sans réponse (temps écoulé) comptent comme fausses
+    // Les exercices sans réponse (temps écoulé) comptent comme faux : le total reste 100.
     total: session.total,
+    donneesAnalyse: session.donneesAnalyse,
     competences: evaluees.map<CompetenceResultat>((competence) => ({ competence, ...session.scoresCompetences[competence] })),
     lacunes,
     pointsFaibles: faiblesses.map(({ domaine, detail }) => ({ domaine, detail })),
     phaseAssimil: echelle.indexOf(niveau) <= 1 ? "impregnation" : "activation",
     justification: {
-      resume: `Avec ${session.score} bonne(s) réponse(s) sur ${session.total}, vos réponses correspondent aux descripteurs du niveau ${niveau}`
+      resume: `Avec ${session.bonnes} bonne(s) réponse(s) sur ${repondues}, vos réponses correspondent aux descripteurs du niveau ${niveau}`
         + (faiblesses.length > 0 ? ", avec des points à consolider." : ", sans point faible marqué."),
       sources: [sourceNiveau(cadre, echelle, niveau), ...faiblesses.map(({ source }) => source)],
     },
@@ -198,14 +225,17 @@ export const testDiagnosticMockService = {
       banque,
       niveaux,
       plan,
-      total: totalDu(plan),
+      total: totalDu(plan) * POINTS_PAR_EXERCICE,
       questionCourante: banque[0],
       dejaPosees: new Set(),
       // Le test commence au milieu de l'échelle, puis s'adapte
       niveauVise: Math.floor((niveaux.length - 1) / 2),
       niveauxVises: [],
+      bonnes: 0,
       score: 0,
       scoresCompetences: creerScoresCompetences(),
+      debutQuestion: Date.now(),
+      donneesAnalyse: [],
       terminee: false,
       derniereReponse: null,
     };
@@ -220,7 +250,7 @@ export const testDiagnosticMockService = {
       langue,
       niveaux,
       numeroQuestion: 1,
-      totalQuestions: session.total,
+      totalQuestions: totalDu(plan),
       plan,
       question: sansCorrection(premiere),
     };
@@ -241,7 +271,8 @@ export const testDiagnosticMockService = {
         precedente.type === "choix" && reponse.type === "choix" ? precedente.choix === reponse.choix
           : precedente.type === "texte" && reponse.type === "texte" ? precedente.texte === reponse.texte
             : precedente.type === "audio" && reponse.type === "audio" ? precedente.audio === reponse.audio
-              : false
+              : precedente.type === "sans_reponse" && reponse.type === "sans_reponse" ? true
+                : false
       );
       if (identique) return session.derniereReponse.retour;
       throw new ApiError(409, "Une autre réponse a déjà été enregistrée pour cette question.");
@@ -257,42 +288,72 @@ export const testDiagnosticMockService = {
     const reponseLibreValide = reponse.type === "texte"
       ? Boolean(reponse.texte.trim())
       : reponse.type === "audio" && reponse.audio.size > 0;
-    if (question.typeReponse === "choix" && !choixValide
+    const sansReponse = reponse.type === "sans_reponse";
+    if (!sansReponse && (question.typeReponse === "choix" && !choixValide
       || question.typeReponse === "texte" && (reponse.type !== "texte" || !reponseLibreValide)
-      || question.typeReponse === "audio" && (reponse.type !== "audio" || !reponseLibreValide)) {
+      || question.typeReponse === "audio" && (reponse.type !== "audio" || !reponseLibreValide))) {
       throw new ApiError(422, "La réponse sélectionnée est invalide.");
     }
 
     if (question.typeReponse !== "choix") await analyseSimulee();
     const correcte = reponse.type === "choix" && reponse.choix === question.bonneReponse;
-    // Démonstration : une réponse libre non vide est considérée comme réussie, en attendant l'évaluation par l'IA
-    const reussie = question.typeReponse === "choix" ? correcte : reponseLibreValide;
-    session.score += Number(reussie);
-    session.scoresCompetences[question.competence].total += 1;
-    session.scoresCompetences[question.competence].score += Number(reussie);
+    // La dictée et le texte à trous sont corrigés exactement ; l'oral reste à évaluer par le service STT (phase 4).
+    const juste = sansReponse ? false : question.reponseAttendue
+      ? reponse.type === "texte"
+        ? normaliser(reponse.texte) === normaliser(question.reponseAttendue)
+        : reponse.type === "audio"
+          ? true // La transcription STT n'existe pas encore : phase 1, on valide l'enregistrement.
+          : false
+      : question.typeReponse === "texte"
+        ? reponseLibreValide
+        : question.typeReponse === "audio" ? reponseLibreValide : correcte;
+    const points = Number(juste) * POINTS_PAR_EXERCICE;
+    session.bonnes += Number(juste);
+    session.score += points;
+    session.scoresCompetences[question.competence].total += POINTS_PAR_EXERCICE;
+    session.scoresCompetences[question.competence].score += points;
     session.niveauxVises.push(session.niveauVise);
+    const donnee: DonneeAnalyse = {
+      idQuestion: question.id,
+      competence: question.competence,
+      format: formatDe(question),
+      difficulte: Math.max(1, session.niveaux.indexOf(question.niveau) + 1),
+      justesse: juste,
+      tempsReponseSecondes: Math.max(0, Math.round((Date.now() - session.debutQuestion) / 1000)),
+    };
+    // La transcription et la confiance STT seront ajoutées quand le service de voix existera (phase 4).
+    session.donneesAnalyse.push(donnee);
     // Seules les réponses à choix font évoluer le niveau estimé
     if (question.typeReponse === "choix") {
-      session.niveauVise = Math.max(0, Math.min(session.niveaux.length - 1, session.niveauVise + (reussie ? 1 : -1)));
+      session.niveauVise = Math.max(0, Math.min(session.niveaux.length - 1, session.niveauVise + (juste ? 1 : -1)));
     }
 
     const suivante = choisirQuestion(session);
     if (suivante) {
       session.questionCourante = suivante;
       session.dejaPosees.add(suivante.id);
+      session.debutQuestion = Date.now();
     } else {
       session.terminee = true;
     }
 
     const suite = {
       numeroQuestion: session.niveauxVises.length,
-      totalQuestions: session.total,
+      totalQuestions: session.total / POINTS_PAR_EXERCICE,
       questionSuivante: suivante ? sansCorrection(suivante) : null,
       resultat: suivante ? null : calculerResultat(session),
     };
-    const retour: RetourReponse = question.typeReponse === "choix"
-      ? { ...suite, typeReponse: "choix", correcte, bonneReponse: question.bonneReponse }
-      : { ...suite, typeReponse: question.typeReponse, evaluation: "Réponse enregistrée pour le test." };
+    const retour: RetourReponse = sansReponse
+      ? { ...suite, typeReponse: "en_attente" }
+      : question.typeReponse === "choix"
+        ? { ...suite, typeReponse: "choix", correcte, bonneReponse: question.bonneReponse ?? 0 }
+        : {
+          ...suite,
+          typeReponse: question.typeReponse,
+          evaluation: formatDe(question) === "parler"
+            ? `Enregistrement reçu. Phrase attendue : « ${question.reponseAttendue} ». Analyse vocale à venir.`
+            : juste ? "Bonne réponse." : `Réponse incorrecte. Attendu : ${question.reponseAttendue ?? "—"}.`,
+        };
     session.derniereReponse = { idQuestion, reponse, retour };
     return retour;
   },

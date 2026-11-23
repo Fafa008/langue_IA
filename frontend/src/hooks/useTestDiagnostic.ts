@@ -147,6 +147,31 @@ export function useTestDiagnostic() {
     if (saisie) envoyer(saisie);
   };
 
+  /** Temps imparti écoulé : l'exercice est compté faux, on passe automatiquement au suivant. */
+  const expirerQuestion = () => {
+    const { sessionId, courante, questionsRestantes } = etat;
+    if (!sessionId || !courante || etat.phase !== "question" || reponse.isPending) return;
+    reponse.mutate(
+      {
+        idSession: sessionId,
+        idQuestion: courante.id,
+        reponse: { type: "sans_reponse" },
+        progression: {
+          questionSuivante: questionsRestantes[0] ?? null,
+          numeroQuestion: etat.numeroQuestion,
+          totalQuestions: etat.totalQuestions,
+        },
+      },
+      {
+        onSuccess: (retour) => {
+          dispatch({ type: "repondre", choix: null, retour });
+          if (retour.questionSuivante || retour.resultat) dispatch({ type: "suivante" });
+          else terminer();
+        },
+      },
+    );
+  };
+
   /*
    * Fin du test : le backend calcule le score, lance l'analyse IA best-effort et répond directement avec le résultat.
    */
@@ -235,6 +260,7 @@ export function useTestDiagnostic() {
     repondreTexte,
     repondreAudio,
     reessayerReponse,
+    expirerQuestion,
     suivante,
     /** Termine le test maintenant (temps écoulé, ou nouvel essai après une erreur de calcul). */
     terminer,

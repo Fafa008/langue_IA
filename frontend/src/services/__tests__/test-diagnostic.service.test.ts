@@ -330,7 +330,7 @@ describe("httpTestDiagnosticService", () => {
       const { testDiagnosticService } = await import("@/services/test-diagnostic.service");
       const langues = await testDiagnosticService.langues();
       expect(langues.find((l) => l.code === "en")).toMatchObject({ cadre: "CECRL", disponible: true });
-      expect(langues.find((l) => l.code === "zh")).toMatchObject({ cadre: "HSK", disponible: false, nombreQuestions: 0 });
+      expect(langues.find((l) => l.code === "zh")).toMatchObject({ cadre: "HSK", disponible: true, nombreQuestions: 20 });
 
       const session = await testDiagnosticService.demarrer("en", "professionnel", []);
       const question = QUESTIONS_TEST.en.find((item) => item.id === session.question.id);
@@ -338,7 +338,7 @@ describe("httpTestDiagnosticService", () => {
       expect(session.question).not.toHaveProperty("bonneReponse");
 
       await expect(
-        testDiagnosticService.repondre(session.id, session.question.id, { type: "choix", choix: question.bonneReponse }),
+        testDiagnosticService.repondre(session.id, session.question.id, { type: "choix", choix: question.bonneReponse ?? 0 }),
       ).resolves.toMatchObject({ correcte: true });
     } finally {
       if (originalMock === undefined) delete process.env.NEXT_PUBLIC_API_MOCK;

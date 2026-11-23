@@ -30,6 +30,37 @@ const redaction: Question = {
   motsMinimum: 5,
 };
 
+const trous: Question = {
+  id: "en-ecrire-1",
+  niveau: "A1",
+  competence: "ecrit",
+  typeReponse: "texte",
+  format: "texte_a_trous",
+  enonce: "I live in ___ .",
+  lettresMelangees: ["N", "O", "L", "D", "O", "N"],
+  dureeSecondes: 45,
+};
+
+const dictee: Question = {
+  id: "en-ecouter-2",
+  niveau: "A1",
+  competence: "ecoute",
+  typeReponse: "texte",
+  format: "dictee",
+  enonce: "Écrivez la phrase que vous avez entendue.",
+  audioTexte: "I live in London.",
+};
+
+const parler: Question = {
+  id: "en-parler-1",
+  niveau: "A1",
+  competence: "oral",
+  typeReponse: "audio",
+  format: "parler",
+  enonce: "I live in London.",
+  dureeMinimaleSecondes: 2,
+};
+
 type Props = ComponentProps<typeof QuestionCard>;
 
 function props(question: Question, autres: Partial<Props> = {}): Props {
@@ -135,5 +166,38 @@ describe("QuestionCard", () => {
 
     expect(screen.getByLabelText("Votre réponse")).toBeDisabled();
     expect(screen.getByRole("status")).toHaveTextContent("Elle reste affichée jusqu'à la confirmation");
+  });
+
+  it("affiche les jetons mélangés du texte à trous et accepte la réponse reconstruite", () => {
+    const p = props(trous);
+    render(<QuestionInteractive {...p} />);
+
+    expect(screen.getByText("Complétez le mot manquant avec les lettres proposées.")).toBeInTheDocument();
+    expect(screen.getByTestId("texte-a-trous")).toBeInTheDocument();
+    expect(screen.getAllByText("N")).toHaveLength(2);
+    const valider = screen.getByRole("button", { name: "Valider et continuer" });
+    expect(valider).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Votre réponse"), { target: { value: "London" } });
+    expect(valider).toBeEnabled();
+    fireEvent.click(valider);
+    expect(p.onValiderTexte).toHaveBeenCalledWith("London");
+  });
+
+  it("affiche la consigne de dictée sans révéler la phrase à écrire", () => {
+    render(<QuestionCard {...props(dictee)} />);
+
+    expect(screen.getByText("Écoutez la phrase, puis écrivez exactement ce que vous avez entendu.")).toBeInTheDocument();
+    expect(screen.queryByText("I live in London.")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Votre réponse")).toBeInTheDocument();
+  });
+
+  it("affiche la phrase à répéter pour l'exercice parler", () => {
+    render(<QuestionCard {...props(parler)} />);
+
+    expect(screen.getByText("Répétez la phrase suivante.")).toBeInTheDocument();
+    expect(screen.getByTestId("consigne-parler")).toHaveTextContent("2 s");
+    expect(screen.getByText("« I live in London. »")).toBeInTheDocument();
+    expect(screen.getByTestId("enregistrement-oral")).toBeInTheDocument();
   });
 });

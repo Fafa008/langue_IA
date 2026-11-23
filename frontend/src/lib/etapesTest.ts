@@ -1,7 +1,10 @@
-import type { CompetenceTest, EtapePlan, EtapeTest, Question } from "@/types/test-diagnostic";
+import type { CompetenceTest, EtapePlan, EtapeTest, FormatExercice, Question } from "@/types/test-diagnostic";
 
 /** Durée totale du test : le compte à rebours part de là au démarrage. */
 export const DUREE_TEST_MINUTES = 15;
+
+/** Temps imparti par exercice avant passage automatique (les questions peuvent le surcharger). */
+export const DUREE_QUESTION_DEFAUT_SECONDES = 60;
 
 /** Valeurs par défaut quand la question ne précise pas ses propres exigences. */
 export const DUREE_ORALE_MINIMALE_SECONDES = 30;
@@ -44,6 +47,26 @@ export const ORDRE_ETAPES = Object.keys(ETAPES) as EtapeTest[];
 /** Étape à laquelle appartient une question, d'après sa compétence. */
 export function etapeDe(competence: CompetenceTest): EtapeTest {
   return ORDRE_ETAPES.find((etape) => ETAPES[etape].competences.includes(competence)) ?? "qcm";
+}
+
+const CONSIGNES_FORMAT: Record<FormatExercice, string> = {
+  qcm: "Choisissez la bonne réponse parmi les propositions.",
+  vrai_faux: "Vrai ou faux ? Choisissez la bonne réponse.",
+  texte_a_trous: "Complétez le mot manquant avec les lettres proposées.",
+  dictee: "Écoutez la phrase, puis écrivez exactement ce que vous avez entendu.",
+  parler: "Dites la phrase suivante au micro, sans lire de notes.",
+};
+
+/** Consigne affichée : le format de l'exercice, sinon celle de l'étape pour les questions historiques. */
+export function consigneDe(question: Pick<Question, "competence" | "format">): string {
+  return question.format ? CONSIGNES_FORMAT[question.format] : ETAPES[etapeDe(question.competence)].consigne;
+}
+
+/** Temps disponible sur une question avant passage automatique. */
+export function dureeQuestion(question: Pick<Question, "dureeSecondes">): number {
+  return question.dureeSecondes && question.dureeSecondes > 0
+    ? question.dureeSecondes
+    : DUREE_QUESTION_DEFAUT_SECONDES;
 }
 
 /** Questions triées dans l'ordre des étapes (l'ordre d'origine est gardé à l'intérieur d'une étape). */

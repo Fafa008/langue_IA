@@ -519,6 +519,21 @@ question n'a encore été enregistrée pour cette combinaison.
 
 Une question peut également contenir `support`, `audio_url` ou `audio_texte`. Les champs sans valeur sont omis.
 
+#### Test de positionnement enrichi (phase frontend, champs facultatifs)
+
+Le mock frontend (`src/mocks/questions-test.mock.ts`) fournit 20 exercices par langue : 5 par compétence
+`lecture` (lire), `ecoute` (écouter), `ecrit` (écrire), `oral` (parler). Ces champs sont **optionnels** et absents des
+questions historiques ; le backend ne les expose pas encore. Le frontend les ignore s'ils manquent.
+
+| Champ | Type | Usage |
+| --- | --- | --- |
+| `format` | `qcm`, `vrai_faux`, `texte_a_trous`, `dictee`, `parler` | Choix de l'interface et de la consigne |
+| `lettres_melangees` | `string[]` | Jetons à remettre dans l'ordre pour le mot manquant |
+| `duree_secondes` | nombre | Temps imparti à l'exercice avant passage automatique (60 s par défaut) |
+
+Sans `format`, l'ancien comportement reste inchangé (QCM, rédaction libre ou expression orale libre d'après
+`competence`). La note est calculée par le service : 20 exercices × 5 points = 100.
+
 Le frontend range les questions en quatre étapes d'après leur `competence`, dans cet ordre :
 
 | Étape | Compétences | Réponse |
@@ -596,7 +611,15 @@ arrondi à deux décimales. Une nouvelle requête sur une tentative terminée re
 
 `score` et `percentage` sont identiques, sur 100. Les trois derniers champs (`competences`, `points_faibles`,
 `phase_assimil`) viennent de l'analyse IA de la tentative, faite à la clôture ; ils sont décrits plus bas, dans la section
-de l'analyse, et absents quand elle n'existe pas. La grille de référence utilisée par le backend est :
+de l'analyse, et absents quand elle n'existe pas.
+
+Le dossier factuel destiné à l'agent diagnostic peut aussi être fourni dans `donnees_analyse` (facultatif, absent
+aujourd'hui côté backend). Chaque ligne décrit un exercice : `id_question`, `competence`, `format`, `difficulte`
+(entier ≥ 1), `justesse` (booléen), `temps_reponse_secondes` (nombre ≥ 0) et, le cas échéant, `transcription` et
+`confiance_stt` fournies plus tard par le service vocal. L'agent interprète ces faits : il ne calcule ni la note ni la
+pondération. Le frontend écarte les lignes invalides et n'affiche rien si le champ est absent.
+
+La grille de référence utilisée par le backend est :
 
 | Pourcentage | CECRL | HSK |
 | --- | --- | --- |

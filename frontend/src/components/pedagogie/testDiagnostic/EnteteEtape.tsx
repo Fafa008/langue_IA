@@ -10,6 +10,8 @@ interface EnteteEtapeProps {
   progression: { numero: number; faites: number; total: number };
   /** null tant que le compte à rebours n'a pas démarré. */
   secondesRestantes: number | null;
+  /** Temps restant sur l'exercice en cours (affiché en plus du temps global). */
+  secondesQuestion?: number | null;
   onQuitter: () => void;
   quitterDesactive?: boolean;
 }
@@ -23,6 +25,7 @@ export default function EnteteEtape({
   position,
   progression,
   secondesRestantes,
+  secondesQuestion = null,
   onQuitter,
   quitterDesactive = false,
 }: EnteteEtapeProps) {
@@ -58,6 +61,17 @@ export default function EnteteEtape({
             {formaterDuree(secondesRestantes)}
           </p>
         )}
+        {secondesQuestion !== null && (
+          <p
+            role="timer"
+            aria-label={`Temps restant pour cet exercice : ${formaterDuree(secondesQuestion)}`}
+            data-testid="temps-question"
+            className="hidden shrink-0 items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-small font-semibold tabular-nums text-content-secondary sm:flex"
+          >
+            <Timer size={16} aria-hidden />
+            Exercice : {formaterDuree(secondesQuestion)}
+          </p>
+        )}
       </div>
 
       <div
@@ -71,8 +85,13 @@ export default function EnteteEtape({
       >
         <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pourcentage}%` }} />
       </div>
-      <p className="mt-2 flex justify-between text-small text-content-secondary">
+      <p className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-small text-content-secondary">
         <span data-testid="progress-label">Question {progression.numero} sur {progression.total}</span>
+        {secondesQuestion !== null && (
+          <span className="tabular-nums sm:hidden" data-testid="temps-question-mobile">
+            Exercice : {formaterDuree(secondesQuestion)}
+          </span>
+        )}
         <span className="font-semibold text-primary">{pourcentage} %</span>
       </p>
     </header>

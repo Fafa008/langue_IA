@@ -1,5 +1,8 @@
 import {
   compterMots,
+  consigneDe,
+  dureeQuestion,
+  DUREE_QUESTION_DEFAUT_SECONDES,
   etapeDe,
   formaterDuree,
   planDepuisQuestions,
@@ -32,6 +35,20 @@ describe("étapes du test", () => {
       { etape: "expression_ecrite", nombreQuestions: 1 },
     ]);
     expect(positionEtape(plan, "expression_ecrite")).toEqual({ numero: 2, total: 2 });
+  });
+});
+
+describe("formats du test de positionnement", () => {
+  it("donne la consigne du format quand il est renseigné", () => {
+    expect(consigneDe({ competence: "ecrit", format: "texte_a_trous" }))
+      .toBe("Complétez le mot manquant avec les lettres proposées.");
+    expect(consigneDe({ competence: "ecoute" }))
+      .toBe("Écoutez l'extrait, puis choisissez ce que vous avez entendu.");
+  });
+
+  it("utilise la durée de la question, sinon le temps imparti par défaut", () => {
+    expect(dureeQuestion({ dureeSecondes: 45 })).toBe(45);
+    expect(dureeQuestion({})).toBe(DUREE_QUESTION_DEFAUT_SECONDES);
   });
 });
 
