@@ -4,6 +4,7 @@
     "code_langue": "en",
     "referentiel": "CECRL",
     "niveau_preliminaire": "B1",
+    "niveau_confirme": false,
     "lecon_atteinte": 23
   },
   "entree": {

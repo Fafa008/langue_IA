@@ -4,7 +4,8 @@
   "contexte": {
     "code_langue": "en",
     "referentiel": "CECRL",
-    "niveau_preliminaire": "B1"
+    "niveau_preliminaire": "B1",
+    "niveau_confirme": false
   },
   "entree": {
     "scenario": "quotidien",
