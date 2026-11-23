@@ -20,9 +20,10 @@ import json
 import math
 from collections.abc import Sequence
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.llm.base import MessageLLM
+from app.prompts.variables import VariablesEvaluationDiagnostic
 from app.schemas.chatbot import (
     CORRECTIONS_CHATBOT_MAX,
     EXPLICATION_CORRECTION_MAX,
@@ -128,17 +129,31 @@ def _points_faibles(preuves: list[PreuveReponse]) -> list[PointFaible]:
 
 
 def resultat_diagnostic_demonstration(messages: Sequence[MessageLLM]) -> ResultatDiagnostic | None:
-    """Construire le résultat de démonstration à partir du prompt, ou ``None`` s'il ne s'agit pas d'un diagnostic."""
+    """Construire le résultat de démonstration à partir du prompt, ou ``None`` s'il ne s'agit pas d'un diagnostic.
+
+    Le bloc de données est relu avec le même modèle strict que le rendu du prompt (`extra="forbid"`) : un champ
+    inconnu — par exemple `id_exercice` au lieu de `id_question` (T2) — ne doit jamais être ignoré silencieusement
+    pour produire une réponse de démonstration valide.
+    """
     donnees = _donnees_diagnostic(messages)
     if donnees is None:
         return None
-    contexte = donnees["contexte_apprenant"]
-    referentiel = contexte["referentiel"]
-    niveau_preliminaire = contexte["niveau_preliminaire"]
-    score = float(donnees["score_preliminaire"])
+    try:
+        variables = VariablesEvaluationDiagnostic.model_validate(donnees)
+    except ValidationError:
+        return None
+    if variables.score_preliminaire is None:
+        return None
+    referentiel = variables.referentiel
+    niveau_preliminaire = variables.contexte_apprenant.niveau_preliminaire
+    score = float(variables.score_preliminaire)
     preuves = [
-        PreuveReponse(id_question=r["id_question"], competence=r["competence"], type_reponse=r["type_reponse"])
-        for r in donnees["reponses"]
+        PreuveReponse(
+            id_question=reponse.id_question,
+            competence=reponse.competence,
+            type_reponse=reponse.type_reponse,
+        )
+        for reponse in variables.reponses
     ]
     production = any(preuve.type_reponse in ("texte", "audio") for preuve in preuves)
     niveau_estime = _niveau_estime(referentiel, niveau_preliminaire, score)
@@ -146,7 +161,7 @@ def resultat_diagnostic_demonstration(messages: Sequence[MessageLLM]) -> Resulta
     phase = PhaseAssimil.ACTIVATION if production and score >= SCORE_ACTIVATION else PhaseAssimil.IMPREGNATION
 
     return ResultatDiagnostic(
-        code_langue=contexte["code_langue"],
+        code_langue=variables.code_langue,
         referentiel=referentiel,
         niveau_estime=niveau_estime,
         phase_assimil=phase,

@@ -1,0 +1,28 @@
+{
+  "request_id": "8f14e45f-ea0c-4d2b-9f6e-1c2b3a4d5e6f",
+  "version_agent": "1.0.0",
+  "contexte": {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_preliminaire": "B1"
+  },
+  "entree": {
+    "scenario": "quotidien",
+    "reponses": [
+      {
+        "id_question": "ex-12",
+        "competence": "ecrit",
+        "type_reponse": "texte",
+        "contenu": "I usually go to work by bus, but yesterday I walked.",
+        "enonce": "Décrivez votre trajet habituel et celui d'hier."
+      },
+      {
+        "id_question": "ex-18",
+        "competence": "oral",
+        "type_reponse": "audio",
+        "contenu": "Hello, my name is Rova and I live in Antananarivo."
+      }
+    ],
+    "score_preliminaire": 64
+  }
+}

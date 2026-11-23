@@ -1,0 +1,31 @@
+{
+  "request_id": "8f14e45f-ea0c-4d2b-9f6e-1c2b3a4d5e6f",
+  "agent": "diagnostic",
+  "version_agent": "1.0.0",
+  "version_prompt": "diagnostic/evaluation@1.1.0",
+  "statut": "succes",
+  "resultat": {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_estime": "B2",
+    "phase_assimil": "activation",
+    "points_faibles": [
+      {
+        "domaine": "expression_ecrite",
+        "id_question": "ex-12",
+        "observation": "Le présent remplace le prétérit après le repère yesterday.",
+        "justification": "Le repère temporel appelle un temps passé ; estimation à confirmer avec un vrai fournisseur."
+      }
+    ],
+    "score_confiance": 0.6,
+    "niveau_preliminaire": "B1",
+    "ecart_avec_niveau_preliminaire": 0
+  },
+  "meta": {
+    "duree_ms": 1200,
+    "fournisseur": "factice",
+    "modele": "modele-test",
+    "version_corpus": "2026.10",
+    "empreinte_prompt": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

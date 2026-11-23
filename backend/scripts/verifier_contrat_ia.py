@@ -8,14 +8,28 @@ Code de sortie 0 si tout est conforme, 1 sinon (le détail est affiché, sans co
 """
 
 import sys
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 
 from app.core.config import get_settings
-from app.schemas.ia import ContexteApprenantIA, EntreeCorrectionIA, RequeteCorrectionIA
+from app.schemas.ia import (
+    VERSION_AGENT_DIAGNOSTIC,
+    ContexteApprenantIA,
+    EntreeCorrectionIA,
+    EntreeDiagnosticIA,
+    PreuveDiagnosticIA,
+    RequeteCorrectionIA,
+    RequeteDiagnosticIA,
+)
+from app.services.analyse_diagnostic import verifier_reponse_diagnostic
 from app.services.correction_exercice import verifier_feedback
-from app.services.ia import CHEMIN_CORRECTION, ErreurServiceIA, corriger_reponse_libre
+from app.services.ia import (
+    CHEMIN_CORRECTION,
+    ErreurServiceIA,
+    corriger_reponse_libre,
+    evaluer_diagnostic,
+)
 from app.services.phase_parcours import phase_parcours
 
 # Réponse fictive avec des erreurs visibles même sans LLM (majuscule initiale, point final absents).
@@ -76,6 +90,54 @@ def verifier_refus_sans_lecon() -> str | None:
     return None
 
 
+def requete_diagnostic_reference() -> RequeteDiagnosticIA:
+    """Requête canonique identique à ``contrats/ia/diagnostic-evaluer/requete.json`` (US-N02).
+
+    Le dossier ``contrats/`` n'est monté qu'en développement : ce script tourne aussi dans l'image de production
+    du job Docker CI. Les tests de contrat vérifient que cette requête et l'exemple partagé restent identiques.
+    """
+    return RequeteDiagnosticIA(
+        request_id=UUID("8f14e45f-ea0c-4d2b-9f6e-1c2b3a4d5e6f"),
+        version_agent=VERSION_AGENT_DIAGNOSTIC,
+        contexte=ContexteApprenantIA(code_langue="en", referentiel="CECRL", niveau_preliminaire="B1"),
+        entree=EntreeDiagnosticIA(
+            scenario="quotidien",
+            reponses=[
+                PreuveDiagnosticIA(
+                    id_question="ex-12",
+                    competence="ecrit",
+                    type_reponse="texte",
+                    contenu="I usually go to work by bus, but yesterday I walked.",
+                    enonce="Décrivez votre trajet habituel et celui d'hier.",
+                ),
+                PreuveDiagnosticIA(
+                    id_question="ex-18",
+                    competence="oral",
+                    type_reponse="audio",
+                    contenu="Hello, my name is Rova and I live in Antananarivo.",
+                ),
+            ],
+            score_preliminaire=64,
+        ),
+    )
+
+
+def verifier_diagnostic() -> str | None:
+    """Appel réel avec la requête de référence partagée, pour vérifier le déploiement atomique du contrat IA."""
+    demande = requete_diagnostic_reference()
+    try:
+        enveloppe = evaluer_diagnostic(demande)
+    except ErreurServiceIA as erreur:
+        return f"appel refusé ou réponse hors contrat ({erreur.code})"
+    if not verifier_reponse_diagnostic(enveloppe, demande):
+        return "réponse incohérente avec la requête de référence"
+    print(
+        f"OK  diagnostic : {len(enveloppe.resultat.points_faibles)} point(s) faible(s), "
+        f"version {enveloppe.version_agent} ({enveloppe.version_prompt})"
+    )
+    return None
+
+
 def main() -> int:
     if not get_settings().ia_service_url.strip():
         print("ÉCHEC IA_SERVICE_URL n'est pas configurée dans le conteneur backend.")
@@ -83,11 +145,11 @@ def main() -> int:
     echecs = [f"leçon {lecon} : {raison}" for lecon in LECONS if (raison := verifier_lecon(lecon))]
     if raison := verifier_refus_sans_lecon():
         echecs.append(f"sans leçon : {raison}")
+    if raison := verifier_diagnostic():
+        echecs.append(f"diagnostic : {raison}")
     for echec in echecs:
         print(f"ÉCHEC {echec}")
-    print(
-        "Contrat backend ↔ service IA (correction des réponses libres) : " + ("non conforme" if echecs else "conforme")
-    )
+    print("Contrat backend ↔ service IA (correction et diagnostic) : " + ("non conforme" if echecs else "conforme"))
     return 1 if echecs else 0
 
 
