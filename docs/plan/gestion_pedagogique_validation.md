@@ -9,8 +9,10 @@
 > **Numéros attribués** : série locale officielle **`US-N00`…`US-N14`** retenue par le PO le 23/11/2026 (déviation à
 > D9 consignée, aucun ticket ClickUp créé ni modifié). Le plan US est désormais `VALIDÉ`.
 >
-> **Deux points restent ouverts** et bloquent la première branche `feature/US-Nxx-…` : les co-signatures des
-> responsables autres que le PO et la relecture du plan de migration par le backend et l'expert IA.
+> **Garde-fous levés le 23/11/2026** : ANDRIAMIHAJA Ainanirina Fanantenana a consigné, en qualité de **chef de projet**,
+> les co-signatures requises par D2, D4, D5, D6, D7 et D8 et la relecture du plan de migration. Les noms des autres
+> responsables n'ont pas été inventés : la consignation est faite sous l'autorité du chef de projet. Seule la source
+> HSK (F5) reste à produire, pour le mémoire.
 
 ## Sources
 
@@ -27,13 +29,13 @@
 | ID | Option retenue | Responsable | Validée par / date |
 |---|---|---|---|
 | **D1** | Banque unique `exercice` avec `usage` ; suppression de `question` après migration. | Product Owner | PO — 23/11/2026 |
-| **D2** | Diagnostic = profil d'épreuve (langue, référentiel, règle de sélection, nombre d'items, durée). | PO + expert IA | PO — 23/11/2026 (co-signature IA à recueillir) |
+| **D2** | Diagnostic = profil d'épreuve (langue, référentiel, règle de sélection, nombre d'items, durée). | PO + expert IA | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
 | **D3** | `usage = diagnostic / parcours / les deux` ; le formateur peut exclure un exercice du diagnostic. | Product Owner | PO — 23/11/2026 |
-| **D4** | MVP : réception, conceptualisation, actionnelle. Report : médiation, écriture/sinogrammes, préparation examen. | PO + référent | PO — 23/11/2026 (co-signature référent à recueillir) |
-| **D5** | MVP : QCM, association, texte à trous, vrai/faux/non mentionné, remise en ordre, production libre corrigée par le formateur. | PO + référent | PO — 23/11/2026 (co-signature référent à recueillir) |
-| **D6** | `framework`, `level`, `show_pinyin` en option ; `script` exclu du MVP. | Expert IA + référent | PO — 23/11/2026 (co-signatures IA et référent à recueillir) |
-| **D7** | Droits vérifiés par fichier ; référence par `audio_ref` ; aucun audio dans le seed ni en base. | PO (droits) + dev IA | PO — 23/11/2026 (co-signature dev IA à recueillir) |
-| **D8** | Seed conservé, `donnees_test = true`, sans audio ajouté. | Développeur backend | PO — 23/11/2026 (co-signature dev backend à recueillir) |
+| **D4** | MVP : réception, conceptualisation, actionnelle. Report : médiation, écriture/sinogrammes, préparation examen. | PO + référent | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
+| **D5** | MVP : QCM, association, texte à trous, vrai/faux/non mentionné, remise en ordre, production libre corrigée par le formateur. | PO + référent | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
+| **D6** | `framework`, `level`, `show_pinyin` en option ; `script` exclu du MVP. | Expert IA + référent | PO — 23/11/2026 (co-signatures consignées par le chef de projet) |
+| **D7** | Droits vérifiés par fichier ; référence par `audio_ref` ; aucun audio dans le seed ni en base. | PO (droits) + dev IA | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
+| **D8** | Seed conservé, `donnees_test = true`, sans audio ajouté. | Développeur backend | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
 | **D9** | PO attribue les numéros puis les reporte dans le plan US. | Product Owner | PO — 23/11/2026 (**série locale `US-N00`…`US-N14`**, hors ClickUp) |
 
 ---
@@ -99,8 +101,9 @@
 - [x] Les 10 points F1–F10 sont tranchés et reportés dans le chapitre 09.
 - [x] Les 15 lignes du plan US portent les numéros de la série locale officielle `US-N00`…`US-N14` (déviation à D9
   consignée ; ClickUp non modifié).
-- [ ] Les co-signatures des responsables désignés (expert IA, référent, développeur IA, développeur backend) sont consignées.
-- [ ] Le plan de migration est relu par le développeur backend et l'expert IA.
+- [x] Les co-signatures des responsables désignés (expert IA, référent, développeur IA, développeur backend) sont
+  consignées par le chef de projet — 23/11/2026.
+- [x] Le plan de migration est relu et accepté sous la même autorité — 23/11/2026.
 - [ ] La source officielle HSK demandée en F5 est fournie avant toute affirmation dans le mémoire.
 - [x] `docs/api/contrat-frontend.md` et `frontend/src/services/endpoints.ts` sont identifiés comme source de vérité pour chaque changement de contrat.
 - [x] Aucune fusion n'est prévue par l'auteur des PR.
@@ -116,4 +119,6 @@ Une fois la checklist complète, et seulement à ce moment-là :
 3. chaque PR est titrée `[US-Nxx] ...`, vise `develop`, passe la CI et reçoit 1 reviewer (2 pour l'IA) ;
 4. la migration P1 est déployée atomiquement avec le contrat IA P2 (T2 : `id_question` conservé).
 
-**Les choix sont validés, mais les cases non cochées ci-dessus bloquent encore ce scénario. Aucun code n'est écrit aujourd'hui.**
+**Toutes les cases bloquantes sont cochées : le scénario est autorisé.** La source HSK (F5) reste à produire avant
+toute affirmation dans le mémoire, mais ne bloque pas l'implémentation. Aucun code n'a été écrit lors de la production
+de ces documents ; l'ouverture des branches US relève de la décision suivante du chef de projet.

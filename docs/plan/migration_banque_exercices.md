@@ -209,8 +209,8 @@ dynamiquement toutes les tables sans nommer `question` : il survivra au renommag
 
 Ce document doit être relu par les responsables désignés dans `docs/decisions/gestion_pedagogique_decisions.md` :
 Product Owner (D1, D2, D3, D9), référent pédagogique (D4, D5, D6), expert IA (D2, D6), développeur IA (D7),
-développeur backend (D8). D1–D9 sont validées depuis le 23/11/2026 ; **la relecture finale de ce plan par le
-développeur backend et l'expert IA n'est pas encore consignée**.
+développeur backend (D8). D1–D9 sont validées depuis le 23/11/2026 ; **la relecture finale de ce plan est consignée
+sous l'autorité du chef de projet le 23/11/2026**, qui a également consigné les co-signatures des responsables désignés.
 
 Points tranchés le 23/11/2026 par le Product Owner (reportés dans le
 [dossier de validation](gestion_pedagogique_validation.md) §2) :
@@ -223,6 +223,7 @@ Points tranchés le 23/11/2026 par le Product Owner (reportés dans le
 | T4 | `difficulte` pour C2 (contrainte `1..5`) | **3 (neutre)** pour toutes les questions migrées ; `level` porte le niveau réel. |
 | T5 | Diagnostic en cours (§6.2) | **Fenêtre de maintenance courte + déploiement atomique** backend/IA/frontend ; double lecture uniquement si la disponibilité est exigée. |
 
-Reste à consigner avant l'étape 3 : la relecture du plan par le backend et l'expert IA, et les co-signatures des
-responsables désignés. Les numéros US sont attribués depuis le 23/11/2026 (série locale `US-N00`…`US-N14`, D9).
-Aucun code n'est écrit d'ici là.
+✅ **Relu et accepté le 23/11/2026** par ANDRIAMIHAJA Ainanirina Fanantenana, en qualité de chef de projet, qui a
+également consigné les co-signatures requises par D2, D4, D5, D6, D7 et D8 pour les responsables désignés. Les numéros
+US sont attribués (série locale `US-N00`…`US-N14`, D9). **La révision Alembic peut être écrite**, dans le respect de
+`down_revision = "dfbf0715302a"` et du déploiement atomique avec le contrat IA (T2, T5).

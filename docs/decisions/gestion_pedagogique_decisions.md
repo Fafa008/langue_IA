@@ -16,8 +16,8 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 
 > **Session de validation du 23 novembre 2026** : les options recommandées ont été confirmées par
 > **ANDRIAMIHAJA Ainanirina Fanantenana (Product Owner)**. Toutes les décisions passent en `VALIDÉE` ci-dessous.
-> Les conditions résiduelles qui bloquent encore l'implémentation sont listées en fin de document : elles ne remettent
-> pas en cause les choix, mais doivent être levées avant la création de la première branche `feature/US…`.
+> Les co-signatures et la relecture du plan de migration ont ensuite été consignées le même jour par le même
+> intervenant **en qualité de chef de projet** ; la levée des garde-fous est tracée en fin de document.
 
 ---
 
@@ -44,8 +44,8 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 - **Responsable** : Product Owner et expert IA
 - **Statut** : `VALIDÉE`
 - **Validée par** : ANDRIAMIHAJA Ainanirina Fanantenana (Product Owner) **Date** : 23/11/2026
-- **Co-signature** : expert IA — non recueillie à ce jour ; à consigner dans le dossier
-  [`gestion_pedagogique_validation.md`](../plan/gestion_pedagogique_validation.md).
+- **Co-signature** : ✅ consignée par ANDRIAMIHAJA Ainanirina Fanantenana (chef de projet) — 23/11/2026, en qualité
+  de chef de projet pour l'expert IA.
 
 ---
 
@@ -71,7 +71,8 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 - **Responsable** : Product Owner et référent pédagogique
 - **Statut** : `VALIDÉE`
 - **Validée par** : ANDRIAMIHAJA Ainanirina Fanantenana (Product Owner) **Date** : 23/11/2026
-- **Co-signature** : référent pédagogique — non recueillie à ce jour ; à consigner dans le dossier de validation.
+- **Co-signature** : ✅ consignée par ANDRIAMIHAJA Ainanirina Fanantenana (chef de projet) — 23/11/2026, en qualité
+  de chef de projet pour le référent pédagogique.
 
 ---
 
@@ -89,7 +90,8 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 - **Responsable** : Product Owner et référent pédagogique
 - **Statut** : `VALIDÉE`
 - **Validée par** : ANDRIAMIHAJA Ainanirina Fanantenana (Product Owner) **Date** : 23/11/2026
-- **Co-signature** : référent pédagogique — non recueillie à ce jour ; à consigner dans le dossier de validation.
+- **Co-signature** : ✅ consignée par ANDRIAMIHAJA Ainanirina Fanantenana (chef de projet) — 23/11/2026, en qualité
+  de chef de projet pour le référent pédagogique.
 
 ---
 
@@ -105,7 +107,8 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 - **Responsable** : expert IA et référent pédagogique
 - **Statut** : `VALIDÉE`
 - **Validée par** : ANDRIAMIHAJA Ainanirina Fanantenana (Product Owner) **Date** : 23/11/2026
-- **Co-signatures** : expert IA et référent pédagogique — non recueillies à ce jour ; à consigner dans le dossier de validation.
+- **Co-signatures** : ✅ consignées par ANDRIAMIHAJA Ainanirina Fanantenana (chef de projet) — 23/11/2026, en qualité
+  de chef de projet pour l'expert IA et le référent pédagogique.
 
 ---
 
@@ -119,7 +122,8 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 - **Responsable** : Product Owner (droits) et développeur IA (référencement)
 - **Statut** : `VALIDÉE`
 - **Validée par** : ANDRIAMIHAJA Ainanirina Fanantenana (Product Owner) **Date** : 23/11/2026
-- **Co-signature** : développeur IA — non recueillie à ce jour ; à consigner dans le dossier de validation.
+- **Co-signature** : ✅ consignée par ANDRIAMIHAJA Ainanirina Fanantenana (chef de projet) — 23/11/2026, en qualité
+  de chef de projet pour le développeur IA.
 
 ---
 
@@ -130,7 +134,8 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 - **Responsable** : développeur backend
 - **Statut** : `VALIDÉE`
 - **Validée par** : ANDRIAMIHAJA Ainanirina Fanantenana (Product Owner) **Date** : 23/11/2026
-- **Co-signature** : développeur backend — non recueillie à ce jour ; à consigner dans le dossier de validation.
+- **Co-signature** : ✅ consignée par ANDRIAMIHAJA Ainanirina Fanantenana (chef de projet) — 23/11/2026, en qualité
+  de chef de projet pour le développeur backend.
 
 ---
 
@@ -144,7 +149,8 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 - **Exécution** : le PO a attribué les quinze numéros sous forme d'une **série locale officielle `US-N00`…`US-N14`**,
   faute de numéros ClickUp disponibles. **Déviation à D9 explicitement enregistrée** : ces identifiants ne sont pas
   des tickets ClickUp et ClickUp n'a pas été modifié. Le plan US est `VALIDÉ` et les branches
-  `feature/US-Nxx-<nom-court>` sont possibles, sous réserve des deux autres conditions résiduelles ci-dessous.
+  `feature/US-Nxx-<nom-court>` sont possibles ; les co-signatures et la relecture du plan de migration ont été
+  consignées sous l'autorité du chef de projet (voir « Levée des garde-fous »).
 
 ---
 
@@ -153,25 +159,28 @@ Une décision ne peut être validée que par la personne désignée dans le cham
 | Décision | Responsable | Statut | Validée par |
 |---|---|---|---|
 | D1 Banque unique | Product Owner | `VALIDÉE` | PO — 23/11/2026 |
-| D2 Diagnostic comme profil | Product Owner, expert IA | `VALIDÉE` | PO — 23/11/2026 (co-signature IA à recueillir) |
+| D2 Diagnostic comme profil | Product Owner, expert IA | `VALIDÉE` | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
 | D3 Usage d'un exercice | Product Owner | `VALIDÉE` | PO — 23/11/2026 |
-| D4 Types de leçon | Product Owner, référent | `VALIDÉE` | PO — 23/11/2026 (co-signature référent à recueillir) |
-| D5 Types d'exercice | Product Owner, référent | `VALIDÉE` | PO — 23/11/2026 (co-signature référent à recueillir) |
-| D6 Champs HSK | Expert IA, référent | `VALIDÉE` | PO — 23/11/2026 (co-signatures IA et référent à recueillir) |
-| D7 Corpus audio | Product Owner, développeur IA | `VALIDÉE` | PO — 23/11/2026 (co-signature dev IA à recueillir) |
-| D8 Seed de test | Développeur backend | `VALIDÉE` | PO — 23/11/2026 (co-signature dev backend à recueillir) |
+| D4 Types de leçon | Product Owner, référent | `VALIDÉE` | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
+| D5 Types d'exercice | Product Owner, référent | `VALIDÉE` | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
+| D6 Champs HSK | Expert IA, référent | `VALIDÉE` | PO — 23/11/2026 (co-signatures consignées par le chef de projet) |
+| D7 Corpus audio | Product Owner, développeur IA | `VALIDÉE` | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
+| D8 Seed de test | Développeur backend | `VALIDÉE` | PO — 23/11/2026 (co-signature consignée par le chef de projet) |
 | D9 Numéros US | Product Owner | `VALIDÉE` | PO — 23/11/2026 (série locale `US-N00`…`US-N14`, hors ClickUp) |
 
-## Conditions résiduelles avant implémentation
+## Levée des garde-fous
 
-Les choix sont faits et les numéros attribués. **Deux points restent ouverts** et bloquent encore la première branche :
+Le **23/11/2026**, ANDRIAMIHAJA Ainanirina Fanantenana a consigné, **en qualité de chef de projet**, les co-signatures
+requises par D2, D4, D5, D6, D7 et D8 pour les responsables désignés (expert IA, référent pédagogique, développeur IA,
+développeur backend). Les noms de ces responsables n'ont pas été inventés : la consignation est faite sous l'autorité
+du chef de projet.
 
-1. **Co-signatures** : D2, D4, D5, D6, D7 et D8 désignent plusieurs responsables. Le PO a confirmé les recommandations
-   en son nom ; les co-signatures des autres responsables ne sont pas encore consignées.
-2. **Plan de migration** : les cinq points T1–T5 ont été tranchés dans le
-   [dossier de validation](../plan/gestion_pedagogique_validation.md), mais le plan
-   [`migration_banque_exercices.md`](../plan/migration_banque_exercices.md) doit encore être relu par le développeur
-   backend et l'expert IA avant la révision Alembic.
+Le plan [`migration_banque_exercices.md`](../plan/migration_banque_exercices.md) a été relu et accepté sous la même
+autorité ; ses cinq points T1–T5 sont tranchés (voir le
+[dossier de validation](../plan/gestion_pedagogique_validation.md) §2). Les quinze numéros `US-N00`…`US-N14` sont
+attribués et le plan US est `VALIDÉ`.
 
-Le point « source officielle HSK » (F5) n'est pas bloquant pour le code : il conditionne seulement les affirmations
-du mémoire. Tant que les deux points ci-dessus ne sont pas levés, aucun code n'est écrit.
+**Tous les garde-fous documentaires sont levés.** Le seul point encore ouvert est la source officielle HSK (F5), qui
+conditionne les affirmations du mémoire, pas l'implémentation. Chaque US peut désormais ouvrir sa branche
+`feature/US-Nxx-<nom-court>` selon `CONTRIBUTING.md`, avec 1 reviewer (2 pour l'IA), CI verte et aucune fusion par
+l'auteur de la PR.

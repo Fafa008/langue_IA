@@ -215,22 +215,22 @@ de production orale (`prononciation`) ou d'écoute reste à trancher (§10).
 
 | Décision | Traitée au § | Statut | Bloque quoi |
 |---|---|---|---|
-| D1 Banque unique | 3.1, 4 R1 | `VALIDÉE` | — (choix fait, attend T1 et la relecture du plan de migration) |
-| D2 Profil d'épreuve | 3.3, 5.2 | `VALIDÉE` | Co-signature expert IA |
+| D1 Banque unique | 3.1, 4 R1 | `VALIDÉE` | — (T1 tranché, plan de migration relu) |
+| D2 Profil d'épreuve | 3.3, 5.2 | `VALIDÉE` | — (co-signature consignée par le chef de projet) |
 | D3 Usage d'un exercice | 3.1, 4 R4 | `VALIDÉE` | — (F8 : drapeau d'exclusion retenu) |
-| D4 Types de leçon | 3.2 | `VALIDÉE` | Co-signature référent |
-| D5 Types d'exercice | 3.4 | `VALIDÉE` | Co-signature référent |
-| D6 Champs HSK | 3.1, 3.5 | `VALIDÉE` | Co-signatures IA et référent ; source officielle HSK (F5) |
-| D7 Corpus audio | 3.1, 3.5, 4 R6 | `VALIDÉE` | Co-signature développeur IA ; droits par fichier |
-| D8 Seed de test | 3.5, 4 R7 | `VALIDÉE` | Co-signature développeur backend |
+| D4 Types de leçon | 3.2 | `VALIDÉE` | — (co-signature consignée par le chef de projet) |
+| D5 Types d'exercice | 3.4 | `VALIDÉE` | — (co-signature consignée par le chef de projet) |
+| D6 Champs HSK | 3.1, 3.5 | `VALIDÉE` | Source officielle HSK (F5) à produire pour le mémoire |
+| D7 Corpus audio | 3.1, 3.5, 4 R6 | `VALIDÉE` | Droits par fichier à vérifier avant diffusion |
+| D8 Seed de test | 3.5, 4 R7 | `VALIDÉE` | — (co-signature consignée par le chef de projet) |
 | D9 Numéros US | 9 | `VALIDÉE` | Série locale `US-N00`…`US-N14` attribuée (hors ClickUp) ; branches `feature/US-Nxx-…` |
 
 ---
 
 ## 8. Critères d'acceptation fonctionnels
 
-D1–D9 sont validées et les numéros `US-N00`…`US-N14` attribués depuis le 23/11/2026 ; ces critères ne deviennent
-actifs qu'après co-signature des responsables et relecture du plan de migration. Aucun code n'est écrit d'ici là.
+D1–D9 sont validées, les numéros `US-N00`…`US-N14` attribués et tous les garde-fous levés le 23/11/2026 sous
+l'autorité du chef de projet. Ces critères sont actifs dès l'ouverture de chaque branche US.
 
 | ID | Étant donné… | Quand… | Alors… |
 |---|---|---|---|
@@ -247,7 +247,8 @@ actifs qu'après co-signature des responsables et relecture du plan de migration
 
 ## 9. Séquence avant implémentation
 
-1. ✅ **D1 à D9 validées le 23/11/2026** par le Product Owner ; co-signatures des autres responsables encore à recueillir.
+1. ✅ **D1 à D9 validées le 23/11/2026** par le Product Owner ; co-signatures et relecture du plan de migration
+   consignées le même jour sous l'autorité du chef de projet.
 2. ✅ **Numéros attribués** : série locale officielle `US-N00`…`US-N14` renseignée dans
    [`../plan/gestion_pedagogique_plan.md`](../plan/gestion_pedagogique_plan.md) le 23/11/2026 (D9). Déviation à D9
    consignée : aucun ticket ClickUp n'a été créé ni modifié.
@@ -274,8 +275,9 @@ Les dix points ci-dessous ont été tranchés le 23/11/2026 (voir le
 9. ✅ Correction libre : **file formateur, note + commentaire persistés, aucune note IA** (F4).
 10. ⏳ Sources officielles HSK : **action encore à produire** par l'expert IA avant toute affirmation dans le mémoire (F5).
 
-**Reste réellement ouvert** : les co-signatures, la relecture du plan de migration et la source HSK. La numérotation
-(F6/D9) est réglée par la série locale `US-N00`…`US-N14`.
+**Plus aucun point bloquant** : numérotation (F6/D9), co-signatures et relecture du plan de migration sont réglés.
+Reste à produire, sans blocage du code : la source officielle HSK (F5) pour le mémoire, et la vérification des droits
+audio par fichier (D7) avant toute diffusion.
 
 ---
 

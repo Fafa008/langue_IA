@@ -6,8 +6,9 @@
 > Exception de périmètre : à sa rédaction, le garde-fou des décisions (D1–D9 `EN ATTENTE`, plan US absent) avait été
 > levé par l'utilisateur **uniquement pour la production des documents d'audit et de plan**.
 > **Mise à jour du 23/11/2026** : D1–D9 sont désormais `VALIDÉE` et les cinq points du plan de migration sont tranchés,
-> mais les co-signatures et la relecture finale du plan manquent encore. Les numéros US ont été attribués sous forme
-> d'une série locale `US-N00`…`US-N14` (hors ClickUp). **Aucune implémentation n'est autorisée.** Voir
+> Les numéros US ont été attribués sous forme d'une série locale `US-N00`…`US-N14` (hors ClickUp), puis les
+> co-signatures et la relecture finale du plan ont été consignées le 23/11/2026 sous l'autorité du chef de projet.
+> **Les garde-fous sont levés** ; seule la source officielle HSK reste à produire pour le mémoire. Voir
 > [`../plan/gestion_pedagogique_validation.md`](../plan/gestion_pedagogique_validation.md).
 
 ---

@@ -8,9 +8,8 @@
 > modifiée. La colonne `P0…P14` reste un ordre technique proposé, réorganisable par le PO.
 >
 > Les branches `feature/US-Nxx-<nom-court>` et les PR `[US-Nxx] ...` suivent `CONTRIBUTING.md`.
-> **Deux conditions bloquantes** restent à lever avant la première branche : co-signatures des responsables et
-> relecture du plan de migration par le backend et l'expert IA. La source officielle HSK (F5) conditionne seulement
-> les affirmations du mémoire.
+> **Garde-fous levés le 23/11/2026** : le chef de projet a consigné les co-signatures requises et la relecture du plan
+> de migration. Le plan est exécutable. La source officielle HSK (F5) conditionne seulement les affirmations du mémoire.
 
 ## Sources
 
@@ -27,8 +26,8 @@
 1. **Une ligne = une fonctionnalité = une US.** Les lots techniques sont regroupés avec la fonctionnalité qu'ils rendent possible.
 2. Les numéros `US-N00`…`US-N14` ont été attribués par le PO le 23/11/2026 (série locale, hors ClickUp) ; chaque ligne
    est marquée `VALIDÉE` et porte son identifiant de branche.
-3. Toutes les lignes portent `VALIDÉ` ; le code reste subordonné aux deux conditions bloquantes rappelées en tête.
-4. Le plan de migration doit être validé avant P1 ; la bascule IA doit être atomique avant P3.
+3. Toutes les lignes portent `VALIDÉ` et les garde-fous sont levés : chaque US peut ouvrir sa branche.
+4. ✅ Le plan de migration est relu et accepté ; la bascule IA reste atomique avant P3 (T2).
 5. Chaque US suit `CONTRIBUTING.md` : branche `feature/US-Nxx-<nom-court>` depuis `origin/develop`, commits
    `type(scope): description`, PR titrée `[US-Nxx] ...`, CI verte, 1 reviewer (2 pour l'IA), **aucune fusion par l'auteur**.
 6. Les noms de champs, codes d'erreur et routes publics sont ceux de
@@ -71,8 +70,8 @@
   développeur IA (D7), développeur backend (D8).
 - **Livrable** : ✅ D1–D9 passées en `VALIDÉE` avec nom et date le 23/11/2026 ; ✅ quinze numéros `US-N00`…`US-N14`
   attribués et branches renseignées ; ce document passe de `BROUILLON` à `VALIDÉ`.
-- **Critère d'arrêt** : la numérotation ne bloque plus. Restent requis avant la première branche : co-signatures des
-  responsables désignés et relecture du plan de migration par le backend et l'expert IA (voir le dossier de validation).
+- **Critère d'arrêt** : ✅ levé. Numérotation, co-signatures et relecture du plan de migration sont consignées le
+  23/11/2026 sous l'autorité du chef de projet (voir le dossier de validation). P0 est terminé.
 
 ### P1 — Banque unique : migration `question` → `exercice`
 
@@ -216,11 +215,12 @@ les points encore ouverts.
   (déviation à D9 consignée ; ClickUp non modifié).
 - [x] Les cinq points ouverts du plan de migration sont tranchés (T1–T5 : option A, `id_question` conservé,
   `prononciation`, `difficulte = 3`, maintenance atomique).
-- [ ] Le plan de migration `migration_banque_exercices.md` est relu par le développeur backend et l'expert IA.
+- [x] Le plan de migration `migration_banque_exercices.md` est relu et accepté sous l'autorité du chef de projet
+  (23/11/2026).
 - [x] La recommandation IA (`id_question` conservé pendant la transition) est confirmée.
 - [x] Les codes de permission du formateur (`pedagogy:content:write`, `pedagogy:content:publish`) et le validateur
   de publication (administrateur) sont désignés.
-- [ ] Les co-signatures des responsables désignés sont consignées.
+- [x] Les co-signatures des responsables désignés sont consignées par le chef de projet (23/11/2026).
 - [ ] Le chapitre 09 est relu comme spécification de référence ; `docs/api/contrat-frontend.md` est à jour.
 - [ ] Aucune fusion n'est prévue par l'auteur des PR.
 
@@ -230,5 +230,5 @@ les points encore ouverts.
 
 Ce plan fournit des **numéros de série locale** (`US-N00`…`US-N14`) et des noms de branches, mais **aucun ticket
 ClickUp** : la déviation à D9 est explicite et ClickUp n'a pas été modifié. L'ordre `P0…P14` reste une proposition
-technique fondée sur les dépendances du code ; le Product Owner peut le réorganiser librement. Le plan est `VALIDÉ`,
-mais les co-signatures, la relecture du plan de migration et la source HSK (F5) ne sont pas encore consignées.
+technique fondée sur les dépendances du code ; le Product Owner peut le réorganiser librement. Le plan est `VALIDÉ` et
+tous les garde-fous sont levés. Seule la source HSK (F5) reste à produire pour le mémoire.
