@@ -17,7 +17,7 @@ const utilisateur: UtilisateurDto = {
 test.describe("Session expirée", () => {
   test("affiche un message explicite quand on revient de /login?session=expiree", async ({ page }) => {
     await page.goto("/login?session=expiree");
-    await expect(page.getByRole("alert")).toContainText("Votre session a expiré");
+    await expect(page.getByRole("alert").filter({ hasText: "Votre session a expiré" })).toContainText("Votre session a expiré");
   });
 
   test("un 401 sur /users/me efface la session et ramène à la connexion", async ({ page }) => {
@@ -33,7 +33,7 @@ test.describe("Session expirée", () => {
     await page.goto("/espace/apprenant");
 
     await expect(page).toHaveURL(/\/login\?session=expiree/);
-    await expect(page.getByRole("alert")).toContainText("Votre session a expiré");
+    await expect(page.getByRole("alert").filter({ hasText: "Votre session a expiré" })).toContainText("Votre session a expiré");
     const stored = await page.evaluate(() => window.localStorage.getItem("digitheque-auth"));
     expect(stored).toBeNull();
   });
