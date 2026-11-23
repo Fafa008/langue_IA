@@ -116,6 +116,10 @@ services:
       RAG_CORPUS_OFFICIEL_AUTORISE: ${RAG_CORPUS_OFFICIEL_AUTORISE:-false}
       RAG_CORPUS_CHEMIN: ${RAG_CORPUS_CHEMIN:-/app/corpus/cecrl}
       RAG_CORPUS_VERIFIER_EMPREINTE: ${RAG_CORPUS_VERIFIER_EMPREINTE:-true}
+      # US-IA-CHAT-01 : mémoire courte du tuteur (tours, résumé, cache de traduction).
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      REDIS_TTL_S: ${REDIS_TTL_S:-86400}
+      REDIS_TOURS_MAX: ${REDIS_TOURS_MAX:-20}
     volumes:
       - ./ia-service/models:/app/models:ro
       - ./ia-service/corpus:/app/corpus:ro

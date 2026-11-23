@@ -124,6 +124,25 @@ class ConfigLLM(BaseSettings):
         )
 
 
+class ConfigMemoire(BaseSettings):
+    """Paramètres de la mémoire courte Redis du service IA.
+
+    Les valeurs par défaut conviennent au réseau interne Compose : ``redis`` est le nom du service, le TTL couvre
+    24 h et la liste des tours est bornée à 20 entrées. Aucune valeur secrète n'est attendue ici.
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="REDIS_",
+        extra="ignore",
+        frozen=True,
+        populate_by_name=True,
+    )
+
+    url: str = Field(default="redis://redis:6379/0", min_length=1, max_length=256)
+    ttl_s: int = Field(default=86_400, ge=60, le=604_800)
+    tours_max: int = Field(default=20, ge=1, le=100)
+
+
 def _detail_validation(erreur: dict) -> str:
     """Décrit une erreur de configuration sans recopier la valeur fautive (qui peut être un secret)."""
     emplacement = ".".join(str(partie) for partie in erreur.get("loc", ())) or "configuration"
@@ -160,4 +179,16 @@ def charger_config() -> ConfigLLM:
         message = "Configuration LLM invalide"
         if details:
             message += " : " + "; ".join(details[:5])
+        raise ErreurConfiguration(message + ".") from None
+
+
+def charger_config_memoire() -> ConfigMemoire:
+    """Lire la configuration Redis sans jamais exposer d'URL value dans un message d'erreur."""
+    try:
+        return ConfigMemoire()
+    except ValidationError as exc:
+        details = [_detail_validation(erreur) for erreur in exc.errors()]
+        message = "Configuration de la mémoire courte invalide"
+        if details:
+            message += " : " + "; ".join(list(dict.fromkeys(details))[:5])
         raise ErreurConfiguration(message + ".") from None

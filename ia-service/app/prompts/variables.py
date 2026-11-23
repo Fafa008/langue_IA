@@ -6,12 +6,25 @@ from typing import Literal
 from pydantic import Field, field_validator, model_validator
 
 from app.schemas.base import ModeleStrict
-from app.schemas.chatbot import HISTORIQUE_CHATBOT_MAX, MESSAGE_CHATBOT_MAX, MessageHistorique
+from app.schemas.chatbot import (
+    HISTORIQUE_CHATBOT_MAX,
+    MESSAGE_CHATBOT_MAX,
+    MessageHistorique,
+    PhaseAssimil,
+)
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.correction import EntreeCorrection, phase_de_lecon
 from app.schemas.diagnostic import PointFaible, PreuveReponse, ResultatDiagnostic
 from app.schemas.recommandation import RECOMMANDATIONS_MAX, TYPE_PAR_DOMAINE
-from app.schemas.regles import CodeLangue, CodeNiveau, Competence, Referentiel, erreur, niveaux_du_referentiel
+from app.schemas.regles import (
+    RESUME_MEMOIRE_MAX,
+    CodeLangue,
+    CodeNiveau,
+    Competence,
+    Referentiel,
+    erreur,
+    niveaux_du_referentiel,
+)
 
 ScenarioDiagnostic = Literal["quotidien", "entretien", "examen"]
 
@@ -145,11 +158,45 @@ class VariablesEvaluationDiagnostic(ModeleStrict):
 
 
 class VariablesConversationChatbot(ModeleStrict):
-    """Variables dynamiques du prompt de conversation du chatbot."""
+    """Variables dynamiques du prompt de conversation du chatbot (contrat publié 1.2.0)."""
 
     contexte_apprenant: ContexteApprenant
     historique: list[MessageHistorique] = Field(max_length=HISTORIQUE_CHATBOT_MAX)
     message: str = Field(min_length=1, max_length=MESSAGE_CHATBOT_MAX)
+
+
+class VariablesConversationChatbotV2(ModeleStrict):
+    """Variables du prompt 1.3.0 : descripteur CECRL, niveau effectif et phase Assimil."""
+
+    contexte_apprenant: ContexteApprenant
+    historique: list[MessageHistorique] = Field(max_length=HISTORIQUE_CHATBOT_MAX)
+    message: str = Field(min_length=1, max_length=MESSAGE_CHATBOT_MAX)
+    descripteurs_rag: list[DescripteurRAGPrompt] = Field(default_factory=list, max_length=8)
+    phase_assimil: PhaseAssimil = "impregnation"
+    niveau_effectif: CodeNiveau
+    niveau_confirme: bool = False
+
+    @model_validator(mode="after")
+    def verifier_niveau_effectif(self) -> "VariablesConversationChatbotV2":
+        """Le niveau injecté doit appartenir au référentiel du contexte."""
+        if self.niveau_effectif not in niveaux_du_referentiel(self.contexte_apprenant.referentiel):
+            raise erreur("Le niveau effectif n'appartient pas au référentiel du contexte apprenant.")
+        if any(
+            descripteur.code_langue != self.contexte_apprenant.code_langue
+            or descripteur.referentiel != self.contexte_apprenant.referentiel
+            for descripteur in self.descripteurs_rag
+        ):
+            raise erreur("Les descripteurs RAG doivent correspondre à la langue et au référentiel du contexte.")
+        return self
+
+
+class VariablesCorrectionChatbot(ModeleStrict):
+    """Variables du prompt de correction en marge du chat."""
+
+    message: str = Field(min_length=1, max_length=MESSAGE_CHATBOT_MAX)
+    niveau_effectif: CodeNiveau
+    phase_assimil: PhaseAssimil
+    resume_session: str = Field(default="", max_length=RESUME_MEMOIRE_MAX)
 
 
 class VariablesCorrectionReponseLibre(ModeleStrict):
