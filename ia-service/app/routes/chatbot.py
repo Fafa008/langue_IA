@@ -19,9 +19,9 @@ from app.core.codes_erreur import STATUTS_HTTP
 from app.memory import clefs
 from app.schemas.chatbot import (
     ChargeMemoireLongTerme,
-    EntreeChatbot,
     EntreeClotureSession,
     EntreeConversation,
+    EntreeCorrectionChatbot,
     EntreeExercice,
     EntreeTraduction,
     ResultatChatbot,
@@ -75,9 +75,11 @@ async def envoyer_message(
     responses=_REPONSES_ERREUR,
 )
 async def corriger_message(
-    requete: RequeteAgent[EntreeChatbot], request: Request
+    requete: RequeteAgent[EntreeCorrectionChatbot], request: Request
 ) -> ReponseAgent[ResultatCorrection] | JSONResponse:
     """Analyser séparément le dernier message de l'apprenant, sans couper la conversation."""
+    if requete.entree.identifiant_session:
+        clefs.valider_identifiant_session(requete.entree.identifiant_session)
     reponse = await request.app.state.harness.executer(CODE_AGENT_CORRECTION_CHATBOT, requete)
     if isinstance(reponse, ReponseErreur):
         return _reponse_erreur(reponse)

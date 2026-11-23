@@ -172,6 +172,9 @@ def test_rend_le_prompt_de_conversation_versionne() -> None:
         != RegistrePrompts().definition("diagnostic", "evaluation", VERSION_EVALUATION_DIAGNOSTIC)[1]
     )
     assert rendu.temperature == 0.5
+    # Les modèles à raisonnement consomment une partie de ce budget avant d'émettre le JSON : trop peu de jetons
+    # et Groq refuse la réponse avec `json_validate_failed` avant même la validation Pydantic.
+    assert rendu.max_tokens >= 1500
     assert "tuteur IA" in rendu.messages[0].contenu
     assert "corrections" in rendu.messages[0].contenu
     assert "au plus trois corrections" in rendu.messages[0].contenu
