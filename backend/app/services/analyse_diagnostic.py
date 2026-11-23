@@ -27,9 +27,11 @@ from app.models import Reponse, StatutDiagnostic, TestDiagnostic
 from app.schemas.diagnostic import CompetenceResultatOut, PointFaibleOut
 from app.schemas.ia import (
     NIVEAUX_IA,
+    VERSION_AGENT_DIAGNOSTIC,
     ContexteApprenantIA,
     EntreeDiagnosticIA,
     PreuveDiagnosticIA,
+    ReponseDiagnosticIA,
     RequeteDiagnosticIA,
     ResultatDiagnosticIA,
 )
@@ -176,6 +178,8 @@ def _preparer(tentative: TestDiagnostic, lignes: list[_Ligne]) -> RequeteDiagnos
 
     return RequeteDiagnosticIA(
         request_id=uuid4(),
+        # Version explicite : un désalignement avec le service IA échoue au lieu d'être masqué (T5).
+        version_agent=VERSION_AGENT_DIAGNOSTIC,
         contexte=ContexteApprenantIA(
             code_langue=code_langue,
             referentiel=referentiel,
@@ -186,6 +190,68 @@ def _preparer(tentative: TestDiagnostic, lignes: list[_Ligne]) -> RequeteDiagnos
             score_preliminaire=float(tentative.score),
         ),
     )
+
+
+def _preuve_directe(domaine: str, preuve: PreuveDiagnosticIA) -> bool:
+    """Miroir backend de ``preuve_directe`` du service IA : une réponse à choix ne prouve rien seule."""
+    production = preuve.type_reponse in ("texte", "audio")
+    if domaine in ("grammaire", "vocabulaire"):
+        return production
+    if domaine == "expression_ecrite":
+        return preuve.competence == "ecrit" and preuve.type_reponse == "texte"
+    if domaine == "expression_orale":
+        return preuve.competence == "oral" and preuve.type_reponse == "audio"
+    if domaine == "comprehension_ecrite":
+        return preuve.competence == "lecture" and production
+    if domaine == "comprehension_orale":
+        return preuve.competence == "ecoute" and production
+    return False
+
+
+def verifier_reponse_diagnostic(enveloppe: ReponseDiagnosticIA, requete: RequeteDiagnosticIA) -> bool:
+    """Vérifier qu'une enveloppe valide au sens Pydantic répond bien à *cette* requête.
+
+    ``extra="forbid"`` refuse déjà les champs inconnus ; ce contrôle complète la frontière de confiance sur les
+    réponses structurellement valides mais incohérentes (langue, niveau, preuve citée, écart recalculé). Il suit les
+    mêmes règles que ``ResultatDiagnostic.verifier_coherence`` côté IA : les deux services échangent le même contrat
+    (exemple partagé ``contrats/ia/diagnostic-evaluer/``), sans partager de code.
+    """
+    if enveloppe.request_id != requete.request_id or enveloppe.agent != "diagnostic":
+        return False
+    resultat = enveloppe.resultat
+    contexte = requete.contexte
+    referentiel_attendu = "HSK" if contexte.code_langue == "zh" else "CECRL"
+    if (
+        resultat.code_langue != contexte.code_langue
+        or resultat.referentiel != contexte.referentiel
+        or resultat.referentiel != referentiel_attendu
+        or resultat.niveau_preliminaire != contexte.niveau_preliminaire
+    ):
+        return False
+
+    niveaux = NIVEAUX_IA[referentiel_attendu]
+    if resultat.niveau_estime not in niveaux or resultat.niveau_preliminaire not in niveaux:
+        return False
+    ecart = niveaux.index(resultat.niveau_estime) - niveaux.index(resultat.niveau_preliminaire)
+    if resultat.ecart_avec_niveau_preliminaire != ecart:
+        return False
+    if resultat.score_confiance == 0.0 and resultat.points_faibles:
+        return False
+
+    preuves = {preuve.id_question: preuve for preuve in requete.entree.reponses}
+    if len(preuves) != len(requete.entree.reponses):
+        return False
+    domaines: set[str] = set()
+    for point in resultat.points_faibles:
+        preuve = preuves.get(point.id_question)
+        if preuve is None or point.domaine in domaines or not _preuve_directe(point.domaine, preuve):
+            return False
+        domaines.add(point.domaine)
+    if resultat.phase_assimil == "activation" and not any(
+        preuve.type_reponse in ("texte", "audio") for preuve in requete.entree.reponses
+    ):
+        return False
+    return True
 
 
 def _analyser_document(document: dict) -> AnalyseDiagnostic:
@@ -227,6 +293,9 @@ def analyser_tentative(id_tentative: int) -> AnalyseDiagnostic | None:
         enveloppe = evaluer_diagnostic(requete)
     except ErreurServiceIA as erreur:
         logger.warning("Analyse IA indisponible (tentative=%s, code=%s)", id_tentative, erreur.code)
+        return None
+    if not verifier_reponse_diagnostic(enveloppe, requete):
+        logger.warning("Analyse IA incohérente avec la requête (tentative=%s)", id_tentative)
         return None
 
     document = enveloppe.model_dump(mode="json")

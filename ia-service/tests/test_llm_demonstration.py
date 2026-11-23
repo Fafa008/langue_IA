@@ -165,6 +165,13 @@ def test_aucune_reponse_hors_diagnostic() -> None:
     assert repondre_demonstration(messages_chatbot("Hello!"), ResultatChatbot) is not None
 
 
+def test_parseur_factice_refuse_un_identifiant_hors_contrat() -> None:
+    """Le faux fournisseur ne doit pas produire de résultat si le prompt utilise `id_exercice` (T2)."""
+    reponses = [{"id_exercice": "1", "competence": "ecrit", "type_reponse": "texte", "contenu": "Hello."}]
+    assert resultat_diagnostic_demonstration(messages(reponses=reponses)) is None
+    assert repondre_demonstration(messages(reponses=reponses), ResultatDiagnostic) is None
+
+
 def test_client_factice_scenarios_prioritaires_puis_repondeur() -> None:
     client = FakeLLMClient([ScenarioLLM(reponse=RESULTAT_VALIDE)], repondeur=repondre_demonstration)
 

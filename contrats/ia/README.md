@@ -27,3 +27,8 @@ la CI fait un appel réel du backend vers le service IA démarré (`backend/scri
 - `recommandation-parcours/` — `POST /recommandation/actions`, propositions d'exercices à partir des points faibles
   du diagnostic. La requête et la réponse sont uniques ; les exemples invalides couvrent aussi bien le schéma
   (domaines, types, priorités, confiance) que la cohérence avec la requête (langue, niveau visé, domaines demandés).
+- `diagnostic-evaluer/` — `POST /diagnostic/evaluer`, estimation produite à partir des preuves transmises (US-N02).
+  L'identifiant expose `id_question` des deux côtés (décision T2) : malgré la banque unique, le nom de champ du
+  contrat IA ne suit pas le renommage de la clé primaire en base. `version_agent` (`1.0.0`) et `version_prompt`
+  (`diagnostic/evaluation@1.1.0`) sont gelés par les exemples : un changement incompatible de schéma doit passer par
+  une nouvelle version, publiée atomiquement avec les schémas des deux services.

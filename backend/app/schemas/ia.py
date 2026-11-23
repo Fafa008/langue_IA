@@ -33,6 +33,11 @@ PhaseAssimilIA = Literal["impregnation", "activation"]
 TypeReponseIA = Literal["choix", "texte", "audio"]
 ScenarioDiagnosticIA = Literal["quotidien", "entretien", "examen"]
 
+# Versions gelées par l'exemple partagé `contrats/ia/diagnostic-evaluer/` (US-N02). T2 conserve `id_question` :
+# aucun changement incompatible de schéma, donc pas de bump d'agent. Toute évolution future se publie atomiquement.
+VERSION_AGENT_DIAGNOSTIC = "1.0.0"
+VERSION_PROMPT_DIAGNOSTIC = "diagnostic/evaluation@1.1.0"
+
 
 class _ModeleIA(BaseModel):
     """Modèle de la frontière IA : aucun champ inconnu n'est accepté."""

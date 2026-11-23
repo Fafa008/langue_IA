@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Langue, Niveau, Question, StatutDiagnostic
 from app.models import TestDiagnostic as TentativeDiagnostic
-from app.schemas.ia import ReponseDiagnosticIA
+from app.schemas.ia import NIVEAUX_IA, VERSION_AGENT_DIAGNOSTIC, ReponseDiagnosticIA
 from app.services import analyse_diagnostic
 from app.services.ia import ErreurServiceIA
 from tests.conftest import creer_utilisateur, entete
@@ -33,6 +33,9 @@ class FauxServiceIA:
         if self.erreur is not None:
             raise self.erreur
         points = self.points or []
+        niveaux = NIVEAUX_IA[requete.contexte.referentiel]
+        niveau_estime = self.niveau_estime or requete.contexte.niveau_preliminaire
+        ecart = niveaux.index(niveau_estime) - niveaux.index(requete.contexte.niveau_preliminaire)
         return ReponseDiagnosticIA.model_validate(
             {
                 "request_id": str(requete.request_id),
@@ -43,7 +46,7 @@ class FauxServiceIA:
                 "resultat": {
                     "code_langue": requete.contexte.code_langue,
                     "referentiel": requete.contexte.referentiel,
-                    "niveau_estime": self.niveau_estime or requete.contexte.niveau_preliminaire,
+                    "niveau_estime": niveau_estime,
                     "phase_assimil": self.phase,
                     "points_faibles": [
                         {**point, "id_question": point.get("id_question", requete.entree.reponses[0].id_question)}
@@ -51,7 +54,7 @@ class FauxServiceIA:
                     ],
                     "score_confiance": 0.6,
                     "niveau_preliminaire": requete.contexte.niveau_preliminaire,
-                    "ecart_avec_niveau_preliminaire": 0,
+                    "ecart_avec_niveau_preliminaire": ecart,
                 },
                 "meta": {
                     "duree_ms": 1200,
@@ -147,7 +150,8 @@ def test_persiste_l_analyse_et_expose_les_champs_publics(client, db: Session, ia
     _repondre(client, apprenant, tentative, questions[1], "are")
     _repondre(client, apprenant, tentative, questions[2], "is")
     _repondre(client, apprenant, tentative, questions[3], "My name is Rova.")
-    ia.points = [POINT_FAIBLE]
+    # La preuve citée doit être une production libre : le service IA vérifie la même règle des deux côtés.
+    ia.points = [{**POINT_FAIBLE, "id_question": str(questions[3].id_question)}]
     ia.niveau_estime = "C2"
 
     response = _terminer(client, apprenant, tentative)
@@ -167,6 +171,7 @@ def test_persiste_l_analyse_et_expose_les_champs_publics(client, db: Session, ia
     # Rien d'identifiant ni de corrigé ne part vers le service IA.
     (requete,) = ia.appels
     assert requete.contexte.code_langue == "en"
+    assert requete.version_agent == VERSION_AGENT_DIAGNOSTIC
     assert requete.contexte.niveau_preliminaire == "A1"
     assert requete.entree.score_preliminaire == 66.67
     assert [reponse.id_question for reponse in requete.entree.reponses] == [str(q.id_question) for q in questions]
