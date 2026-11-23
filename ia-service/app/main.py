@@ -1,13 +1,15 @@
 """Point d'entrée du service IA.
 
-Le service expose ``GET /health``, ``POST /chatbot/message`` (US67), ``POST /diagnostic/evaluer`` (PRE-05),
-``POST /correction/reponse-libre`` (US157) et ``POST /recommandation/actions``. Le client LLM unique, le Harness
-et ses agents Diagnostic, chatbot, correction et recommandation sont enregistrés au démarrage : une configuration
-LLM invalide empêche le service de démarrer, et les ressources partagées sont fermées proprement à l'arrêt. Le
-service ne persiste rien : c'est le backend qui valide et enregistre l'analyse du diagnostic, le feedback des
-réponses libres et les propositions de recommandation.
+Le service expose ``GET /health``, ``POST /chatbot/message`` (US67), les routes internes de correction et de
+traduction du chatbot, ``POST /diagnostic/evaluer`` (PRE-05), ``POST /correction/reponse-libre`` (US157) et
+``POST /recommandation/actions``. Le client LLM unique, le Harness et ses agents Diagnostic, chatbot, correction,
+traduction et recommandation sont enregistrés au démarrage : une configuration LLM invalide empêche le service de
+démarrer, et les ressources partagées sont fermées proprement à l'arrêt. Le service ne persiste rien : c'est le
+backend qui valide et enregistre l'analyse du diagnostic, le feedback des réponses libres et les propositions de
+recommandation.
 """
 
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -16,19 +18,26 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agent.correction import definir_agent_correction_chatbot
+from app.agent.traduction import definir_agent_traduction_chatbot
 from app.agents.chatbot import definir_agent_chatbot
 from app.agents.correction import definir_agent_correction
 from app.agents.diagnostic import construire_definition
 from app.agents.recommandation import definir_agent_recommandation
 from app.api import chatbot, correction, diagnostic, recommandation
+from app.core.config import charger_config_memoire
 from app.core.erreurs import ErreurConfiguration, ErreurServiceIA
 from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service, gerer_erreur_validation
 from app.core.securite import jeton_interne_attendu, verifier_jeton_interne
 from app.harness.execution import Harness
 from app.harness.registre import RegistreAgents
 from app.llm.fabrique import obtenir_client, reinitialiser_client
+from app.memory.court import MemoireCourte, MemoireCourteVide
+from app.memory.redis import MemoireRedis
 from app.prompts import RegistrePrompts
 from app.rag import construire_recuperateur
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -41,9 +50,22 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     client_llm = obtenir_client()
     registre_agents = RegistreAgents()
     recuperateur_rag = construire_recuperateur()
+    # Une configuration Redis invalide n'empêche pas le service de démarrer : le chat continue sans cache.
+    try:
+        configuration_memoire = charger_config_memoire()
+        memoire: MemoireCourte = MemoireRedis.depuis_url(
+            configuration_memoire.url,
+            ttl_s=configuration_memoire.ttl_s,
+            tours_max=configuration_memoire.tours_max,
+        )
+    except ErreurConfiguration as erreur:
+        logger.warning("memoire_courte_desactivee raison=%s", erreur)
+        memoire = MemoireCourteVide()
 
     registre_agents.enregistrer(construire_definition(registre_prompts))
     registre_agents.enregistrer(definir_agent_chatbot(registre_prompts))
+    registre_agents.enregistrer(definir_agent_correction_chatbot(registre_prompts))
+    registre_agents.enregistrer(definir_agent_traduction_chatbot(registre_prompts))
     registre_agents.enregistrer(definir_agent_correction(registre_prompts))
     registre_agents.enregistrer(definir_agent_recommandation(registre_prompts))
 
@@ -51,11 +73,13 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     app.state.registre_agents = registre_agents
     app.state.registre_prompts = registre_prompts
     app.state.recuperateur_rag = recuperateur_rag
+    app.state.memoire = memoire
     app.state.harness = Harness(
         registre_agents,
         client_llm,
         registre_prompts=registre_prompts,
         recuperateur_rag=recuperateur_rag,
+        memoire=memoire,
     )
 
     try:
@@ -63,6 +87,7 @@ async def duree_vie(app: FastAPI) -> AsyncIterator[None]:
     finally:
         await client_llm.fermer()
         await recuperateur_rag.fermer()
+        await memoire.fermer()
         reinitialiser_client()
 
 

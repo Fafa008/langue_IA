@@ -20,6 +20,7 @@ from app.core.gestionnaire_erreurs import code_pour, reponse_erreur_pour_code
 from app.harness.agent import ContexteExecution, OutilsCommuns, SignalementRAG
 from app.harness.registre import RegistreAgents
 from app.llm.base import FournisseurLLM
+from app.memory.court import MemoireCourte, MemoireCourteVide
 from app.prompts import RegistrePrompts
 from app.rag.base import RecuperateurRAG
 from app.rag.repli import RecuperateurAvecRepli
@@ -47,12 +48,14 @@ class Harness:
         *,
         registre_prompts: RegistrePrompts | None = None,
         recuperateur_rag: RecuperateurRAG | None = None,
+        memoire: MemoireCourte | None = None,
         horloge: Callable[[], float] = time.monotonic,
     ) -> None:
         self._registre = registre
         self._client_llm = client_llm
         self._registre_prompts = registre_prompts or RegistrePrompts()
         self._recuperateur_rag = RecuperateurAvecRepli(recuperateur_rag or RecuperateurVide())
+        self._memoire = memoire or MemoireCourteVide()
         self._horloge = horloge
 
     async def executer(
@@ -86,6 +89,7 @@ class Harness:
             registre_prompts=self._registre_prompts,
             recuperateur_rag=self._recuperateur_rag,
             horloge=self._horloge,
+            memoire=self._memoire,
         )
         contexte = ContexteExecution(
             request_id=requete.request_id,
