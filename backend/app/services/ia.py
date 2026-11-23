@@ -14,12 +14,16 @@ from pydantic import BaseModel, ValidationError
 from app.core.config import get_settings
 from app.schemas.ia import (
     ReponseChatbotIA,
+    ReponseClotureIA,
     ReponseCorrectionIA,
     ReponseDiagnosticIA,
+    ReponseExerciceIA,
     ReponseRecommandationIA,
     RequeteChatbotIA,
+    RequeteClotureIA,
     RequeteCorrectionIA,
     RequeteDiagnosticIA,
+    RequeteExerciceIA,
     RequeteRecommandationIA,
 )
 
@@ -28,6 +32,8 @@ logger = logging.getLogger(__name__)
 CHEMIN_EVALUATION = "/diagnostic/evaluer"
 CHEMIN_CORRECTION = "/correction/reponse-libre"
 CHEMIN_CHATBOT = "/chatbot/message"
+CHEMIN_CLOTURE_CHATBOT = "/chatbot/session/close"
+CHEMIN_EXERCICE_CHATBOT = "/chatbot/exercice"
 CHEMIN_RECOMMANDATION = "/recommandation/actions"
 
 T = TypeVar("T", bound=BaseModel)
@@ -106,6 +112,24 @@ def envoyer_message_chatbot(
 ) -> ReponseChatbotIA:
     """Appeler l'agent Chatbot et retourner son enveloppe validée, corrections en marge comprises."""
     return _poster(CHEMIN_CHATBOT, requete, ReponseChatbotIA, transport)
+
+
+def clore_session_chatbot(
+    requete: RequeteClotureIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseClotureIA:
+    """Demander à l'agent de clôture la charge utile de mémoire long terme, sans rien persister ici."""
+    return _poster(CHEMIN_CLOTURE_CHATBOT, requete, ReponseClotureIA, transport)
+
+
+def generer_exercice_chatbot(
+    requete: RequeteExerciceIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseExerciceIA:
+    """Demander un exercice ciblé à l'agent dédié et valider son enveloppe."""
+    return _poster(CHEMIN_EXERCICE_CHATBOT, requete, ReponseExerciceIA, transport)
 
 
 def recommander_actions(

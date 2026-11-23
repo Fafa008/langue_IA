@@ -167,12 +167,42 @@ class ChargeMemoireLongTerme(ModeleStrict):
     session: SessionMemoire
 
 
+class EntreeClotureSession(ModeleStrict):
+    """Données de confiance transmises par le backend à la clôture d'une session."""
+
+    identifiant_session: str = Field(min_length=1, max_length=IDENTIFIANT_SESSION_MAX)
+    profil: ProfilMemoire
+
+
+class ErreurMemoireGeneree(ModeleStrict):
+    """Erreur pédagogique extraite de la conversation, sans date ni identité inventée par le modèle."""
+
+    type: TypeErreurChatbot
+    erreur: str = Field(min_length=1, max_length=EXTRAIT_CORRECTION_MAX)
+    frequence: int = Field(ge=1, le=10000)
+
+
+class MemoireGeneree(ModeleStrict):
+    """Sortie brute du LLM : le service IA ajoute le profil, la session et la date d'occurrence."""
+
+    resume: str = Field(min_length=1, max_length=RESUME_MEMOIRE_MAX)
+    erreurs: list[ErreurMemoireGeneree] = Field(default_factory=list, max_length=20)
+
+
 class EntreeExercice(ModeleStrict):
     """Demande d'exercice ciblé à partir des erreurs récurrentes du profil."""
 
     identifiant_session: str = Field(min_length=1, max_length=IDENTIFIANT_SESSION_MAX)
     type_erreur: TypeErreurChatbot
+    erreur: str = Field(min_length=1, max_length=EXTRAIT_CORRECTION_MAX)
     niveau: CodeNiveau
+
+
+class ExerciceGenere(ModeleStrict):
+    """Sortie brute du LLM : l'identifiant du descripteur est ajouté par le service IA, jamais inventé."""
+
+    enonce: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
+    consigne: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
 
 
 class ResultatExercice(ModeleStrict):

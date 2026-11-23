@@ -7,11 +7,14 @@ from pydantic import Field, field_validator, model_validator
 
 from app.schemas.base import ModeleStrict
 from app.schemas.chatbot import (
+    EXTRAIT_CORRECTION_MAX,
     HISTORIQUE_CHATBOT_MAX,
     MESSAGE_CHATBOT_MAX,
     REPONSE_CHATBOT_MAX,
     MessageHistorique,
     PhaseAssimil,
+    ResumeSession,
+    TypeErreurChatbot,
 )
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.correction import EntreeCorrection, phase_de_lecon
@@ -206,6 +209,47 @@ class VariablesTraductionChatbot(ModeleStrict):
     message: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
     code_langue: CodeLangue
     niveau_effectif: CodeNiveau
+
+
+class VariablesMemoireChatbot(ModeleStrict):
+    """Variables du prompt de clôture : résumé courant et tours de la session, sans identité."""
+
+    code_langue: CodeLangue
+    referentiel: Referentiel
+    niveau_effectif: CodeNiveau
+    phase_assimil: PhaseAssimil
+    resume_session: ResumeSession
+    tours: list[MessageHistorique] = Field(max_length=HISTORIQUE_CHATBOT_MAX)
+
+    @model_validator(mode="after")
+    def verifier_coherence(self) -> "VariablesMemoireChatbot":
+        if self.referentiel != ("HSK" if self.code_langue == "zh" else "CECRL"):
+            raise erreur("Le référentiel ne correspond pas à la langue de la session.")
+        if self.niveau_effectif not in niveaux_du_referentiel(self.referentiel):
+            raise erreur("Le niveau effectif n'appartient pas au référentiel de la session.")
+        return self
+
+
+class VariablesExerciceChatbot(ModeleStrict):
+    """Variables du prompt d'exercice ciblé : une erreur, un niveau et un descripteur documentaire."""
+
+    contexte_apprenant: ContexteApprenant
+    type_erreur: TypeErreurChatbot
+    erreur: str = Field(min_length=1, max_length=EXTRAIT_CORRECTION_MAX)
+    niveau_effectif: CodeNiveau
+    descripteurs_rag: list[DescripteurRAGPrompt] = Field(default_factory=list, max_length=8)
+
+    @model_validator(mode="after")
+    def verifier_coherence(self) -> "VariablesExerciceChatbot":
+        contexte = self.contexte_apprenant
+        if self.niveau_effectif not in niveaux_du_referentiel(contexte.referentiel):
+            raise erreur("Le niveau effectif n'appartient pas au référentiel du contexte apprenant.")
+        if any(
+            descripteur.code_langue != contexte.code_langue or descripteur.referentiel != contexte.referentiel
+            for descripteur in self.descripteurs_rag
+        ):
+            raise erreur("Les descripteurs RAG doivent correspondre à la langue et au référentiel du contexte.")
+        return self
 
 
 class VariablesCorrectionReponseLibre(ModeleStrict):

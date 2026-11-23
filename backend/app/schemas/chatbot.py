@@ -47,3 +47,20 @@ class ChatbotMessageOut(_ModeleChatbot):
 
 class ChatbotSessionSupprimeeOut(_ModeleChatbot):
     supprime: bool = True
+
+
+# --- Exercice ciblé (US-IA-CHAT-04) : route publique distincte, sans modifier ``ChatbotMessageOut`` ---
+
+
+class ExerciceCibleChatbotIn(_ModeleChatbot):
+    identifiant_session: str = Field(min_length=1, max_length=64)
+    type_erreur: Literal["grammaire", "orthographe", "syntaxe"]
+    erreur: str = Field(min_length=1, max_length=120)
+
+
+class ExerciceCibleChatbotOut(_ModeleChatbot):
+    id_exercice: int = Field(ge=1)
+    enonce: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
+    consigne: str = Field(min_length=1, max_length=REPONSE_CHATBOT_MAX)
+    descripteur_id: str = Field(min_length=1, max_length=128)
+    niveau: str = Field(min_length=1, max_length=20)
