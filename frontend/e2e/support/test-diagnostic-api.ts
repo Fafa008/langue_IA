@@ -27,6 +27,9 @@ function questionPublique(question: Question) {
     audio_texte: question.audioTexte,
     duree_minimale_secondes: question.dureeMinimaleSecondes,
     mots_minimum: question.motsMinimum,
+    // Les contrôles E2E (scan Axe, mesures de largeur) dépassent le délai réel de 60 s par exercice :
+    // le faux backend accorde 10 min pour éviter un passage automatique sous le test.
+    duree_secondes: 600,
   };
 }
 
@@ -61,14 +64,13 @@ export const ECOUTE: QuestionMock = {
   bonneReponse: 0,
 };
 
-/** Premier niveau ayant des questions enregistrables, et ces questions (même règle que le backend). */
+/** Premier niveau ayant des QCM enregistrables, et ces questions (même règle que le backend). */
 function niveauDeDepart(langue: string) {
   const banque = (QUESTIONS_TEST as Record<string, QuestionMock[] | undefined>)[langue] ?? [];
   const niveaux = [...new Set(banque.map((question) => question.niveau))];
-  const niveau = niveaux.find((code) => banque.some(
-    (question) => question.niveau === code && question.typeReponse !== "audio",
-  ));
-  const questions = banque.filter((question) => question.niveau === niveau && question.typeReponse !== "audio");
+  const choix = (question: QuestionMock) => question.typeReponse === "choix" && question.bonneReponse !== undefined;
+  const niveau = niveaux.find((code) => banque.some((question) => question.niveau === code && choix(question)));
+  const questions = banque.filter((question) => question.niveau === niveau && choix(question));
   return { niveau, questions };
 }
 
@@ -264,14 +266,16 @@ export async function mockTestDiagnosticApi(
         await json(route, 404, { detail: "Tentative introuvable." });
         return;
       }
-      const questionsCorrigeables = tentative.questions.filter((question) => question.typeReponse === "choix");
+      const questionsCorrigeables = tentative.questions.filter(
+        (question) => question.typeReponse === "choix" && question.bonneReponse !== undefined,
+      );
       if (questionsCorrigeables.length === 0) {
         await json(route, 409, { detail: "Aucune question à choix n'est disponible pour le scoring." });
         return;
       }
       const correctes = questionsCorrigeables.filter((question) => {
         const valeur = tentative.reponses.get(question.id)?.valeur;
-        return valeur !== undefined && question.choix?.[question.bonneReponse] === valeur;
+        return valeur !== undefined && question.choix?.[question.bonneReponse ?? 0] === valeur;
       }).length;
       const percentage = Math.round((correctes / questionsCorrigeables.length) * 10_000) / 100;
       const level = percentage < 20 ? "A1"

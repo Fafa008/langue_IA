@@ -94,7 +94,8 @@ test.describe("Écran d'accueil du diagnostic", () => {
     await expect(page.getByRole("option")).toHaveCount(4);
     await expect(page.getByTestId("language-option-en")).toContainText("Échelle CECRL, A1 à C2");
     await expect(page.getByTestId("language-option-fr")).toContainText("Échelle CECRL, A1 à C2");
-    await expect(page.getByTestId("language-option-zh")).toContainText("Bientôt disponible");
+    await expect(page.getByTestId("language-option-zh")).toContainText("Échelle HSK, HSK 1 à 6");
+    await expect(page.getByTestId("language-option-zh")).not.toHaveAttribute("aria-disabled", "true");
     await expect(page.getByTestId("language-option-es")).toContainText("Espagnol");
     await expect(page.getByTestId("language-option-es")).toContainText("Bientôt disponible");
   });
@@ -117,12 +118,12 @@ test.describe("Écran d'accueil du diagnostic", () => {
   });
 
   test("une langue « Bientôt disponible » ne peut pas être choisie", async ({ page }) => {
-    await ouvrir(page, "zh");
+    await ouvrir(page, "es");
     await expect(page.getByTestId("language-select")).toContainText("Choisissez une langue");
     await page.getByTestId("language-select").click();
-    await expect(page.getByTestId("language-option-zh")).toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByTestId("language-option-es")).toHaveAttribute("aria-disabled", "true");
     // Clic forcé : l'option est désactivée, le clic ne doit rien choisir
-    await page.getByTestId("language-option-zh").click({ force: true });
+    await page.getByTestId("language-option-es").click({ force: true });
     await expect(page.getByTestId("language-select")).toContainText("Choisissez une langue");
     await expect(boutonCommencer(page)).toBeDisabled();
   });
@@ -178,7 +179,7 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
   test("crée une tentative et charge les questions depuis le backend", async ({ page }) => {
     await ouvrir(page, "en");
     await demarrer(page);
-    await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-a1-1");
+    await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-lire-1");
     await expect(page.getByTestId("progress-label")).toHaveText("Question 1 sur 2");
     await expect(page.getByTestId("feedback")).toHaveCount(0);
   });
@@ -187,7 +188,7 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     await ouvrir(page, "en");
     await demarrer(page);
     await expect(page.getByRole("heading", { name: "Étape 1/1 : Grammaire et lexique" })).toBeVisible();
-    await expect(page.getByRole("timer")).toHaveText(/^1[45]:\d\d$/);
+    await expect(page.getByTestId("temps-restant")).toHaveText(/^1[45]:\d\d$/);
     await expect(page.getByRole("button", { name: "Valider et continuer" })).toBeDisabled();
   });
 
@@ -225,7 +226,7 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     await expect(page.getByRole("button", { name: /Valider et/ })).toHaveCount(0);
     await page.getByRole("button", { name: "Question suivante" }).click();
 
-    await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-a1-2");
+    await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-lire-2");
     await repondre(page);
     const terminaison = page.waitForResponse((response) =>
       response.url().includes("/api/v1/diagnostic/tentatives/1/terminer") && response.request().method() === "POST",
@@ -270,7 +271,7 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
     await ouvrir(page, "en");
     await demarrer(page);
     await page.reload();
-    await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-a1-1");
+    await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-lire-1");
     await page.goto(URL_TEST);
     await expect(page).toHaveURL(`${URL_TEST}/test`);
   });

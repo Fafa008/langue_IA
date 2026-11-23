@@ -8,7 +8,7 @@ import { useConfirmationSortie } from "@/hooks/useConfirmationSortie";
 import { useTempsRestant } from "@/hooks/useTempsRestant";
 import { useTestDiagnostic } from "@/hooks/useTestDiagnostic";
 import { erreurReessayable, messageErreurDiagnostic } from "@/lib/erreursDiagnostic";
-import { DUREE_TEST_MINUTES, etapeDe, positionEtape } from "@/lib/etapesTest";
+import { DUREE_TEST_MINUTES, dureeQuestion, etapeDe, positionEtape } from "@/lib/etapesTest";
 import { ROUTES } from "@/lib/routes";
 import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnostic.store";
 import { ATTENTE_CLOTURE } from "@/lib/attentesDiagnostic";
@@ -35,6 +35,19 @@ export default function DeroulementTest() {
   // Toujours la dernière version de terminer, sans réarmer les minuteurs à chaque rendu (le compte à rebours en provoque un par seconde)
   const terminerRef = useRef(test.terminer);
   terminerRef.current = test.terminer;
+  const expirerRef = useRef(test.expirerQuestion);
+  expirerRef.current = test.expirerQuestion;
+
+  // Compte à rebours propre à l'exercice : à zéro, on passe automatiquement au suivant.
+  const question = etat.courante;
+  const [debutQuestion, setDebutQuestion] = useState(() => Date.now());
+  const questionExpiree = useRef(false);
+  useEffect(() => {
+    setDebutQuestion(Date.now());
+    questionExpiree.current = false;
+  }, [question?.id]);
+  const secondesQuestionBrutes = useTempsRestant(debutQuestion, (question ? dureeQuestion(question) : 60) / 60);
+  const secondesQuestion = secondesQuestionBrutes === null ? null : Math.ceil(secondesQuestionBrutes);
 
   useEffect(() => router.prefetch(ROUTES.apprenant.testDiagnostic.resultats), [router]);
 
@@ -52,6 +65,13 @@ export default function DeroulementTest() {
     finAutomatiqueLancee.current = true;
     terminerRef.current();
   }, [tempsEcoule, sansSession]);
+
+  useEffect(() => {
+    if (tempsEcoule || sansSession || secondesQuestion === null || secondesQuestion > 0) return;
+    if (etat.phase !== "question" || test.reponseEnCours || test.terminaisonEnCours || questionExpiree.current) return;
+    questionExpiree.current = true;
+    expirerRef.current();
+  }, [tempsEcoule, sansSession, secondesQuestion, etat.phase, test.reponseEnCours, test.terminaisonEnCours]);
 
   if (sansSession || !etat.courante || !etat.langue) return null;
 
@@ -71,6 +91,7 @@ export default function DeroulementTest() {
           total: etat.totalQuestions,
         }}
         secondesRestantes={secondesRestantes}
+        secondesQuestion={secondesQuestion}
         onQuitter={() => setConfirmerAbandon(true)}
         quitterDesactive={occupe}
       />

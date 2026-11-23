@@ -12,6 +12,12 @@ interface EnregistrementOralProps {
   /** Appelé avec l'enregistrement s'il est assez long, avec null quand il est effacé. */
   onChange: (audio: Blob | null) => void;
   disabled?: boolean;
+  /** Phrase à répéter, affichée au-dessus du micro pour l'exercice « parler ». */
+  phraseACible?: string;
+  /** Faut-il afficher la phrase ? Un sujet d'expression orale libre ne l'affiche pas. */
+  afficherPhrase?: boolean;
+  /** Titre du cadre, par exemple « Répétez la phrase suivante ». */
+  titre?: string;
 }
 
 type Etat = "pret" | "enregistrement" | "termine";
@@ -32,7 +38,11 @@ function Action({ libelle, onClick, children }: { libelle: string; onClick: () =
  * Expression orale : enregistrement au micro avec chronomètre, arrêt, nouvel essai et réécoute.
  * Un enregistrement plus court que `dureeMinimale` n'est pas retenu.
  */
-export default function EnregistrementOral({ audio, dureeMinimale, onChange, disabled = false }: EnregistrementOralProps) {
+export default function EnregistrementOral(
+  {
+    audio, dureeMinimale, onChange, disabled = false, phraseACible, afficherPhrase = false, titre,
+  }: EnregistrementOralProps,
+) {
   const [etat, setEtat] = useState<Etat>(audio ? "termine" : "pret");
   const [secondes, setSecondes] = useState(0);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -125,6 +135,12 @@ export default function EnregistrementOral({ audio, dureeMinimale, onChange, dis
 
   return (
     <div className="mt-6 flex flex-col items-center" data-testid="enregistrement-oral">
+      {titre && <p className="text-small font-semibold text-content-secondary">{titre}</p>}
+      {afficherPhrase && phraseACible && (
+        <blockquote className="mb-2 rounded-btn bg-background px-6 py-3 text-center text-h5 font-semibold text-content">
+          « {phraseACible} »
+        </blockquote>
+      )}
       <div className="relative flex h-44 w-44 items-center justify-center">
         {enCours && (
           <>

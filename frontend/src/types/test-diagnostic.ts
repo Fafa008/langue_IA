@@ -15,6 +15,10 @@ export interface EtapePlan {
   nombreQuestions: number;
 }
 
+/** Format pédagogique de l'exercice : le type de réponse reste `choix`, `texte` ou `audio`. */
+export type FormatExercice = "qcm" | "vrai_faux" | "texte_a_trous" | "dictee" | "parler";
+export const FORMATS_EXERCICE = ["qcm", "vrai_faux", "texte_a_trous", "dictee", "parler"] as const;
+
 /** Données publiques d'une question ; la bonne réponse n'est envoyée qu'après validation. */
 export interface Question {
   id: string;
@@ -22,10 +26,16 @@ export interface Question {
   competence: CompetenceTest;
   typeReponse: "choix" | "texte" | "audio";
   enonce: string;
+  /** Format d'affichage ; absent sur les questions historiques (QCM par défaut). */
+  format?: FormatExercice;
   choix?: string[];
   support?: string;
   audioUrl?: string;
   audioTexte?: string;
+  /** Texte à trous : jetons à remettre dans l'ordre pour reconstruire le mot manquant. */
+  lettresMelangees?: string[];
+  /** Temps imparti à cette question avant passage automatique, en secondes. */
+  dureeSecondes?: number;
   /** Expression orale : durée de parole minimale, en secondes. */
   dureeMinimaleSecondes?: number;
   /** Expression écrite : nombre de mots minimal. */
@@ -57,7 +67,9 @@ export interface PersonnalisationTest {
 export type ReponseTest =
   | { type: "choix"; choix: number }
   | { type: "texte"; texte: string }
-  | { type: "audio"; audio: Blob };
+  | { type: "audio"; audio: Blob }
+  /** Temps imparti écoulé : l'exercice est compté comme faux et le test passe au suivant. */
+  | { type: "sans_reponse" };
 
 export interface SessionTest {
   id: string;
@@ -80,7 +92,8 @@ export type RetourReponse = RetourReponseBase & (
   | {
       typeReponse: "en_attente";
       questionSuivante: Question | null;
-      resultat: null;
+      /** Renseigné si le temps imparti à la dernière question s'est écoulé. */
+      resultat: ResultatTest | null;
     }
   | {
       typeReponse: "choix";
@@ -142,6 +155,20 @@ export interface Justification {
  * Résultat du test. Niveau et score sont toujours présents ; le reste dépend de l'analyse
  * et peut manquer (analyse partielle, backend qui ne le fournit pas encore).
  */
+/** Une ligne du dossier transmis à l'agent diagnostic : l'agent interprète, il ne calcule pas le score. */
+export interface DonneeAnalyse {
+  idQuestion: string;
+  competence: CompetenceTest;
+  format: FormatExercice;
+  /** Difficulté relative de la question (1 = débutant), tirée de son niveau. */
+  difficulte: number;
+  justesse: boolean;
+  tempsReponseSecondes: number;
+  /** Transcription et confiance renseignées plus tard par le service STT (phase 4). */
+  transcription?: string;
+  confianceStt?: number;
+}
+
 export interface ResultatTest {
   niveau: string;
   score: number;
@@ -152,6 +179,8 @@ export interface ResultatTest {
   pointsFaibles?: PointFaible[];
   phaseAssimil?: PhaseAssimil;
   justification?: Justification;
+  /** Données par exercice destinées à l'analyse ; absentes si le backend ne les fournit pas. */
+  donneesAnalyse?: DonneeAnalyse[];
 }
 
 /**

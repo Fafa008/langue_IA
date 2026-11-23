@@ -56,7 +56,7 @@ test.describe.skip("Reprise d'un test interrompu", () => {
     await expect(page).toHaveURL(`${URL_TEST}/test`);
     // Reprise à la question sans réponse : la première n'est pas reposée
     await expect(page.getByTestId("progress-label")).toHaveText("Question 2 sur 2");
-    await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-a1-2");
+    await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-lire-2");
 
     await page.getByTestId("option-1").click();
     await page.getByRole("button", { name: "Valider et finaliser" }).click();

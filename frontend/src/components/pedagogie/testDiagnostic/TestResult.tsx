@@ -13,6 +13,7 @@ import BoutonRetour from "./BoutonRetour";
 import CarteNiveau from "./resultat/CarteNiveau";
 import CarteScore from "./resultat/CarteScore";
 import DetailCompetences from "./resultat/DetailCompetences";
+import DonneesAnalyse from "./resultat/DonneesAnalyse";
 import EchelleNiveaux from "./resultat/EchelleNiveaux";
 import JustificationNiveau from "./resultat/JustificationNiveau";
 import PointsFaibles from "./resultat/PointsFaibles";
@@ -96,6 +97,9 @@ export default function TestResult() {
           </PointsFaibles>
         </div>
       </div>
+
+      {/* Données factuelles destinées à l'agent : facultatives, jamais calculées par l'agent lui-même. */}
+      {resultat.donneesAnalyse && <DonneesAnalyse donnees={resultat.donneesAnalyse} />}
 
       {/* Décision D5 (F-01) : sans justification fournie par l'analyse, la section n'est pas affichée. */}
       {resultat.justification && <JustificationNiveau justification={resultat.justification} />}

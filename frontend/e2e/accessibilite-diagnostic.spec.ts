@@ -81,7 +81,7 @@ async function parcourirLesEcrans(page: Page, verifier: (ecran: string, elements
 
   await expect(page.getByTestId("question-card")).toBeVisible({ timeout: 15_000 });
   await page.getByTestId("option-0").click();
-  await verifier("question à choix", [page.getByRole("timer"), page.getByRole("button", { name: "Valider et continuer" })]);
+  await verifier("question à choix", [page.getByTestId("temps-restant"), page.getByRole("button", { name: "Valider et continuer" })]);
   await page.getByRole("button", { name: "Valider et continuer" }).click();
   await expect(page.getByTestId("feedback")).toBeVisible();
   await verifier("retour après réponse", [page.getByRole("button", { name: "Question suivante" })]);
@@ -129,8 +129,8 @@ async function parcourirLesEtats(page: Page, verifier: (ecran: string, elements?
 
   // Deux dernières minutes : le minuteur change de couleur
   await page.clock.fastForward("13:30");
-  await expect(page.getByRole("timer")).toHaveClass(/text-warning-dark/);
-  await verifier("minuteur presque écoulé", [page.getByRole("timer")]);
+  await expect(page.getByTestId("temps-restant")).toHaveClass(/text-warning-dark/);
+  await verifier("minuteur presque écoulé", [page.getByTestId("temps-restant")]);
 
   await page.getByTestId("option-1").click();
   await page.getByRole("button", { name: "Valider et finaliser" }).click();

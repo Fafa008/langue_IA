@@ -24,4 +24,9 @@ describe("EnteteEtape", () => {
     fireEvent.click(screen.getByRole("button", { name: "Quitter le test" }));
     expect(onQuitter).toHaveBeenCalled();
   });
+
+  it("affiche le temps de l'exercice sur la ligne de progression sur petit écran", () => {
+    render(<EnteteEtape {...props} secondesRestantes={300} secondesQuestion={45} />);
+    expect(screen.getByTestId("temps-question-mobile")).toHaveTextContent("Exercice : 00:45");
+  });
 });
