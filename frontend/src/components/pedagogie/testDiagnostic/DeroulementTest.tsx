@@ -8,6 +8,7 @@ import { useConfirmationSortie } from "@/hooks/useConfirmationSortie";
 import { useTempsRestant } from "@/hooks/useTempsRestant";
 import { useTestDiagnostic } from "@/hooks/useTestDiagnostic";
 import { erreurReessayable, messageErreurDiagnostic } from "@/lib/erreursDiagnostic";
+import { API_MOCK } from "@/lib/env";
 import { DUREE_TEST_MINUTES, dureeQuestion, etapeDe, positionEtape } from "@/lib/etapesTest";
 import { ROUTES } from "@/lib/routes";
 import { selectTestEnCours, useTestDiagnosticStore } from "@/store/test-diagnostic.store";
@@ -152,6 +153,17 @@ export default function DeroulementTest() {
             onValiderTexte={test.repondreTexte}
             onValiderAudio={test.repondreAudio}
           />
+
+          {API_MOCK && etat.phase === "question" && !occupe && (
+            <button
+              type="button"
+              className="btn-secondary mt-4 w-full"
+              onClick={test.passer}
+              data-testid="passer-question"
+            >
+              Passer (réponse automatique)
+            </button>
+          )}
 
           {test.erreurReponse && (
             <ErreurReessayable

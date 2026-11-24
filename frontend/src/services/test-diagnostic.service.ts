@@ -305,8 +305,12 @@ export const httpTestDiagnosticService = {
     if (reponse.type === "audio") {
       throw new Error("L'enregistrement des réponses audio sera disponible après la mise en place du stockage des médias.");
     }
-    if (reponse.type === "sans_reponse") {
-      throw new Error("Le passage automatique nécessite le service de diagnostic.");
+    if (reponse.type === "sans_reponse" || reponse.type === "automatique") {
+      throw new Error(
+        reponse.type === "automatique"
+          ? "La réponse automatique est réservée au mode démonstration."
+          : "Le passage automatique nécessite le service de diagnostic.",
+      );
     }
     const reponseFournie = reponse.type === "choix" ? valeurChoix : reponse.texte;
     if (!reponseFournie?.trim()) {

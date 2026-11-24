@@ -36,6 +36,17 @@ async function parcourir(session: SessionTest, juste: boolean, langue: CodeLangu
   return retour;
 }
 
+/** Parcours de démonstration : le mock lui-même fournit la bonne réponse à chaque exercice. */
+async function parcourirEnAutomatique(session: SessionTest): Promise<RetourReponse | null> {
+  let courante: Question | null = session.question;
+  let retour: RetourReponse | null = null;
+  while (courante) {
+    retour = await testDiagnosticMockService.repondre(session.id, courante.id, { type: "automatique" });
+    courante = retour.questionSuivante;
+  }
+  return retour;
+}
+
 describe("testDiagnosticMockService — banque quatre compétences", () => {
   it("couvre les cinq langues avec cinq exercices par compétence", async () => {
     const langues = await testDiagnosticMockService.langues();
@@ -79,6 +90,18 @@ describe("testDiagnosticMockService — banque quatre compétences", () => {
     const second = await testDiagnosticMockService.demarrer("fr", "professionnel", []);
     const autre = await parcourir(second, true, "fr");
     expect(autre?.resultat?.score).toBe(resultat?.resultat?.score);
+  });
+
+  it("donne toutes les bonnes réponses en mode automatique sans les exposer avant validation", async () => {
+    const session = await testDiagnosticMockService.demarrer("en", "professionnel", []);
+    const premiere = session.question;
+    expect(premiere).not.toHaveProperty("bonneReponse");
+    expect(premiere).not.toHaveProperty("reponseAttendue");
+
+    const resultat = await parcourirEnAutomatique(session);
+    expect(resultat?.resultat).toMatchObject({ score: 100, total: 100, lacunes: [] });
+    // La question servie après un passage automatique ne révèle toujours pas sa correction.
+    expect(resultat?.questionSuivante).toBeNull();
   });
 
   it("corrige la dictée et le texte à trous exactement", async () => {

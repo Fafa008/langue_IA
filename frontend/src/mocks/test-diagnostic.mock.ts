@@ -27,6 +27,25 @@ import {
 export const POINTS_PAR_EXERCICE = 5;
 const NOMBRE_PAR_ETAPE = 5;
 
+/**
+ * Démo : reconstruit la bonne réponse à partir de la banque simulée, sans jamais l'exposer au composant
+ * avant validation. Le service HTTP refuse cette variante : le backend ne transmet pas les corrections.
+ */
+function reponseAutomatique(question: QuestionMock): ReponseTest {
+  if (question.typeReponse === "choix") {
+    if (question.bonneReponse === undefined) {
+      throw new ApiError(422, "Correction simulée indisponible pour cette question.");
+    }
+    return { type: "choix", choix: question.bonneReponse };
+  }
+  if (!question.reponseAttendue) {
+    throw new ApiError(422, "Correction simulée indisponible pour cette question.");
+  }
+  return question.typeReponse === "texte"
+    ? { type: "texte", texte: question.reponseAttendue }
+    : { type: "audio", audio: new Blob([question.reponseAttendue], { type: "audio/webm" }) };
+}
+
 /** Plan visé, réduit si la banque d'une langue n'a pas assez d'exercices. */
 const PLAN_VISE: EtapePlan[] = [
   { etape: "qcm", nombreQuestions: NOMBRE_PAR_ETAPE },
@@ -272,7 +291,8 @@ export const testDiagnosticMockService = {
           : precedente.type === "texte" && reponse.type === "texte" ? precedente.texte === reponse.texte
             : precedente.type === "audio" && reponse.type === "audio" ? precedente.audio === reponse.audio
               : precedente.type === "sans_reponse" && reponse.type === "sans_reponse" ? true
-                : false
+                : precedente.type === "automatique" && reponse.type === "automatique" ? true
+                  : false
       );
       if (identique) return session.derniereReponse.retour;
       throw new ApiError(409, "Une autre réponse a déjà été enregistrée pour cette question.");
@@ -281,27 +301,32 @@ export const testDiagnosticMockService = {
       throw new ApiError(409, "Cette question a déjà reçu une réponse.");
     }
     const question = session.questionCourante;
-    const choixValide = reponse.type === "choix"
-      && Number.isInteger(reponse.choix)
-      && reponse.choix >= 0
-      && reponse.choix < (question.choix?.length ?? 0);
-    const reponseLibreValide = reponse.type === "texte"
-      ? Boolean(reponse.texte.trim())
-      : reponse.type === "audio" && reponse.audio.size > 0;
-    const sansReponse = reponse.type === "sans_reponse";
+    // Le bouton « Passer » demande au mock de fournir la correction : on la transforme en vraie réponse
+    // avant la validation, pour réutiliser exactement le même calcul de score que pour un apprenant.
+    const reponseEffective: ReponseTest = reponse.type === "automatique"
+      ? reponseAutomatique(question)
+      : reponse;
+    const choixValide = reponseEffective.type === "choix"
+      && Number.isInteger(reponseEffective.choix)
+      && reponseEffective.choix >= 0
+      && reponseEffective.choix < (question.choix?.length ?? 0);
+    const reponseLibreValide = reponseEffective.type === "texte"
+      ? Boolean(reponseEffective.texte.trim())
+      : reponseEffective.type === "audio" && reponseEffective.audio.size > 0;
+    const sansReponse = reponseEffective.type === "sans_reponse";
     if (!sansReponse && (question.typeReponse === "choix" && !choixValide
-      || question.typeReponse === "texte" && (reponse.type !== "texte" || !reponseLibreValide)
-      || question.typeReponse === "audio" && (reponse.type !== "audio" || !reponseLibreValide))) {
+      || question.typeReponse === "texte" && (reponseEffective.type !== "texte" || !reponseLibreValide)
+      || question.typeReponse === "audio" && (reponseEffective.type !== "audio" || !reponseLibreValide))) {
       throw new ApiError(422, "La réponse sélectionnée est invalide.");
     }
 
     if (question.typeReponse !== "choix") await analyseSimulee();
-    const correcte = reponse.type === "choix" && reponse.choix === question.bonneReponse;
+    const correcte = reponseEffective.type === "choix" && reponseEffective.choix === question.bonneReponse;
     // La dictée et le texte à trous sont corrigés exactement ; l'oral reste à évaluer par le service STT (phase 4).
     const juste = sansReponse ? false : question.reponseAttendue
-      ? reponse.type === "texte"
-        ? normaliser(reponse.texte) === normaliser(question.reponseAttendue)
-        : reponse.type === "audio"
+      ? reponseEffective.type === "texte"
+        ? normaliser(reponseEffective.texte) === normaliser(question.reponseAttendue)
+        : reponseEffective.type === "audio"
           ? true // La transcription STT n'existe pas encore : phase 1, on valide l'enregistrement.
           : false
       : question.typeReponse === "texte"

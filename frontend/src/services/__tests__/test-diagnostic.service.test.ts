@@ -322,6 +322,12 @@ describe("httpTestDiagnosticService", () => {
     ).rejects.toThrow("stockage des médias");
   });
 
+  it("refuse la réponse automatique hors mode démonstration", async () => {
+    await expect(
+      httpTestDiagnosticService.repondre("42", "1", { type: "automatique" }),
+    ).rejects.toThrow("réservée au mode démonstration");
+  });
+
   it("charge le faux backend uniquement quand le mode simulé est activé", async () => {
     const originalMock = process.env.NEXT_PUBLIC_API_MOCK;
     process.env.NEXT_PUBLIC_API_MOCK = "true";
