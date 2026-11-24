@@ -15,6 +15,7 @@ import { formatEmail, formatNom, formatPrenom, normaliserEspaces } from "@/lib/s
 import { ROUTES } from "@/lib/routes";
 import { validateRegister } from "@/lib/validation/auth";
 import type { RegisterFormValues, RegisterPayload } from "@/types/auth";
+import type { CodeLangue } from "@/types/langue";
 import AuthHeading from "./AuthHeading";
 import FormulePicker from "./FormulePicker";
 import LanguePicker from "./LanguePicker";
@@ -53,11 +54,11 @@ function today(): string {
   return now.toISOString().slice(0, 10);
 }
 
-export default function RegisterForm() {
+export default function RegisterForm({ langueInitiale }: { langueInitiale?: CodeLangue }) {
   const register = useRegister();
   const { data: formules = [] } = useFormules();
   const form = useForm({
-    initialValues: INITIAL_VALUES,
+    initialValues: langueInitiale ? { ...INITIAL_VALUES, langues: [langueInitiale] } : INITIAL_VALUES,
     validate: (v) => validateRegister(v, formules),
     onSubmit: (v) => register.mutate(toPayload(v)),
     submitting: register.isPending,

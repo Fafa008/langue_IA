@@ -131,19 +131,21 @@ test.describe("Démonstration générale — scénarios 1 à 15", () => {
     // Le formulaire de connexion est couvert par login.spec ; ici on ouvre la session démo et on vérifie l'entrée.
     await loginAs(page, APPRENANT);
     await aller(page, "/espace/apprenant");
-    await expect(page.getByRole("heading", { level: 1, name: /Bonjour Rova/ })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /Bonjour, Rova/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Mon parcours/ }).first()).toBeVisible();
   });
 
-  test("2. Tableau de bord apprenant : raccourcis actifs et rubriques non livrées signalées", async ({ page }) => {
+  test("2. Tableau de bord apprenant : accès rapides et fonctionnalités à venir identifiées", async ({ page }) => {
     await loginAs(page, APPRENANT);
     await aller(page, "/espace/apprenant");
-    await expect(page.getByTestId("etat-modules")).toContainText("ne sont pas livrées");
+    await expect(page.getByRole("heading", { name: "Accès rapide" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Mon parcours/ }).first()).toHaveAttribute(
       "href",
       "/espace/apprenant/parcours",
     );
-    await expect(page.locator("main li").filter({ hasText: "Ateliers" })).toContainText("Bientôt");
+    const ateliers = page.locator("main li").filter({ hasText: "Ateliers" });
+    await expect(ateliers).toContainText("Bientôt");
+    await expect(ateliers.locator("a")).toHaveCount(0);
   });
 
   test("3. Test de positionnement : démarrage, questions et résultat calculé", async ({ page }) => {

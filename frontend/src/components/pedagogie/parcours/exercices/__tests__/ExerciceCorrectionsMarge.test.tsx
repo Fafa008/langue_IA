@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import ExerciceConversation from "@/components/pedagogie/parcours/exercices/ExerciceConversation";
 import { afficher } from "@/test/rendu-avec-query";
 
-// US74-FE : corrections en marge sous le message de l'apprenant, sans interrompre la conversation.
+// US74-FE : corrections dans le panneau latéral, sans interrompre la conversation.
 const drapeau = (globalThis as { __parcoursSimule?: boolean });
 jest.mock("@/mocks/delay", () => ({ delay: () => Promise.resolve() }));
 jest.mock("@/lib/env", () => ({
@@ -34,13 +34,15 @@ afterEach(() => {
   delete (globalThis as { __parcoursSimule?: boolean }).__parcoursSimule;
 });
 
-describe("US74-FE — corrections en marge", () => {
-  it("affiche la correction sous le message fautif, avec l'extrait, la forme correcte et la règle", async () => {
+describe("US74-FE — corrections IA", () => {
+  it("affiche la correction dans le panneau latéral, avec l'extrait, la forme correcte et la règle", async () => {
     afficher(<ExerciceConversation contenu={contenu} langue="fr" enCours={false} verrouille={false} onSoumettre={jest.fn()} />);
     envoyer("hier j'ai allé au cinéma");
 
+    await screen.findByText("je suis allé(e)");
+    await within(screen.getByRole("log")).findByText(/^(Très bien|D'accord|Intéressant)/);
     const marge = await screen.findByTestId("corrections-marge");
-    expect(within(marge).getByText("Corrections en marge")).toBeInTheDocument();
+    expect(within(marge).getByText("Corrections de l’IA")).toBeInTheDocument();
     expect(within(marge).getByText("j'ai allé")).toBeInTheDocument();
     expect(within(marge).getByText("je suis allé(e)")).toBeInTheDocument();
     expect(within(marge).getByText(/« Aller » se conjugue avec l'auxiliaire être/)).toBeInTheDocument();
@@ -53,16 +55,21 @@ describe("US74-FE — corrections en marge", () => {
     expect(screen.getByPlaceholderText(/Écrivez ou dictez/)).toBeEnabled();
   });
 
-  it("n'affiche aucune section de correction quand le message est correct", () => {
+  it("indique où les corrections apparaîtront quand le message est correct", async () => {
     afficher(<ExerciceConversation contenu={contenu} langue="fr" enCours={false} verrouille={false} onSoumettre={jest.fn()} />);
     envoyer("Hier, je suis allé au cinéma.");
-    expect(screen.queryByTestId("corrections-marge")).not.toBeInTheDocument();
+    await within(screen.getByRole("log")).findByText(/^(Très bien|D'accord|Intéressant)/);
+    expect(screen.getByTestId("corrections-marge")).toHaveTextContent(
+      "Les corrections apparaîtront ici après votre premier message.",
+    );
   });
 
   it("affiche les corrections renvoyées par le service même hors drapeau de démonstration", async () => {
     drapeau.__parcoursSimule = false;
     afficher(<ExerciceConversation contenu={contenu} langue="fr" enCours={false} verrouille={false} onSoumettre={jest.fn()} />);
     envoyer("hier j'ai allé au cinéma");
-    expect(await screen.findByTestId("corrections-marge")).toBeInTheDocument();
+    await screen.findByText("je suis allé(e)");
+    await within(screen.getByRole("log")).findByText(/^(Très bien|D'accord|Intéressant)/);
+    expect(screen.getByTestId("corrections-marge")).toBeInTheDocument();
   });
 });

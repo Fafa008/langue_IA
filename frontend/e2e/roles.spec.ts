@@ -23,8 +23,8 @@ function compte(id_user: number, role: Role, prenom: string, email: string): Uti
  * L'administrateur a son propre tableau de bord (KPI) au lieu de l'accueil par raccourcis.
  */
 const ESPACES: Record<Role, { accueil: string; titre: string; rubrique: string }> = {
-  APPRENANT: { accueil: "/espace/apprenant", titre: "Bonjour Rova", rubrique: "Mes inscriptions" },
-  FORMATEUR: { accueil: "/espace/formateur", titre: "Bonjour Hery", rubrique: "Mes séances" },
+  APPRENANT: { accueil: "/espace/apprenant", titre: "Bonjour, Rova !", rubrique: "Mes inscriptions" },
+  FORMATEUR: { accueil: "/espace/formateur", titre: "Bonjour, Hery", rubrique: "Mes séances" },
   ADMINISTRATEUR: { accueil: "/espace/admin", titre: "Tableau de bord", rubrique: "Utilisateurs" },
 };
 
@@ -72,8 +72,23 @@ for (const role of Object.keys(COMPTES) as Role[]) {
 
     await expect(page).toHaveURL(accueil);
     await expect(page.getByRole("heading", { name: titre, level: 1 })).toBeVisible();
-    // Raccourci (ou carte KPI pour l'administrateur) propre au rôle sur le tableau de bord
-    await expect(page.getByRole("main").getByText(rubrique, { exact: true })).toBeVisible();
+    const main = page.getByRole("main");
+    if (role === "APPRENANT") {
+      await expect(main.getByRole("heading", { name: "Accès rapide" })).toBeVisible();
+      await expect(main.getByRole("link", { name: /Mon parcours/ }).first()).toHaveAttribute(
+        "href",
+        "/espace/apprenant/parcours",
+      );
+    } else if (role === "FORMATEUR") {
+      await expect(main.getByRole("heading", { name: "Vos outils" })).toBeVisible();
+      await expect(main.getByRole("link", { name: "Consulter mes apprenants" })).toHaveAttribute(
+        "href",
+        "/espace/formateur/apprenants",
+      );
+    } else {
+      // L'administrateur conserve son tableau de bord historique avec ses KPI.
+      await expect(main.getByText(rubrique, { exact: true })).toBeVisible();
+    }
 
     // Menu du compte : lien vers son espace
     await page.getByRole("button", { name: "Menu du compte" }).click();

@@ -47,6 +47,7 @@ services:
       # En dev, lues à chaque démarrage de next dev (pas besoin de reconstruire l'image)
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${BACKEND_PORT:-8000}}
       NEXT_PUBLIC_API_MOCK: ${NEXT_PUBLIC_API_MOCK:-false}
+      LANGUE_IA_REPO_ROOT: /workspace
       # Détection des modifications à travers le montage (Docker Desktop, WSL)
       WATCHPACK_POLLING: "true"
     volumes:
@@ -55,5 +56,5 @@ services:
       - /app/node_modules
       - /app/.next
       # Le test frontend de cohérence des délais lit ces fichiers de configuration côté serveur.
-      - ./backend:/backend:ro
-      - ./ia-service:/ia-service:ro
+      - ./backend/app/core/config.py:/workspace/backend/app/core/config.py:ro
+      - ./ia-service/app/core/config.py:/workspace/ia-service/app/core/config.py:ro
