@@ -102,89 +102,90 @@ Ce projet vise à concevoir et développer un **système d'information intellige
 
 ### Prérequis
 
-- Git 2.40+
-- Docker 24+ et Docker Compose 2.20+
-- Node.js 20+
-- Python 3.11+
+- Git
+- Docker Desktop/Docker Engine **24+** avec le plugin Docker Compose **2.20+**
+- `make` est facultatif. Python et Node.js locaux ne sont pas nécessaires pour développer ou tester dans Docker.
+- Pour les outils locaux facultatifs : Python **3.11** et Node.js **22** (`.python-version` et `.nvmrc`).
 
-### Étapes (Docker)
+### Démarrage rapide
 
-Tout le monorepo démarre avec une seule commande : PostgreSQL, Redis, backend, service IA et frontend.
+Après avoir cloné le dépôt, copiez l’exemple de configuration. Il ne contient aucune vraie clé API : le fournisseur
+LLM factice et les secrets de démonstration suffisent pour le développement local.
+
+**Linux (Ubuntu) et macOS** — depuis un terminal à la racine :
 
 ```bash
-# 1. Cloner le dépôt
-git clone https://github.com/Fafa008/langue_IA.git
-cd langue_IA
-
-# 2. Copier les variables d'environnement (puis changer les mots de passe et secrets)
 cp .env.example .env
-
-# 3. Lancer la stack (images de production, en arrière-plan)
-docker compose up --build -d --wait      # ou : make up
-
-# 4. Accéder aux services
-# Frontend   : http://localhost:3000
-# Backend    : http://localhost:8000      (santé : /health)
-# Swagger    : http://localhost:8000/docs
-# IA Service : interne à Docker, non exposé sur l'hôte (port 8001 sur back-tier)
-# Appel de santé : docker compose exec -T backend python -c "import urllib.request; urllib.request.urlopen('http://ia-service:8001/health', timeout=3)"
-# PostgreSQL et Redis : internes à Docker (en mode dev : localhost:55432 et localhost:56379)
+make dev
 ```
 
-| Besoin                            | Commande                                                                    | Raccourci               |
-| --------------------------------- | --------------------------------------------------------------------------- | ----------------------- |
-| Développer (rechargement à chaud) | `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build` | `make dev`              |
-| Voir l'état / les journaux        | `docker compose ps` / `docker compose logs -f`                              | `make ps` / `make logs` |
-| Arrêter (données conservées)      | `docker compose down`                                                       | `make down`             |
-| Repartir d'une base vide          | `docker compose down --volumes`                                             | `make reset`            |
-| Recharger les données de départ   | `docker compose exec backend python -m app.seed`                            | `make seed`             |
-| Contrôles de la CI, avant une PR  | ruff, pytest + couverture (backend, IA), typage, lint, Jest (frontend)      | `make check`            |
+Sans `make` : `bash scripts/dev.sh dev`.
 
-Bon à savoir :
+**Windows** — PowerShell avec Docker Desktop utilisant WSL2 :
 
-- **Ports déjà utilisés** (un `npm run dev` ou un autre projet) : changer `FRONTEND_PORT`, `BACKEND_PORT` ou
-  `IA_PORT` dans `.env`. PostgreSQL et Redis ne sont pas ouverts sur la machine (pas de conflit possible avec un
-  PostgreSQL déjà installé) : les services les joignent par leur nom (`db`, `redis`). En mode `dev`, ils sont
-  accessibles sur `localhost:55432` et `localhost:56379` (`POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`).
-- **Données simulées** : `NEXT_PUBLIC_API_MOCK=true` (par défaut) tant que le backend n'implémente pas
-  [`docs/api/contrat-frontend.md`](docs/api/contrat-frontend.md). Cette valeur est intégrée au build du frontend :
-  relancer `docker compose up --build` après un changement (en mode `dev`, un simple redémarrage suffit).
-  Pour une démo rapide, `NEXT_PUBLIC_API_MOCK=true` garde le test de positionnement simulé (bouton « Passer »
-  et réponses automatiques) ; ajouter `NEXT_PUBLIC_AUTH_REELLE=true` et `NEXT_PUBLIC_PARCOURS_REELLE=true` au build
-  branche la connexion, le parcours, les recommandations et le chat sur le vrai backend — donc sur le service IA.
-- **Backend** : implémente le contrat du frontend (voir [`backend/README.md`](backend/README.md)). Au démarrage, il
-  applique les migrations puis le seed (`backend/app/seed.py`, sans doublon) : référentiel toujours ; comptes de
-  démonstration (`apprenant@`, `formateur@`, `admin@digitheque.mg`, mot de passe `Demo2026`) et banque de questions
-  du diagnostic (anglais, français) si `SEED_DEMO=true`. Tests : `make test` (backend), `make test-ia` (service IA). Le service IA expose `/health` et contient le Harness partagé ainsi que
-  les contrats et prompts versionnés ; l'agent diagnostic et son endpoint d'inférence restent à intégrer.
-- **« No module named … » après un `git pull`** : une dépendance a changé et l'image dev est périmée. `make dev`
-  reconstruit les images ; en mode dev, les conteneurs ne redémarrent plus seuls au démarrage de la machine.
-- **Windows** : `.gitattributes` impose des fins de ligne LF (un `docker-entrypoint.sh` en CRLF bloque le backend).
-  Clone fait avant ce fichier : supprimer `backend/docker-entrypoint.sh` puis `git checkout -- backend/docker-entrypoint.sh`.
-- **Modèles IA** : déposer les fichiers entraînés dans `ia-service/models/` (non versionnés), montés en lecture seule.
+```powershell
+Copy-Item .env.example .env
+.\scripts\dev.ps1 dev
+```
 
-### Installation manuelle
+Pour travailler dans WSL2, clonez le dépôt dans le système de fichiers Linux de la distribution, puis utilisez les
+commandes Linux (`make dev` ou `bash scripts/dev.sh dev`). VS Code et GitHub Codespaces peuvent aussi ouvrir le
+dépôt dans le devcontainer, qui utilise les images Compose de développement.
+
+La stack de développement démarre PostgreSQL, Redis, backend, service IA et frontend avec rechargement à chaud.
+Docker choisit automatiquement une image compatible avec `linux/amd64` ou `linux/arm64` (Apple Silicon).
+
+| Action | Linux/macOS | Windows PowerShell |
+|---|---|---|
+| Démarrer en développement | `make dev` ou `bash scripts/dev.sh dev` | `.\scripts\dev.ps1 dev` |
+| Démarrer en arrière-plan | `make up` ou `bash scripts/dev.sh up` | `.\scripts\dev.ps1 up` |
+| Arrêter, conserver les données | `make down` ou `bash scripts/dev.sh down` | `.\scripts\dev.ps1 down` |
+| Tests backend | `make test` ou `bash scripts/dev.sh test` | `.\scripts\dev.ps1 test` |
+| Tests IA | `make test-ia` ou `bash scripts/dev.sh test-ia` | `.\scripts\dev.ps1 test-ia` |
+| Vérifications complètes CI | `make check` ou `bash scripts/dev.sh check` | `.\scripts\dev.ps1 check` |
+| Diagnostic des prérequis | `make doctor` ou `bash scripts/dev.sh doctor` | `.\scripts\dev.ps1 doctor` |
+| Seed de démonstration | `make seed` ou `bash scripts/dev.sh seed` | `.\scripts\dev.ps1 seed` |
+| Effacer les volumes et données | `make reset` ou `bash scripts/dev.sh reset` | `.\scripts\dev.ps1 reset` |
+
+Frontend : `http://localhost:3000`. Backend et Swagger : `http://localhost:8000` et `/docs`. Le service IA reste
+privé sur le réseau Docker (`back-tier`), sans port hôte. En mode dev, PostgreSQL et Redis sont accessibles sur
+`localhost:55432` et `localhost:56379`.
+
+### Versions locales facultatives
+
+Les services et la CI utilisent Python 3.11 ; Python système 3.14 n’est pas pris en charge pour les installations
+locales (certaines dépendances épinglées n’ont pas encore de wheel). Le plus simple est de rester dans Docker ou le
+devcontainer. Pour un venv local, installez Python 3.11 avec [uv](https://docs.astral.sh/uv/) ou pyenv avant
+d’installer les dépendances :
 
 ```bash
-# Backend
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows : venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-
-# Frontend (fonctionne sans backend grâce aux données simulées : voir frontend/README.md)
-cd frontend
-npm install
-npm run dev
-
-# IA Service
-cd ia-service
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8001
+uv python install 3.11
+uv venv --python 3.11 .venv
+uv pip install --python .venv/bin/python -r backend/requirements-dev.txt
+.venv/bin/python scripts/verifier_python.py
 ```
+
+Sur Windows, utilisez `.venv\Scripts\python.exe` à la place de `.venv/bin/python`. Node local, si nécessaire, doit
+être en version 22 (`nvm use` lit `.nvmrc`).
+
+### Dépannage
+
+- **Port déjà occupé :** modifiez `FRONTEND_PORT`, `BACKEND_PORT`, `POSTGRES_HOST_PORT` ou `REDIS_HOST_PORT` dans
+  `.env`, puis relancez Compose. Les URL frontend/backend et les origines CORS sont déduites des ports si
+  `NEXT_PUBLIC_API_URL`, `FRONTEND_URL` et `BACKEND_CORS_ORIGINS` restent vides. L’IA n’a volontairement pas de
+  port hôte.
+- **Python 3.14 / échec de `pip install`:** ne contournez pas l’échec en changeant les versions verrouillées ;
+  utilisez Docker, le devcontainer ou un venv Python 3.11.
+- **Permissions Docker sous Linux :** vérifiez que le moteur tourne et que votre utilisateur peut exécuter
+  `docker info` (groupe `docker` ou installation rootless). Déconnectez/reconnectez votre session après un changement
+  de groupe. `make doctor` détaille les prérequis.
+- **`.env` absent :** exécutez `cp .env.example .env` (PowerShell : `Copy-Item .env.example .env`). Ne versionnez
+  jamais `.env`.
+- **« No module named … » après un changement de dépendances :** `make dev` ou `scripts/dev.ps1 dev` reconstruit
+  les images. Les conteneurs dev ne redémarrent pas automatiquement après un redémarrage de la machine.
+- **Windows / fins de ligne :** `.gitattributes` force LF pour les scripts et fichiers exécutés dans les conteneurs.
+  Le service IA répond à `/health` uniquement depuis le backend ou un conteneur du réseau privé.
+- **Modèles IA :** placez les artefacts non versionnés dans `ia-service/models/`, montés en lecture seule.
 
 ---
 
