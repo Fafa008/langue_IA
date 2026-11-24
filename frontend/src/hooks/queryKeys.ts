@@ -1,3 +1,4 @@
+import type { FiltresContenus, TypeEntite } from "@/lib/contenus/types";
 import type { FormateursFiltres } from "@/types/formateur";
 import type { LanguesFiltres } from "@/types/langue";
 import type { PeriodeInscriptions } from "@/types/tableau-de-bord";
@@ -27,5 +28,11 @@ export const queryKeys = {
   /** Préfixe commun : tout le parcours est relu après une réponse (statuts, leçon atteinte, phase). */
   parcoursTout: ["parcours"] as const,
   statistiquesAdmin: ["statistiques-admin"] as const,
+  /** Contenus pédagogiques du formateur (USPxx) : préfixe commun, relu en entier après chaque modification. */
+  contenusTout: ["contenus"] as const,
+  contenusLangues: ["contenus", "langues"] as const,
+  /** Une langue et tous ses contenus (libellés, règles de validation). */
+  contenusLangue: (code: string) => ["contenus", code, "tout"] as const,
+  contenusListe: (code: string, type: TypeEntite, filtres: FiltresContenus) => ["contenus", code, type, filtres] as const,
   inscriptions: (jours: PeriodeInscriptions) => ["inscriptions", jours] as const,
 };

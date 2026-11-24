@@ -4,6 +4,8 @@ const ESPACE = "/espace";
 const DIAGNOSTIC = `${ESPACE}/apprenant/test-diagnostic`;
 /** Module Parcours personnalisé (domaine Pédagogie) : src/app/espace/apprenant/(pedagogie)/parcours. */
 const PARCOURS = `${ESPACE}/apprenant/parcours`;
+/** Rubrique « Contenus » du formateur : src/app/espace/formateur/contenus. */
+const CONTENUS = `${ESPACE}/formateur/contenus`;
 
 export const ROUTES = {
   home: "/",
@@ -42,6 +44,13 @@ export const ROUTES = {
     apprenants: `${ESPACE}/formateur/apprenants`,
     /** Synthèse des erreurs récurrentes de la classe (US52-FE). */
     syntheseErreurs: `${ESPACE}/formateur/synthese-erreurs`,
+    /** Contenus pédagogiques par langue : modules, leçons, activités, parcours (USPxx, données simulées). */
+    contenus: {
+      accueil: CONTENUS,
+      /** ?onglet=modules|lecons|exercices|parcours ouvre l'onglet voulu. */
+      langue: (code: string, onglet?: string) => `${CONTENUS}/${code}${onglet ? `?onglet=${onglet}` : ""}`,
+      lecon: (code: string, idLecon: string) => `${CONTENUS}/${code}/lecons/${idLecon}`,
+    },
     parametres: `${ESPACE}/formateur/parametres`,
   },
   admin: {

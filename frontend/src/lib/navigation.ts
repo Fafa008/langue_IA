@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   CalendarCheck,
   CalendarDays,
   ClipboardList,
@@ -30,13 +31,18 @@ export interface NavItem {
   libelleEtat?: string;
   /** Autres pages où l'entrée est aussi mise en évidence (onglets d'une même page). */
   aussiActifSur?: string[];
-  /** L'entrée reste en évidence sur les pages rangées sous son adresse (modules et leçons du parcours). */
+  /**
+   * L'entrée reste en évidence sur les pages rangées sous son adresse (modules et leçons du parcours).
+   * Attention : AppSidebar affiche aussi, sous cette entrée, le sous-menu des modules du parcours apprenant.
+   */
   sousPages?: true;
+  /** Comme sousPages pour la mise en évidence, mais sans sous-menu (rubrique « Contenus » du formateur). */
+  actifSurSousPages?: true;
 }
 
 /** Vrai si l'entrée du menu correspond à la page affichée. */
-export function estActif({ href, aussiActifSur, sousPages }: NavItem, pathname: string): boolean {
-  return pathname === href || !!aussiActifSur?.includes(pathname) || (!!sousPages && pathname.startsWith(`${href}/`));
+export function estActif({ href, aussiActifSur, sousPages, actifSurSousPages }: NavItem, pathname: string): boolean {
+  return pathname === href || !!aussiActifSur?.includes(pathname) || (!!(sousPages || actifSurSousPages) && pathname.startsWith(`${href}/`));
 }
 
 /** Page d'arrivée de chaque rôle après la connexion. */
@@ -64,6 +70,7 @@ const FORMATEUR: NavItem[] = [
   { label: "Ateliers", href: ROUTES.formateur.ateliers, icon: CalendarDays, bientot: true },
   { label: "Mes apprenants", href: ROUTES.formateur.apprenants, icon: UsersRound },
   { label: "Synthèse des erreurs", href: ROUTES.formateur.syntheseErreurs, icon: ClipboardCheck },
+  { label: "Contenus", href: ROUTES.formateur.contenus.accueil, icon: BookOpen, actifSurSousPages: true },
   { label: "Mon profil", href: ROUTES.profil, icon: UserRound },
   { label: "Paramètres", href: ROUTES.formateur.parametres, icon: Settings, bientot: true },
 ];
