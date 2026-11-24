@@ -176,13 +176,13 @@ function RecommandationsParcours({ parcours }: { parcours: ParcoursPersonnalise 
           {donnees.statut === "PARTIEL" && (
             <p role="status" className="msg-warning">
               Analyse partielle : aucune proposition exploitable n&apos;a pu être obtenue (données insuffisantes ou
-              service indisponible). Les actions ci-dessous restent indicatives.
+              service indisponible).
             </p>
           )}
           {donnees.recommandations.length === 0 ? (
             <p className="text-content-secondary">
-              Aucune action ciblée cette fois. Continuez la leçon en cours : de nouvelles recommandations
-              apparaîtront après vos prochains exercices.
+              Aucune action ciblée cette fois. Refaites le test de positionnement pour obtenir des recommandations
+              adaptées à vos résultats.
             </p>
           ) : (
             <ol aria-label="Actions recommandées" className="space-y-2">
