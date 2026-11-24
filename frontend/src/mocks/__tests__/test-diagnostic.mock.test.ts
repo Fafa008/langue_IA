@@ -36,7 +36,7 @@ async function parcourir(session: SessionTest, juste: boolean, langue: CodeLangu
   return retour;
 }
 
-/** Parcours de démonstration : le mock lui-même fournit la bonne réponse à chaque exercice. */
+/** Parcours de démonstration : l'apprenant abandonne chaque exercice avec « Passer ». */
 async function parcourirEnAutomatique(session: SessionTest): Promise<RetourReponse | null> {
   let courante: Question | null = session.question;
   let retour: RetourReponse | null = null;
@@ -92,16 +92,37 @@ describe("testDiagnosticMockService — banque quatre compétences", () => {
     expect(autre?.resultat?.score).toBe(resultat?.resultat?.score);
   });
 
-  it("donne toutes les bonnes réponses en mode automatique sans les exposer avant validation", async () => {
+  it("compte les exercices « Passer » comme abandonnés (0 point) sans révéler la correction", async () => {
     const session = await testDiagnosticMockService.demarrer("en", "professionnel", []);
     const premiere = session.question;
     expect(premiere).not.toHaveProperty("bonneReponse");
     expect(premiere).not.toHaveProperty("reponseAttendue");
 
-    const resultat = await parcourirEnAutomatique(session);
-    expect(resultat?.resultat).toMatchObject({ score: 100, total: 100, lacunes: [] });
-    // La question servie après un passage automatique ne révèle toujours pas sa correction.
+    const premierRetour = await testDiagnosticMockService.repondre(session.id, premiere.id, { type: "automatique" });
+    if (premierRetour.typeReponse !== "en_attente") throw new Error("Un exercice abandonné doit rester en attente.");
+    expect(premierRetour.abandonnee).toBe(true);
+    // Aucune bonne réponse n'est renvoyée au composant, même après le passage.
+    expect(premierRetour).not.toHaveProperty("bonneReponse");
+    expect(premierRetour).not.toHaveProperty("evaluation");
+
+    const resultat = await parcourirEnAutomatique({ ...session, question: premierRetour.questionSuivante! });
+    expect(resultat?.resultat).toMatchObject({ score: 0, total: 100 });
+    expect(resultat?.resultat?.competences).toEqual([
+      { competence: "lecture", score: 0, total: 25 },
+      { competence: "ecoute", score: 0, total: 25 },
+      { competence: "ecrit", score: 0, total: 25 },
+      { competence: "oral", score: 0, total: 25 },
+    ]);
+    expect(resultat?.resultat?.donneesAnalyse).toHaveLength(20);
+    expect(resultat?.resultat?.donneesAnalyse?.every((donnee) => !donnee.justesse)).toBe(true);
     expect(resultat?.questionSuivante).toBeNull();
+  });
+
+  it("ne marque pas un temps écoulé comme un abandon explicite", async () => {
+    const session = await testDiagnosticMockService.demarrer("it", "professionnel", []);
+    const retour = await testDiagnosticMockService.repondre(session.id, session.question.id, { type: "sans_reponse" });
+    if (retour.typeReponse !== "en_attente") throw new Error("Un temps écoulé doit rester en attente.");
+    expect(retour.abandonnee).toBe(false);
   });
 
   it("corrige la dictée et le texte à trous exactement", async () => {

@@ -70,7 +70,7 @@ export type ReponseTest =
   | { type: "audio"; audio: Blob }
   /** Temps imparti écoulé : l'exercice est compté comme faux et le test passe au suivant. */
   | { type: "sans_reponse" }
-  /** Démo uniquement : le mock répond avec la correction de la banque, sans l'exposer avant validation. */
+  /** Démo uniquement : exercice abandonné par l'apprenant, compté 0 point sans révéler la correction. */
   | { type: "automatique" };
 
 export interface SessionTest {
@@ -96,6 +96,8 @@ export type RetourReponse = RetourReponseBase & (
       questionSuivante: Question | null;
       /** Renseigné si le temps imparti à la dernière question s'est écoulé. */
       resultat: ResultatTest | null;
+      /** Démo : l'apprenant a explicitement abandonné l'exercice (« Passer ») : 0 point, sans correction dévoilée. */
+      abandonnee?: boolean;
     }
   | {
       typeReponse: "choix";

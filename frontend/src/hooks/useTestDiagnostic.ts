@@ -189,8 +189,8 @@ export function useTestDiagnostic() {
   };
 
   /**
-   * Démo uniquement : le mock fournit la bonne réponse et on enchaîne immédiatement, sans afficher le feedback.
-   * Le backend ne connaît pas les corrections : cette action n'est donc exposée qu'en mode API simulée.
+   * Démo uniquement : l'apprenant abandonne l'exercice (0 point, aucune correction dévoilée) et on enchaîne
+   * immédiatement. Le backend ne gère pas cette variante : le bouton n'est exposé qu'en mode API simulée.
    */
   const passer = () => {
     const { sessionId, courante, questionsRestantes } = etat;

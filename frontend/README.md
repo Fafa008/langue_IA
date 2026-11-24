@@ -51,6 +51,9 @@ Next.js lit les fichiers du dossier `frontend/` (pas le `.env` de la racine) :
 | `NEXT_PUBLIC_MODE`                  | `demo`                  | `reel` : backend partout ; `demo` : voir ci-dessous     |
 | `NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO`| `passif`                | Scénario du parcours simulé en mode `demo`              |
 
+En mode `demo`, la langue des contenus simulés (modules, exercices, recommandations) est celle du parcours de
+l'apprenant côté backend : `fr`, `en`, `it`, `de` ou `zh` (HSK). Sans backend, le mock reste en français.
+
 Pour travailler avec le vrai backend :
 
 ```bash
@@ -70,7 +73,12 @@ NEXT_PUBLIC_MODE=demo npm run build
 - Connexion automatique au compte apprenant du seed (`SEED_DEMO=true`) pour obtenir un JWT : le navigateur ne parle
   qu'au backend, jamais au service IA.
 - Le chat et les recommandations passent par le backend puis le service IA réel (Groq ou `factice` selon la config).
-- Le backend doit être démarré pour ces deux fonctions ; sans lui, le reste de la démo reste utilisable.
+- Le test simulé donne bien son résultat, mais les exercices « Passer » sont des abandons comptés **0 point**
+  (aucune bonne réponse n'est inventée) ; sa langue pilote le parcours simulé : un test d'anglais terminé affiche
+  le parcours en anglais (`fr`, `en`, `it`, `de`, `zh` / HSK).
+  Sans test terminé, la langue vient du parcours backend de l'apprenant.
+- Le backend doit être démarré pour le chat et les recommandations ; sans lui, le résultat du test et le parcours
+  simulé restent utilisables (en français si aucun test n'a été terminé).
 
 ### Règle : le navigateur ne parle jamais au service IA
 

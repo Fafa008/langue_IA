@@ -2,8 +2,9 @@
 
 /**
  * Deux presets seulement : `reel` (défaut, tout passe par le backend) et `demo` (maquette autonome).
- * En démo, le test, le parcours affiché et les écrans de saisie viennent des mocks ; le chat et les
- * recommandations restent branchés sur le backend puis le service IA (voir `parcours-personnalise.service.ts`).
+ * En démo, le test, le parcours affiché et les écrans de saisie viennent des mocks ; la langue du test terminé
+ * choisit celle du parcours simulé, sinon on lit le parcours backend, et le chat et les recommandations restent
+ * branchés sur le backend puis le service IA (voir `parcours-personnalise.service.ts`).
  */
 export const MODE = process.env.NEXT_PUBLIC_MODE === "demo" ? "demo" : "reel";
 export const DEMO = MODE === "demo";
