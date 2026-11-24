@@ -877,7 +877,9 @@ Les trois routes de lecture ci-dessous existent côté backend (`backend/app/api
 `backend/app/services/lecture_parcours.py`). Le preset `NEXT_PUBLIC_MODE=demo` affiche les données simulées
 (`frontend/src/mocks/parcours-personnalise.mock.ts`) pour ces routes de lecture, mais appelle bien le backend pour
 `POST /parcours/{id}/recommandations` et les routes `/chatbot/*`. Conversion côté
-frontend : `frontend/src/services/parcours-personnalise.mapper.ts`.
+frontend : `frontend/src/services/parcours-personnalise.mapper.ts`. Les contenus simulés
+(`frontend/src/mocks/parcours-langues.ts`) existent en `fr`, `en`, `it`, `de` et `zh` (HSK) : la langue est lue sur
+le parcours backend de l'apprenant, avec repli français si le backend est indisponible.
 
 Écrans : « Mon parcours » (`/espace/apprenant/parcours`), un module (`/parcours/modules/{numero}`) et une leçon
 (`/parcours/lecons/{numero}`) ; la barre latérale liste les modules sous « Mon parcours ».

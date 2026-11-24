@@ -33,14 +33,42 @@ describe("presets frontend — reel / demo", () => {
     expect(fetchMock).toHaveBeenCalled(); // la réponse vide est volontaire : seul le chemin HTTP est vérifié ici
   });
 
-  it("le preset demo simule le parcours affiché sans appel réseau pour enCours", async () => {
+  it("le preset demo simule le parcours affiché dans la langue du parcours backend", async () => {
     const env = charger("demo");
     expect(env.API_MOCK).toBe(true); // test de positionnement simulé, bouton « Passer »
     expect(env.AUTH_MOCK).toBe(false); // JWT réel du compte de seed, pour autoriser le chat
     expect(env.PARCOURS_MOCK).toBe(true);
-    const fetchMock = mockFetch({ body: {} });
-    await expect(env.parcoursPersonnaliseService.enCours()).resolves.toMatchObject({ idParcours: 7 });
-    expect(fetchMock).not.toHaveBeenCalled();
+    const fetchMock = mockFetch({
+      body: {
+        id_parcours: 6,
+        statut: "EN_COURS",
+        date_creation: "2026-10-02T09:30:00Z",
+        code_langue: "it",
+        libelle_langue: "Italien",
+        cadre: "CECRL",
+        niveaux_cadre: ["A1", "A2"],
+        niveau_depart: "A2",
+        niveau_vise: "B1",
+        lecon_atteinte: 4,
+        phase: "PASSIVE",
+        est_lecon_de_revision: false,
+        modules: [],
+      },
+    });
+    await expect(env.parcoursPersonnaliseService.enCours()).resolves.toMatchObject({
+      idParcours: 7,
+      langue: { code: "it", libelle: "Italien" },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1); // une seule lecture du vrai parcours, pour la langue et les recommandations
+  });
+
+  it("le preset demo reste en français si le backend n'est pas disponible", async () => {
+    const env = charger("demo");
+    mockFetch({ status: 503, body: {} });
+    await expect(env.parcoursPersonnaliseService.enCours()).resolves.toMatchObject({
+      idParcours: 7,
+      langue: { code: "fr", libelle: "Français" },
+    });
   });
 
   it("en demo, le chat passe par le backend puis le service IA", async () => {

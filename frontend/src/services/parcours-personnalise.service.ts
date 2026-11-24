@@ -1,7 +1,7 @@
 import { apiRequest } from "@/lib/api-client";
 import { DEMO, PARCOURS_MOCK } from "@/lib/env";
 import { sessionChatbotCourante } from "@/lib/session-chatbot";
-import { parcoursPersonnaliseMock } from "@/mocks/parcours-personnalise.mock";
+import { choisirLangueParcoursMock, parcoursPersonnaliseMock } from "@/mocks/parcours-personnalise.mock";
 import type {
   CorrectionExercice,
   CorrectionSepareeChatbot,
@@ -171,22 +171,37 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
 /**
  * Preset « demo » : le contenu pédagogique affiché est simulé, mais le chat et les recommandations passent par le
  * backend puis le service IA. Le parcours de l'apprenant reste réel côté backend (compte de seed) : on le lit une
- * fois pour appeler `/recommandations` avec le bon identifiant, sans afficher ses leçons à la place du mock.
+ * fois pour appeler `/recommandations` avec le bon identifiant et pour choisir la langue des contenus simulés.
  */
-let idParcoursBackendDemo: Promise<number> | null = null;
+let parcoursBackendDemo: Promise<ParcoursPersonnalise> | null = null;
 
-function identifiantParcoursBackendDemo(): Promise<number> {
-  idParcoursBackendDemo ??= httpParcoursPersonnaliseService.enCours().then((parcours) => parcours.idParcours);
-  return idParcoursBackendDemo;
+function parcoursBackend(): Promise<ParcoursPersonnalise> {
+  parcoursBackendDemo ??= httpParcoursPersonnaliseService.enCours().catch((erreur: unknown) => {
+    parcoursBackendDemo = null; // backend indisponible : on réessaiera à la prochaine ouverture du parcours
+    throw erreur;
+  });
+  return parcoursBackendDemo;
+}
+
+/** Aligne la langue du parcours simulé sur `code_langue` du parcours backend ; sans backend, le mock reste en français. */
+function alignerLangueParcoursDemo(): Promise<void> {
+  return parcoursBackend()
+    .then((parcours) => {
+      choisirLangueParcoursMock(parcours.langue.code);
+    })
+    .catch(() => undefined);
 }
 
 const demoParcoursPersonnaliseService: ParcoursPersonnaliseService = {
-  enCours: mockParcoursPersonnaliseService.enCours,
+  async enCours() {
+    await alignerLangueParcoursDemo();
+    return mockParcoursPersonnaliseService.enCours();
+  },
   exercices: mockParcoursPersonnaliseService.exercices,
   lecon: mockParcoursPersonnaliseService.lecon,
   corriger: mockParcoursPersonnaliseService.corriger,
   async recommandations() {
-    return httpParcoursPersonnaliseService.recommandations(await identifiantParcoursBackendDemo());
+    return httpParcoursPersonnaliseService.recommandations((await parcoursBackend()).idParcours);
   },
   chatbot: httpParcoursPersonnaliseService.chatbot,
   corrigerChatbot: httpParcoursPersonnaliseService.corrigerChatbot,
