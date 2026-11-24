@@ -166,22 +166,26 @@ Bon à savoir :
 ### Installation manuelle
 
 ```bash
-# Backend
+# Backend — dans un terminal dédié
 cd backend
 python -m venv venv
 source venv/bin/activate  # Windows : venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
+```
 
-# Frontend (fonctionne sans backend grâce aux données simulées : voir frontend/README.md)
+```bash
+# Frontend — dans un autre terminal
 cd frontend
 npm install
 npm run dev
+```
 
+```bash
 # IA Service
 cd ia-service
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # Windows : venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8001
 ```

@@ -1,19 +1,34 @@
 """Fixtures partagées des tests du service IA."""
 
-import os
-
 import pytest
 
-PREFIXES_CONFIG = ("GEMINI_", "LLM_", "RAG_", "OPENAI_", "REDIS_")
-VARIABLES_CONFIG = {"ENVIRONNEMENT", "IA_SERVICE_TOKEN"}
+VARIABLES_LLM = (
+    "ENVIRONNEMENT",
+    "IA_SERVICE_TOKEN",
+    "LLM_FOURNISSEUR",
+    "LLM_FACTICE_SCENARIO",
+    "LLM_MODELE",
+    "LLM_BASE_URL",
+    "LLM_API_KEY",
+    "GEMINI_MODEL",
+    "GEMINI_API_KEY",
+    "LLM_TEMPERATURE",
+    "LLM_MAX_TOKENS",
+    "LLM_TIMEOUT",
+    "LLM_TIMEOUT_S",
+    "LLM_MAX_RETRIES",
+    "LLM_REPRISE_DELAI_S",
+    "LLM_REPRISE_DELAI_MAX_S",
+    "LLM_BUDGET_TOTAL_S",
+    "REDIS_URL",
+    "REDIS_TTL_S",
+    "REDIS_TOURS_MAX",
+)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def env_propre(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
-    """Isole chaque test des variables Compose et de l'environnement de l'hôte."""
-    for nom in tuple(os.environ):
-        if nom in VARIABLES_CONFIG or nom.startswith(PREFIXES_CONFIG):
-            monkeypatch.delenv(nom, raising=False)
-    for nom in VARIABLES_CONFIG:
+    """Supprime les variables LLM et Redis de la machine pour rendre les tests déterministes."""
+    for nom in VARIABLES_LLM:
         monkeypatch.delenv(nom, raising=False)
     return monkeypatch

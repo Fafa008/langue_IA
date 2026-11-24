@@ -7,21 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from app.rag.config import CHEMIN_CORPUS_PAR_DEFAUT, ConfigRAG, _trouver_racine_service
+from app.rag.config import CHEMIN_CORPUS_PAR_DEFAUT, ConfigRAG
 from app.rag.fabrique import construire_recuperateur
 from app.rag.local import RecuperateurLocal
 from app.rag.vide import RecuperateurVide
 from tests.donnees_corpus import corpus_synthetique, ecrire
-
-
-def test_trouver_racine_service_depuis_ses_marqueurs(tmp_path: Path) -> None:
-    service = tmp_path / "ia-service"
-    configuration = service / "app" / "rag" / "config.py"
-    configuration.parent.mkdir(parents=True)
-    configuration.touch()
-    (service / "pyproject.toml").touch()
-
-    assert _trouver_racine_service(configuration) == service
 
 
 def test_configuration_par_defaut_desactivee() -> None:

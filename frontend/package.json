@@ -4,7 +4,7 @@
   "private": true,
   "description": "Frontend Next.js de la plateforme Digithèque (centre de langues hybride)",
   "engines": {
-    "node": ">=22 <23"
+    "node": ">=20"
   },
   "scripts": {
     "dev": "next dev",

@@ -26,11 +26,6 @@ from sqlalchemy.orm import Session  # noqa: E402
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
-from app.core.config import Settings  # noqa: E402
-
-# Les tests ne doivent jamais lire le .env de l'hôte, même lorsqu'ils sont lancés depuis la racine.
-Settings.model_config["env_file"] = None
-
 from app.core.database import SessionLocal, engine  # noqa: E402
 from app.core.security import creer_jeton_acces, hacher_mot_de_passe  # noqa: E402
 from app.main import app  # noqa: E402

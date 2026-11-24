@@ -10,7 +10,6 @@ import pytest
 from openpyxl import Workbook
 
 from app.rag.corpus import CorpusCecrl, SourceOfficielle
-from scripts._chemins import trouver_racine_depot
 from scripts.ingestion_cecrl import (
     EMPREINTE_DESCRIPTEURS_2020,
     RACINE_DEPOT,
@@ -31,27 +30,6 @@ from tests.donnees_corpus import manifeste as composer
 LIGNE_B1 = (1, "S", "M", "A", "Conversation", "B1", "Can take part in a conversation.")
 LIGNE_A2_PLUS = (2, "S", "M", "A", "Conversation", "A2+", "Can exchange simple information.")
 LIGNE_LEXIQUE = (3, "S", "M", "A", "Vocabulary range", "B1", "Has a good range of vocabulary.")
-
-
-def test_trouver_racine_depot_hote(tmp_path: Path) -> None:
-    (tmp_path / ".git").mkdir()
-    (tmp_path / "backend").mkdir()
-    (tmp_path / "backend" / "pyproject.toml").touch()
-    service = tmp_path / "ia-service"
-    scripts = service / "scripts"
-    scripts.mkdir(parents=True)
-    (service / "pyproject.toml").touch()
-
-    assert trouver_racine_depot(scripts / "ingestion_cecrl.py") == tmp_path
-
-
-def test_trouver_racine_depot_conteneur(tmp_path: Path) -> None:
-    service = tmp_path / "app"
-    scripts = service / "scripts"
-    scripts.mkdir(parents=True)
-    (service / "pyproject.toml").touch()
-
-    assert trouver_racine_depot(scripts / "ingestion_cecrl.py") == service
 
 
 @pytest.mark.parametrize(

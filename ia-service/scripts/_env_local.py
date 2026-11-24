@@ -11,9 +11,7 @@ import os
 import re
 from pathlib import Path
 
-from scripts._chemins import trouver_racine_depot
-
-RACINE_DEPOT = trouver_racine_depot(Path(__file__))
+RACINE_DEPOT = Path(__file__).resolve().parents[2]
 CHEMIN_ENV = RACINE_DEPOT / ".env"
 _NOM_VARIABLE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
