@@ -1,9 +1,10 @@
 # Intégration continue : chaque push et chaque pull request doivent passer ces contrôles avant la revue.
-#   frontend  : typage, lint, tests Jest, build de production
+#   check     : make check dans les images Docker de développement (backend, IA, frontend)
+#   frontend  : build de production
 #   e2e       : tests Playwright (bureau + mobile), API simulée par les tests eux-mêmes
-#   backend   : ruff, tests pytest sur PostgreSQL, couverture ≥ 70 % (Definition of Done du README)
+#   python    : tests unitaires IA sur Linux, macOS et Windows avec variables d'environnement polluées
 #   docker    : construction des images, démarrage de toute la stack (healthchecks), seed de démonstration,
-#               construction des images de développement (make dev)
+#               construction des images de développement
 name: CI
 
 # Push sur les branches d'intégration, et toutes les pull requests (y compris les PR empilées
@@ -24,7 +25,7 @@ concurrency:
 
 jobs:
   frontend:
-    name: Frontend (typage, lint, Jest, build)
+    name: Frontend (build de production)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -38,10 +39,49 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - name: Typage, lint et tests unitaires
-        run: npm run check
       - name: Build de production
         run: npm run build
+
+  check-dev-images:
+    name: Contrôles complets (images Docker de développement)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exécuter les mêmes contrôles que make check
+        run: make check
+
+  python-unit-tests:
+    name: Tests IA (${{ matrix.os }}) avec environnement pollué
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: ia-service
+    env:
+      GEMINI_API_KEY: valeur-invalide-pour-test
+      GEMINI_MODEL: modele-invalide
+      LLM_FOURNISSEUR: fournisseur-invalide
+      LLM_TIMEOUT: pas-un-nombre
+      RAG_CORPUS_ACTIF: valeur-invalide
+      RAG_CORPUS_CHEMIN: chemin-invalide
+      OPENAI_API_KEY: valeur-invalide-pour-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            ia-service/requirements.txt
+            ia-service/requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Tests IA sans dépendance à l'environnement du runner
+        run: python -m pytest -p no:cacheprovider
 
   e2e:
     name: Frontend (tests E2E Playwright)
@@ -89,8 +129,8 @@ jobs:
             echo "::error::Binaire Chromium introuvable après installation."
             exit 1
           fi
-          ldd "${chrome}" > /tmp/chromium-ldd.txt 2>/dev/null || true
-          if grep -q "not found" /tmp/chromium-ldd.txt; then
+          ldd "${chrome}" > "${RUNNER_TEMP}/chromium-ldd.txt" 2>/dev/null || true
+          if grep -q "not found" "${RUNNER_TEMP}/chromium-ldd.txt"; then
             echo "Bibliothèques système manquantes, installation des dépendances Playwright…"
             if ! npx playwright install-deps chromium; then
               echo "::warning title=Dépendances système::Miroirs Ubuntu injoignables ; poursuite avec les bibliothèques du runner."
@@ -108,75 +148,11 @@ jobs:
           path: frontend/test-results
           retention-days: 7
 
-  backend:
-    name: Backend (ruff, pytest)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: backend
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: centre_langues
-          POSTGRES_USER: admin
-          POSTGRES_PASSWORD: changeme
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U admin -d centre_langues"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      # Les tests créent et migrent la base centre_langues_test à côté de celle-ci (tests/conftest.py)
-      DATABASE_URL: postgresql://admin:changeme@localhost:5432/centre_langues
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: backend/requirements*.txt
-      # ruff est épinglé dans requirements-dev.txt (même version que `make check`)
-      - run: pip install -r requirements-dev.txt
-      - name: Lint (ruff)
-        run: |
-          ruff check .
-          ruff format --check .
-      - name: Tests et couverture
-        run: pytest --cov=app --cov-report=term-missing:skip-covered --cov-fail-under=70
-
-  ia-service:
-    name: Service IA (installation, démarrage)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: ia-service
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: |
-            ia-service/requirements.txt
-            ia-service/requirements-dev.txt
-      - run: pip install -r requirements-dev.txt
-      - name: Lint et formatage
-        run: ruff check . && ruff format --check .
-      - name: L'application se charge
-        run: python -c "from app.main import app; print(app.title)"
-      - name: Tests et couverture
-        run: pytest --cov=app --cov-report=term-missing:skip-covered --cov-fail-under=70
-
   docker:
     name: Docker (build et démarrage de la stack)
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    needs: [frontend, backend, ia-service]
+    needs: [frontend, check-dev-images]
     steps:
       - uses: actions/checkout@v4
       - name: Construction des images et démarrage (attente des healthchecks)
@@ -207,7 +183,7 @@ jobs:
       - name: Arrêt
         if: always()
         run: docker compose down --volumes
-      - name: Les images de développement se construisent (make dev)
+      - name: Les images de développement se construisent
         run: |
           docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
           docker compose -f docker-compose.yml -f docker-compose.dev.yml build
