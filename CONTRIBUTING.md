@@ -23,8 +23,7 @@ Ce guide explique comment travailler efficacement avec l'équipe.
 ## 🚀 Avant de commencer
 
 1. Lire le [README.md](README.md)
-2. Installer Git et Docker Desktop (Windows/macOS) ou Docker Engine (Linux) avec Docker Compose 2.20+.
-   Python 3.11 et Node.js 22 ne sont nécessaires qu'en installation locale facultative.
+2. Installer les prérequis (Git, Docker, Node.js, Python)
 3. Cloner le dépôt :
    ```bash
    git clone https://github.com/Fafa008/langue_IA.git
@@ -34,15 +33,7 @@ Ce guide explique comment travailler efficacement avec l'équipe.
    ```bash
    cp .env.example .env
    ```
-   Sous PowerShell : `Copy-Item .env.example .env`.
-5. Démarrer avec `make dev` (Linux/macOS), `.\scripts\dev.ps1 dev` (PowerShell), ou
-   `bash scripts/dev.sh dev` (WSL2/Git Bash). `make doctor` / `.\scripts\dev.ps1 doctor` vérifie les prérequis.
-6. Rejoindre le Trello et les canaux de communication
-
-L’équipe travaille dans Docker ou le devcontainer VS Code/Codespaces pour conserver le même environnement sur
-Linux, macOS (Intel/Apple Silicon) et Windows/WSL2. Les conteneurs utilisent Python 3.11 et Node 22. Un venv local
-est facultatif ; si vous en utilisez un, installez exactement Python 3.11 (`.python-version`) avec uv ou pyenv.
-Python 3.14 système n’est pas compatible avec toutes les wheels verrouillées.
+5. Rejoindre le Trello et les canaux de communication
 
 ---
 
@@ -200,36 +191,24 @@ Tous les tests doivent passer avant de créer une Pull Request.
 ### Backend
 
 ```bash
-make test            # ou bash scripts/dev.sh test ; PowerShell : .\scripts\dev.ps1 test
+make test            # pytest dans Docker, sur une base PostgreSQL de test (voir backend/README.md)
 ```
 
-### Suite complète (recommandé avant une PR)
+### Frontend
 
 ```bash
-make check           # backend + IA + frontend, dans les images Docker de développement
-# Sans make :
-bash scripts/dev.sh check
-# Windows PowerShell :
-.\scripts\dev.ps1 check
+cd frontend
+npm run check        # typecheck + lint + tests unitaires
+npm run test:e2e     # tests E2E Playwright (voir frontend/README.md)
 ```
 
 ### IA
 
 ```bash
-make test-ia         # ou bash scripts/dev.sh test-ia ; PowerShell : .\scripts\dev.ps1 test-ia
-```
-
-Le job CI `make check` couvre Ruff, `ruff format --check`, pytest et la couverture minimale de 70 % pour backend et
-IA, ainsi que typage, lint et Jest pour le frontend. La CI teste aussi les tests unitaires IA sous variables
-d’environnement polluées sur Linux, macOS et Windows. Les tests backend utilisent PostgreSQL de test et n’appellent
-pas réellement le service IA.
-
-Les tests E2E Playwright nécessitent Node.js 22 et Chromium installés localement :
-
-```bash
-cd frontend
-npm ci
-npm run test:e2e
+cd ia-service
+pip install -r requirements-dev.txt
+pytest --cov=app --cov-report=term-missing
+ruff check . && ruff format --check .
 ```
 
 ### Tests manuels

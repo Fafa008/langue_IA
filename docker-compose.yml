@@ -22,7 +22,7 @@ x-python-env: &python-env
   IA_SERVICE_URL: http://ia-service:8001
   IA_SERVICE_TOKEN: ${IA_SERVICE_TOKEN:-}
   CHATBOT_QUOTA_ECHANGES: ${CHATBOT_QUOTA_ECHANGES:-20}
-  BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://localhost:${BACKEND_PORT:-8000}}
+  BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
 
 services:
   db:
@@ -66,7 +66,7 @@ services:
         required: false
     environment:
       <<: *python-env
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:${FRONTEND_PORT:-3000}}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       SEED_DEMO: ${SEED_DEMO:-true}
       IA_SERVICE_URL: http://ia-service:8001
       IA_SERVICE_TIMEOUT_S: ${IA_SERVICE_TIMEOUT_S:-55}
@@ -78,8 +78,6 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      ia-service:
         condition: service_healthy
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -96,7 +94,7 @@ services:
       target: prod
     restart: unless-stopped
     environment:
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://localhost:${BACKEND_PORT:-8000}}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
       ENVIRONNEMENT: ${ENVIRONNEMENT:-dev}
       IA_SERVICE_TOKEN: ${IA_SERVICE_TOKEN:-}
       LLM_FOURNISSEUR: ${LLM_FOURNISSEUR:-factice}
@@ -128,9 +126,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    healthcheck:
-      <<: *healthcheck-python
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"]
     #  SUPPRIMÉ : ports: - "${IA_PORT:-8001}:8001" -> Le service IA n'est plus exposé sur l'hôte !
     networks:
       - back-tier   # Uniquement sur le réseau privé (inaccessible par le frontend)
@@ -140,7 +135,7 @@ services:
       context: ./frontend
       target: prod
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${BACKEND_PORT:-8000}}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
         NEXT_PUBLIC_API_MOCK: ${NEXT_PUBLIC_API_MOCK:-false}
         NEXT_PUBLIC_PARCOURS_MOCK: ${NEXT_PUBLIC_PARCOURS_MOCK:-false}
         NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO: ${NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO:-passif}
