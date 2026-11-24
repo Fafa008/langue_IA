@@ -19,7 +19,7 @@ from app.llm.adaptateurs.factice import FakeLLMClient, ScenarioLLM
 from app.llm.demonstration import repondre_demonstration
 from app.prompts import RegistrePrompts
 from app.prompts.registre import VERSION_EVALUATION_POSITIONNEMENT
-from app.prompts.variables import preuves_depuis_reponses
+from app.prompts.variables import VariablesEvaluationPositionnement, preuves_depuis_reponses
 from app.rag import RecuperateurVide
 from app.schemas.commun import ReponseAgent, RequeteAgent
 from app.schemas.diagnostic import (
@@ -69,6 +69,21 @@ def test_versions_du_contrat_v2_sont_geles() -> None:
     reponse = lire("reponse.json")
     assert requete["version_agent"] == VERSION_AGENT_POSITIONNEMENT == reponse["version_agent"]
     assert reponse["version_prompt"] == f"diagnostic/evaluation@{VERSION_EVALUATION_POSITIONNEMENT}"
+
+
+def test_budget_json_laisse_la_place_au_raisonnement() -> None:
+    requete = RequeteAgent[EntreeDiagnosticPositionnement].model_validate(lire("requete.json"))
+    variables = VariablesEvaluationPositionnement(
+        scenario=requete.entree.scenario,
+        code_langue=requete.contexte.code_langue,
+        referentiel=requete.contexte.referentiel,
+        reponses=requete.entree.reponses,
+        score_preliminaire=requete.entree.score_preliminaire,
+        contexte_apprenant=requete.contexte,
+        descripteurs_rag=[],
+    )
+    rendu = RegistrePrompts().rendre_evaluation_diagnostic(variables, version=VERSION_EVALUATION_POSITIONNEMENT)
+    assert rendu.max_tokens >= 3000
 
 
 def test_accepte_la_requete_du_backend() -> None:

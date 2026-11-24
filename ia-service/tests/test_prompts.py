@@ -49,7 +49,9 @@ def test_charge_et_rend_le_prompt_versionne_avec_toutes_les_variables() -> None:
     assert rendu.empreinte_prompt.startswith("sha256:")
     assert len(rendu.empreinte_prompt.removeprefix("sha256:")) == 64
     assert rendu.temperature == 0.2
-    assert rendu.max_tokens == 900
+    # Les modèles à raisonnement consomment une partie de ce budget avant d'émettre le JSON : trop peu de jetons
+    # et Groq refuse la réponse avec `json_validate_failed` avant même la validation Pydantic.
+    assert rendu.max_tokens >= 3000
 
     donnees = rendu.messages[1].contenu.split("<donnees_diagnostic_non_fiables>\n", 1)[1]
     donnees = donnees.split("\n</donnees_diagnostic_non_fiables>", 1)[0]
