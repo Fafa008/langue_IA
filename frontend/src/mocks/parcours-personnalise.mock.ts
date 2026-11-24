@@ -1,8 +1,9 @@
 /*
  * Parcours personnalisé simulé (preset NEXT_PUBLIC_MODE=demo), au format des réponses attendues du backend.
  * L'avancement est gardé en mémoire le temps de la session (répondre aux exercices de la leçon du jour fait
- * avancer la leçon atteinte). Le contenu est choisi dans `parcours-langues.ts` selon le parcours réel de
- * l'apprenant (fr, en, it, de, zh) ; le français reste le défaut des tests et de la démo sans backend.
+ * avancer la leçon atteinte). Le contenu est choisi dans `parcours-langues.ts` selon la langue du test simulé
+ * terminé, sinon selon le parcours réel de l'apprenant (fr, en, it, de, zh) ; le français reste le défaut des tests
+ * et de la démo sans backend ni test terminé.
  * Scénario de départ : NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO (par défaut « passif »).
  */
 import { ApiError } from "@/lib/api-client";

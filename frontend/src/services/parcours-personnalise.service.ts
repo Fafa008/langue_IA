@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api-client";
 import { DEMO, PARCOURS_MOCK } from "@/lib/env";
 import { sessionChatbotCourante } from "@/lib/session-chatbot";
 import { choisirLangueParcoursMock, parcoursPersonnaliseMock } from "@/mocks/parcours-personnalise.mock";
+import { useTestDiagnosticStore } from "@/store/test-diagnostic.store";
 import type {
   CorrectionExercice,
   CorrectionSepareeChatbot,
@@ -170,8 +171,9 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
 
 /**
  * Preset « demo » : le contenu pédagogique affiché est simulé, mais le chat et les recommandations passent par le
- * backend puis le service IA. Le parcours de l'apprenant reste réel côté backend (compte de seed) : on le lit une
- * fois pour appeler `/recommandations` avec le bon identifiant et pour choisir la langue des contenus simulés.
+ * backend puis le service IA. Le parcours réel de l'apprenant (compte de seed) est lu une fois pour appeler
+ * `/recommandations` avec le bon identifiant. Pour la langue du mock, le choix explicite fait dans le test simulé
+ * gagne sur le parcours backend ; à défaut de test terminé, on reprend `code_langue` du backend, puis le français.
  */
 let parcoursBackendDemo: Promise<ParcoursPersonnalise> | null = null;
 
@@ -183,13 +185,25 @@ function parcoursBackend(): Promise<ParcoursPersonnalise> {
   return parcoursBackendDemo;
 }
 
-/** Aligne la langue du parcours simulé sur `code_langue` du parcours backend ; sans backend, le mock reste en français. */
-function alignerLangueParcoursDemo(): Promise<void> {
-  return parcoursBackend()
-    .then((parcours) => {
-      choisirLangueParcoursMock(parcours.langue.code);
-    })
-    .catch(() => undefined);
+/**
+ * Le test simulé ne crée pas de parcours backend : son résultat vit dans le store de session. Une fois le test
+ * terminé, la langue choisie par l'apprenant pilote donc directement les contenus simulés (ex. test anglais → mock
+ * anglais), sans dépendre du `code_langue` du compte de seed.
+ */
+function langueTestTermineeDemo(): string | null {
+  if (typeof window === "undefined") return null;
+  const { langue, resultat } = useTestDiagnosticStore.getState().etat;
+  return resultat ? langue : null;
+}
+
+async function alignerLangueParcoursDemo(): Promise<void> {
+  const langueTest = langueTestTermineeDemo();
+  if (langueTest) {
+    choisirLangueParcoursMock(langueTest);
+    return;
+  }
+  const parcours = await parcoursBackend().catch(() => null);
+  if (parcours) choisirLangueParcoursMock(parcours.langue.code);
 }
 
 const demoParcoursPersonnaliseService: ParcoursPersonnaliseService = {
