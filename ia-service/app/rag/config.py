@@ -13,8 +13,16 @@ from typing import Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# ``app/rag/config.py`` → ``ia-service/``
-RACINE_SERVICE = Path(__file__).resolve().parents[2]
+
+def _trouver_racine_service(chemin_config: Path) -> Path:
+    """Trouver la racine du service via ses marqueurs, sur l'hôte comme dans le conteneur."""
+    for parent in chemin_config.resolve().parents:
+        if (parent / "pyproject.toml").is_file() and (parent / "app").is_dir():
+            return parent
+    raise RuntimeError(f"Racine du service IA introuvable depuis {chemin_config}.")
+
+
+RACINE_SERVICE = _trouver_racine_service(Path(__file__))
 CHEMIN_CORPUS_PAR_DEFAUT = RACINE_SERVICE / "corpus" / "cecrl"
 
 
