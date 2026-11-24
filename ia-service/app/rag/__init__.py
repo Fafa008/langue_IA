@@ -19,9 +19,11 @@ from app.rag.base import (
 from app.rag.config import ConfigRAG
 from app.rag.corpus import COMPETENCES_CORPUS, CorpusCecrl, DescripteurCorpus, ManifesteCorpus
 from app.rag.corpus_experimental import CorpusExperimental, ExerciceExperimental, charger_corpus_experimental
+from app.rag.corpus_pdf import CorpusPdf, DescripteurPdf, ManifestePdf
 from app.rag.experimental import RecuperateurExperimental
 from app.rag.fabrique import construire_recuperateur
 from app.rag.local import RecuperateurLocal
+from app.rag.pdf import RecuperateurPdf
 from app.rag.repli import RecuperateurAvecRepli, descripteurs_repli, est_descripteur_synthetique
 from app.rag.vide import RecuperateurVide
 
@@ -38,12 +40,16 @@ __all__ = [
     "ConfigRAG",
     "CorpusCecrl",
     "CorpusExperimental",
+    "CorpusPdf",
     "DescripteurCorpus",
+    "DescripteurPdf",
     "ExerciceExperimental",
     "ManifesteCorpus",
+    "ManifestePdf",
     "RecuperateurAvecRepli",
     "RecuperateurExperimental",
     "RecuperateurLocal",
+    "RecuperateurPdf",
     "RecuperateurRAG",
     "RecuperateurVide",
     "RequeteRAG",

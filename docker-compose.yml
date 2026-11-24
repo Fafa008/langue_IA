@@ -123,6 +123,8 @@ services:
     volumes:
       - ./ia-service/models:/app/models:ro
       - ./ia-service/corpus:/app/corpus:ro
+      # Corpus généré hors du dépôt (US150-C, corpus PDF) : RAG_CORPUS_HOTE sur l'hôte, RAG_CORPUS_CHEMIN=/corpus-externe
+      - ${RAG_CORPUS_HOTE:-./ia-service/corpus}:/corpus-externe:ro
     depends_on:
       redis:
         condition: service_healthy

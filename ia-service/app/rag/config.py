@@ -21,9 +21,11 @@ CHEMIN_CORPUS_PAR_DEFAUT = RACINE_SERVICE / "corpus" / "cecrl"
 class ConfigRAG(BaseSettings):
     """Paramètres du corpus, lus dans l'environnement avec le préfixe ``RAG_``.
 
-    ``RAG_CORPUS_ACTIF`` vaut ``false`` par défaut. ``RAG_CORPUS_TYPE`` choisit le corpus ``officiel`` (par défaut,
-    pour ne pas changer le comportement historique) ou ``experimental``. Le corpus officiel exige en plus
-    ``RAG_CORPUS_OFFICIEL_AUTORISE=true`` : sans autorisation écrite, la fabrique reste sur le récupérateur vide.
+    ``RAG_CORPUS_ACTIF`` vaut ``false`` par défaut. ``RAG_CORPUS_TYPE`` choisit le corpus ``officiel`` (classeur,
+    par défaut pour ne pas changer le comportement historique), ``pdf`` (descripteurs extraits des PDF du volume
+    complémentaire, US150-C) ou ``experimental``. Les corpus ``officiel`` et ``pdf`` reprennent des textes du
+    Conseil de l'Europe : ils exigent en plus ``RAG_CORPUS_OFFICIEL_AUTORISE=true``, sans quoi la fabrique reste sur
+    le récupérateur vide.
     ``RAG_CORPUS_VERIFIER_EMPREINTE`` désactive uniquement le contrôle d'intégrité, jamais les validations de
     structure.
     """
@@ -31,7 +33,7 @@ class ConfigRAG(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="RAG_", extra="ignore", frozen=True, populate_by_name=True)
 
     corpus_actif: bool = False
-    corpus_type: Literal["officiel", "experimental"] = "officiel"
+    corpus_type: Literal["officiel", "pdf", "experimental"] = "officiel"
     corpus_officiel_autorise: bool = False
     corpus_chemin: Path | None = None
     verifier_empreinte: bool = Field(default=True, validation_alias="RAG_CORPUS_VERIFIER_EMPREINTE")
