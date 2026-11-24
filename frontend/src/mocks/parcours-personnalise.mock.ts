@@ -1,5 +1,5 @@
 /*
- * Parcours personnalisé simulé (NEXT_PUBLIC_API_MOCK=true), au format des réponses attendues du backend.
+ * Parcours personnalisé simulé (preset NEXT_PUBLIC_MODE=demo), au format des réponses attendues du backend.
  * Démo sans backend : l'avancement est gardé en mémoire le temps de la session (répondre aux exercices
  * de la leçon du jour fait avancer la leçon atteinte), et le chatbot répond par des règles simples.
  * Scénario de départ : NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO (par défaut « passif »).

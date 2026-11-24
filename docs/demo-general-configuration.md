@@ -2,14 +2,16 @@
 
 ## Deux environnements distincts
 
-| Contexte | Fichier | `NEXT_PUBLIC_API_MOCK` | Effet |
+| Contexte | Fichier | `NEXT_PUBLIC_MODE` | Effet |
 | --- | --- | --- | --- |
-| `npm run dev` local | `frontend/.env.development` (versionné) | `true` | Les services renvoient `src/mocks`, aucun `fetch` |
-| Docker / CI | `docker-compose.yml` | `false` (forcé) | Les services appellent le backend réel |
-| Playwright | `playwright.config.ts` | `false` (forcé) | L'API est interceptée par les scénarios |
+| `npm run dev` local | `frontend/.env.development` (versionné) | `demo` (défaut) | Test, parcours et écrans simulés ; chat et reco réels |
+| Docker / CI | `docker-compose.yml` | `reel` (forcé par défaut) | Les services appellent le backend réel |
+| Playwright | `playwright.config.ts` | `reel` (forcé) | L'API est interceptée par les scénarios |
 
-Le parcours a son propre interrupteur : `PARCOURS_MOCK = API_MOCK || NEXT_PUBLIC_PARCOURS_MOCK === "true"`
-(`frontend/src/lib/env.ts:9-14`). Il pilote aussi le chat. Pour la démo, il doit rester `false`.
+Il n'y a que ces deux presets. En `demo`, `src/lib/env.ts` expose `API_MOCK=true` (test et écrans simulés) et
+`PARCOURS_MOCK=true` (parcours affiché simulé), mais `parcoursPersonnaliseService` délègue le chat et les
+recommandations au service HTTP : le navigateur ne parle toujours qu'au backend, jamais au service IA.
+`app/providers.tsx` obtient automatiquement un JWT pour le compte apprenant du seed.
 
 ## Valeurs recommandées pour la démo du mémoire
 

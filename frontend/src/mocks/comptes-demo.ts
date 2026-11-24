@@ -1,7 +1,7 @@
 import type { Role, Utilisateur } from "@/types/utilisateur";
 
 /*
- * Comptes de démonstration, un par rôle, utilisables tant que NEXT_PUBLIC_API_MOCK=true.
+ * Comptes de démonstration, un par rôle (les mêmes e-mails que le seed backend `SEED_DEMO=true`).
  * Ils n'existent pas côté backend : à recréer dans les données de test (seeds) de la base.
  */
 

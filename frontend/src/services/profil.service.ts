@@ -43,5 +43,5 @@ export const httpProfilService = {
   },
 };
 
-/** Données simulées tant que NEXT_PUBLIC_API_MOCK=true (voir .env.development). */
+/** Données simulées tant que NEXT_PUBLIC_MODE=demo (voir .env.development). */
 export const profilService: typeof httpProfilService = API_MOCK ? profilMock : httpProfilService;

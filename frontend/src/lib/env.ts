@@ -1,23 +1,24 @@
 /* Configuration lue au build (variables NEXT_PUBLIC_*, voir README « Variables d'environnement »). */
 
+/**
+ * Deux presets seulement : `reel` (défaut, tout passe par le backend) et `demo` (maquette autonome).
+ * En démo, le test, le parcours affiché et les écrans de saisie viennent des mocks ; le chat et les
+ * recommandations restent branchés sur le backend puis le service IA (voir `parcours-personnalise.service.ts`).
+ */
+export const MODE = process.env.NEXT_PUBLIC_MODE === "demo" ? "demo" : "reel";
+export const DEMO = MODE === "demo";
+
 /** URL du backend FastAPI, sans « / » final. */
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/+$/, "");
 
-/** Vrai quand le frontend doit utiliser les données simulées de src/mocks au lieu de l'API. */
-export const API_MOCK = process.env.NEXT_PUBLIC_API_MOCK === "true";
+/** Vrai en démo : les services génériques et le test de positionnement utilisent `src/mocks`. */
+export const API_MOCK = DEMO;
 
 /**
- * Une démo peut garder les exercices simulés (test rapide) tout en branchant l'authentification et le parcours
- * sur le vrai backend : c'est ce que font les deux drapeaux ci-dessous. Leurs valeurs par défaut préservent le
- * comportement historique (API_MOCK=true ⇒ tout est simulé).
+ * La démo obtient automatiquement un JWT pour le compte apprenant de seed (voir `app/providers.tsx`) :
+ * l'authentification reste donc réelle dans les deux presets, afin que le backend puisse autoriser le chat.
  */
-export const AUTH_MOCK = API_MOCK && process.env.NEXT_PUBLIC_AUTH_REELLE !== "true";
+export const AUTH_MOCK = false;
 
-/**
- * Vrai quand le parcours personnalisé utilise ses données simulées. Un build de démo garde l'API réelle pour le reste
- * (NEXT_PUBLIC_API_MOCK=false) et simule seulement le parcours, tant que ses routes ne sont pas livrées (FE-D5, option B).
- * L'écran affiche alors « Mode démonstration ».
- */
-export const PARCOURS_MOCK =
-  (API_MOCK || process.env.NEXT_PUBLIC_PARCOURS_MOCK === "true") &&
-  process.env.NEXT_PUBLIC_PARCOURS_REELLE !== "true";
+/** Vrai en démo : le contenu du parcours affiché vient du mock, mais l'IA est réelle. */
+export const PARCOURS_MOCK = DEMO;

@@ -36,7 +36,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 900_000,
     // Les tests interceptent eux-mêmes les appels HTTP : pas de données simulées côté app.
-    // NEXT_PUBLIC_PARCOURS_MOCK est forcé aussi : un frontend/.env.local local peut le mettre à true.
-    env: { NEXT_PUBLIC_API_MOCK: "false", NEXT_PUBLIC_PARCOURS_MOCK: "false", NEXT_DIST_DIR: ".next-e2e" },
+    // Le preset est forcé : un frontend/.env.local local ne peut pas mettre le build en mode demo.
+    env: { NEXT_PUBLIC_MODE: "reel", NEXT_DIST_DIR: ".next-e2e" },
   },
 });

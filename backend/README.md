@@ -2,7 +2,7 @@
 
 API du centre de langues La Digithèque. Le MVP implémente **tout le contrat attendu par le frontend**
 ([`docs/api/contrat-frontend.md`](../docs/api/contrat-frontend.md)) : le frontend fonctionne sur ce backend avec
-`NEXT_PUBLIC_API_MOCK=false`, sans données simulées.
+`NEXT_PUBLIC_MODE=reel`, sans données simulées.
 
 | Pile       | Choix                                                       |
 | ---------- | ----------------------------------------------------------- |

@@ -40,5 +40,5 @@ export const httpFormateursService = {
   },
 };
 
-/** Données simulées tant que NEXT_PUBLIC_API_MOCK=true (voir .env.development). */
+/** Données simulées tant que NEXT_PUBLIC_MODE=demo (voir .env.development). */
 export const formateursService: typeof httpFormateursService = API_MOCK ? formateursMock : httpFormateursService;

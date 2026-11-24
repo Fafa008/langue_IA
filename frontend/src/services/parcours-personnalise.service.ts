@@ -1,5 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
-import { PARCOURS_MOCK } from "@/lib/env";
+import { DEMO, PARCOURS_MOCK } from "@/lib/env";
 import { sessionChatbotCourante } from "@/lib/session-chatbot";
 import { parcoursPersonnaliseMock } from "@/mocks/parcours-personnalise.mock";
 import type {
@@ -168,4 +168,35 @@ export const mockParcoursPersonnaliseService: ParcoursPersonnaliseService = {
   fermerSession: async () => undefined,
 };
 
-export const parcoursPersonnaliseService = PARCOURS_MOCK ? mockParcoursPersonnaliseService : httpParcoursPersonnaliseService;
+/**
+ * Preset « demo » : le contenu pédagogique affiché est simulé, mais le chat et les recommandations passent par le
+ * backend puis le service IA. Le parcours de l'apprenant reste réel côté backend (compte de seed) : on le lit une
+ * fois pour appeler `/recommandations` avec le bon identifiant, sans afficher ses leçons à la place du mock.
+ */
+let idParcoursBackendDemo: Promise<number> | null = null;
+
+function identifiantParcoursBackendDemo(): Promise<number> {
+  idParcoursBackendDemo ??= httpParcoursPersonnaliseService.enCours().then((parcours) => parcours.idParcours);
+  return idParcoursBackendDemo;
+}
+
+const demoParcoursPersonnaliseService: ParcoursPersonnaliseService = {
+  enCours: mockParcoursPersonnaliseService.enCours,
+  exercices: mockParcoursPersonnaliseService.exercices,
+  lecon: mockParcoursPersonnaliseService.lecon,
+  corriger: mockParcoursPersonnaliseService.corriger,
+  async recommandations() {
+    return httpParcoursPersonnaliseService.recommandations(await identifiantParcoursBackendDemo());
+  },
+  chatbot: httpParcoursPersonnaliseService.chatbot,
+  corrigerChatbot: httpParcoursPersonnaliseService.corrigerChatbot,
+  traduireChatbot: httpParcoursPersonnaliseService.traduireChatbot,
+  exerciceChatbot: httpParcoursPersonnaliseService.exerciceChatbot,
+  fermerSession: httpParcoursPersonnaliseService.fermerSession,
+};
+
+export const parcoursPersonnaliseService = DEMO
+  ? demoParcoursPersonnaliseService
+  : PARCOURS_MOCK
+    ? mockParcoursPersonnaliseService
+    : httpParcoursPersonnaliseService;

@@ -46,7 +46,7 @@ services:
     environment:
       # En dev, lues à chaque démarrage de next dev (pas besoin de reconstruire l'image)
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-      NEXT_PUBLIC_API_MOCK: ${NEXT_PUBLIC_API_MOCK:-false}
+      NEXT_PUBLIC_MODE: ${NEXT_PUBLIC_MODE:-reel}
       # Détection des modifications à travers le montage (Docker Desktop, WSL)
       WATCHPACK_POLLING: "true"
     volumes:

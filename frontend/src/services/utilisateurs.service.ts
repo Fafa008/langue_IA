@@ -31,5 +31,5 @@ export const httpUtilisateursService = {
   },
 };
 
-/** Données simulées tant que NEXT_PUBLIC_API_MOCK=true (voir .env.development). */
+/** Données simulées tant que NEXT_PUBLIC_MODE=demo (voir .env.development). */
 export const utilisateursService: typeof httpUtilisateursService = API_MOCK ? utilisateursMock : httpUtilisateursService;

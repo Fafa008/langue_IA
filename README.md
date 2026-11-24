@@ -146,12 +146,12 @@ Bon à savoir :
   `IA_PORT` dans `.env`. PostgreSQL et Redis ne sont pas ouverts sur la machine (pas de conflit possible avec un
   PostgreSQL déjà installé) : les services les joignent par leur nom (`db`, `redis`). En mode `dev`, ils sont
   accessibles sur `localhost:55432` et `localhost:56379` (`POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`).
-- **Données simulées** : `NEXT_PUBLIC_API_MOCK=true` (par défaut) tant que le backend n'implémente pas
-  [`docs/api/contrat-frontend.md`](docs/api/contrat-frontend.md). Cette valeur est intégrée au build du frontend :
-  relancer `docker compose up --build` après un changement (en mode `dev`, un simple redémarrage suffit).
-  Pour une démo rapide, `NEXT_PUBLIC_API_MOCK=true` garde le test de positionnement simulé (bouton « Passer »
-  et réponses automatiques) ; ajouter `NEXT_PUBLIC_AUTH_REELLE=true` et `NEXT_PUBLIC_PARCOURS_REELLE=true` au build
-  branche la connexion, le parcours, les recommandations et le chat sur le vrai backend — donc sur le service IA.
+- **Deux presets frontend seulement** : `NEXT_PUBLIC_MODE=reel` (défaut production/CI, tout passe par le backend)
+  ou `NEXT_PUBLIC_MODE=demo` (défaut de `npm run dev`). En démo, le test de positionnement est simulé (bouton
+  « Passer » et réponses automatiques), le parcours affiché et les autres écrans viennent de `src/mocks`, mais
+  les recommandations et le chat appellent le backend puis le service IA. La connexion au compte de démo est
+  automatique (JWT réel du seed `SEED_DEMO=true`). Cette valeur est intégrée au build : relancer
+  `docker compose up --build` après un changement (en mode `dev`, un simple redémarrage suffit).
 - **Backend** : implémente le contrat du frontend (voir [`backend/README.md`](backend/README.md)). Au démarrage, il
   applique les migrations puis le seed (`backend/app/seed.py`, sans doublon) : référentiel toujours ; comptes de
   démonstration (`apprenant@`, `formateur@`, `admin@digitheque.mg`, mot de passe `Demo2026`) et banque de questions

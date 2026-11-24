@@ -4,7 +4,7 @@ import { choisirScenarioParcoursMock } from "@/mocks/parcours-personnalise.mock"
 import { afficher as afficherAvecClient } from "@/test/rendu-avec-query";
 
 jest.mock("@/mocks/delay", () => ({ delay: () => Promise.resolve() }));
-// Les composants lisent les données simulées, comme avec NEXT_PUBLIC_API_MOCK=true
+// Les composants lisent les données simulées, comme avec NEXT_PUBLIC_MODE=demo
 jest.mock("@/services/parcours-personnalise.service", () => {
   const actuel = jest.requireActual("@/services/parcours-personnalise.service");
   return { ...actuel, parcoursPersonnaliseService: actuel.mockParcoursPersonnaliseService };

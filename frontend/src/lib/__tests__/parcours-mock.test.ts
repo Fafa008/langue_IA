@@ -1,54 +1,54 @@
 import { mockFetch } from "@/test/fetch-mock";
 
-// FE-D5 (option B) : un build de démo peut simuler le parcours seul, sans simuler le reste de l'API.
-// Les variables NEXT_PUBLIC_* sont lues au chargement du module : chaque cas recharge le module.
-const ENV = {
-  API_MOCK: process.env.NEXT_PUBLIC_API_MOCK,
-  PARCOURS: process.env.NEXT_PUBLIC_PARCOURS_MOCK,
-  AUTH_REELLE: process.env.NEXT_PUBLIC_AUTH_REELLE,
-  PARCOURS_REELLE: process.env.NEXT_PUBLIC_PARCOURS_REELLE,
-};
+// Deux presets seulement : "reel" (backend partout) et "demo" (mocks + IA réelle).
+// NEXT_PUBLIC_MODE est lu au chargement du module : chaque cas recharge le module.
+const MODE_INITIAL = process.env.NEXT_PUBLIC_MODE;
 
-function charger(env: { api?: string; parcours?: string; authReelle?: string; parcoursReelle?: string }) {
-  process.env.NEXT_PUBLIC_API_MOCK = env.api;
-  process.env.NEXT_PUBLIC_PARCOURS_MOCK = env.parcours;
-  process.env.NEXT_PUBLIC_AUTH_REELLE = env.authReelle;
-  process.env.NEXT_PUBLIC_PARCOURS_REELLE = env.parcoursReelle;
-  let charge!: typeof import("@/lib/env") & { parcoursPersonnaliseService: { enCours: () => Promise<unknown> } };
+function charger(mode: "reel" | "demo") {
+  process.env.NEXT_PUBLIC_MODE = mode;
+  type Service = typeof import("@/services/parcours-personnalise.service")["parcoursPersonnaliseService"];
+  let charge!: typeof import("@/lib/env") & { parcoursPersonnaliseService: Service };
   jest.isolateModules(() => {
-    charge = { ...require("@/lib/env"), parcoursPersonnaliseService: require("@/services/parcours-personnalise.service").parcoursPersonnaliseService };
+    charge = {
+      ...require("@/lib/env"),
+      parcoursPersonnaliseService: require("@/services/parcours-personnalise.service").parcoursPersonnaliseService,
+    };
   });
   return charge;
 }
 
 afterEach(() => {
-  process.env.NEXT_PUBLIC_API_MOCK = ENV.API_MOCK;
-  process.env.NEXT_PUBLIC_PARCOURS_MOCK = ENV.PARCOURS;
-  process.env.NEXT_PUBLIC_AUTH_REELLE = ENV.AUTH_REELLE;
-  process.env.NEXT_PUBLIC_PARCOURS_REELLE = ENV.PARCOURS_REELLE;
+  if (MODE_INITIAL === undefined) delete process.env.NEXT_PUBLIC_MODE;
+  else process.env.NEXT_PUBLIC_MODE = MODE_INITIAL;
 });
 
-describe("FE-D5 — mocks du parcours dans un build de démo", () => {
-  it("API réelle sans drapeau du parcours : le parcours n'est pas simulé", () => {
-    expect(charger({ api: "false" }).PARCOURS_MOCK).toBe(false);
+describe("presets frontend — reel / demo", () => {
+  it("le preset réel n'utilise aucun mock", async () => {
+    const env = charger("reel");
+    expect(env.API_MOCK).toBe(false);
+    expect(env.AUTH_MOCK).toBe(false);
+    expect(env.PARCOURS_MOCK).toBe(false);
+    const fetchMock = mockFetch({ body: {} });
+    await expect(env.parcoursPersonnaliseService.enCours()).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalled(); // la réponse vide est volontaire : seul le chemin HTTP est vérifié ici
   });
 
-  it("API réelle avec NEXT_PUBLIC_PARCOURS_MOCK=true : seul le parcours est simulé, sans appel réseau", async () => {
-    const env = charger({ api: "false", parcours: "true" });
+  it("le preset demo simule le parcours affiché sans appel réseau pour enCours", async () => {
+    const env = charger("demo");
+    expect(env.API_MOCK).toBe(true); // test de positionnement simulé, bouton « Passer »
+    expect(env.AUTH_MOCK).toBe(false); // JWT réel du compte de seed, pour autoriser le chat
     expect(env.PARCOURS_MOCK).toBe(true);
     const fetchMock = mockFetch({ body: {} });
     await expect(env.parcoursPersonnaliseService.enCours()).resolves.toMatchObject({ idParcours: 7 });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("le mode simulé complet simule aussi le parcours", () => {
-    expect(charger({ api: "true" }).PARCOURS_MOCK).toBe(true);
-  });
-
-  it("une démo peut garder le test simulé et brancher auth/parcours sur le vrai backend et l'IA", () => {
-    const env = charger({ api: "true", authReelle: "true", parcoursReelle: "true" });
-    expect(env.API_MOCK).toBe(true); // le test de positionnement reste simulé (bouton « Passer »)
-    expect(env.AUTH_MOCK).toBe(false);
-    expect(env.PARCOURS_MOCK).toBe(false); // recommandations et chat passent par le backend, puis l'IA
+  it("en demo, le chat passe par le backend puis le service IA", async () => {
+    const env = charger("demo");
+    const fetchMock = mockFetch({ body: { reponse: "Bonjour", corrections: [] } });
+    await expect(env.parcoursPersonnaliseService.chatbot("Bonjour", [])).resolves.toMatchObject({
+      reponse: "Bonjour",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
