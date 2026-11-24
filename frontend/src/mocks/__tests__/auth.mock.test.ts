@@ -2,7 +2,7 @@ import { authMock, EMAIL_COMPTE_INACTIF } from "@/mocks/auth.mock";
 import { COMPTES_DEMO, MOT_DE_PASSE_DEMO } from "@/mocks/comptes-demo";
 import type { RegisterPayload } from "@/types/auth";
 
-/* Connexion simulée (NEXT_PUBLIC_API_MOCK=true) : un compte de démonstration par rôle. */
+/* Connexion simulée (AUTH_MOCK) : un compte de démonstration par rôle. */
 
 /** Lit le contenu (payload) du JWT factice. */
 const jwtPayload = (token: string) => JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));

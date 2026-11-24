@@ -136,11 +136,9 @@ services:
       target: prod
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-        NEXT_PUBLIC_API_MOCK: ${NEXT_PUBLIC_API_MOCK:-false}
-        NEXT_PUBLIC_PARCOURS_MOCK: ${NEXT_PUBLIC_PARCOURS_MOCK:-false}
+        # Un seul interrupteur : "reel" (défaut) ou "demo".
+        NEXT_PUBLIC_MODE: ${NEXT_PUBLIC_MODE:-reel}
         NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO: ${NEXT_PUBLIC_PARCOURS_MOCK_SCENARIO:-passif}
-        NEXT_PUBLIC_AUTH_REELLE: ${NEXT_PUBLIC_AUTH_REELLE:-false}
-        NEXT_PUBLIC_PARCOURS_REELLE: ${NEXT_PUBLIC_PARCOURS_REELLE:-false}
     restart: unless-stopped
     depends_on:
       backend:

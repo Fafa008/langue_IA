@@ -329,8 +329,8 @@ describe("httpTestDiagnosticService", () => {
   });
 
   it("charge le faux backend uniquement quand le mode simulé est activé", async () => {
-    const originalMock = process.env.NEXT_PUBLIC_API_MOCK;
-    process.env.NEXT_PUBLIC_API_MOCK = "true";
+    const originalMock = process.env.NEXT_PUBLIC_MODE;
+    process.env.NEXT_PUBLIC_MODE = "demo";
     jest.resetModules();
     try {
       const { testDiagnosticService } = await import("@/services/test-diagnostic.service");
@@ -347,8 +347,8 @@ describe("httpTestDiagnosticService", () => {
         testDiagnosticService.repondre(session.id, session.question.id, { type: "choix", choix: question.bonneReponse ?? 0 }),
       ).resolves.toMatchObject({ correcte: true });
     } finally {
-      if (originalMock === undefined) delete process.env.NEXT_PUBLIC_API_MOCK;
-      else process.env.NEXT_PUBLIC_API_MOCK = originalMock;
+      if (originalMock === undefined) delete process.env.NEXT_PUBLIC_MODE;
+      else process.env.NEXT_PUBLIC_MODE = originalMock;
       jest.resetModules();
     }
   });

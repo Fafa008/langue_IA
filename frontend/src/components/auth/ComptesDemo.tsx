@@ -9,7 +9,7 @@ const ICONES: Record<Role, LucideIcon> = {
   ADMINISTRATEUR: ShieldCheck,
 };
 
-/** Raccourcis de connexion, affichés seulement en mode simulé (NEXT_PUBLIC_API_MOCK=true). */
+/** Raccourcis de connexion, affichés seulement si l'authentification est simulée (AUTH_MOCK). */
 export default function ComptesDemo({ onChoisir }: { onChoisir: (email: string, motDePasse: string) => void }) {
   return (
     <section aria-labelledby="comptes-demo" className="mt-6 rounded-btn border border-dashed border-primary/30 bg-primary/5 p-4">

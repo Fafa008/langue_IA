@@ -52,8 +52,7 @@ non versionné et préservé. En cas de désaccord, c'est le code des modules ro
 `frontend/e2e/demo-general.spec.ts` contient 21 tests : les scénarios 1 à 15 du script et six cas
 limites (API indisponible, session expirée, réponse IA invalide, aucune recommandation, micro refusé,
 IA indisponible). Ils s'exécutent sur les projets Playwright `desktop` et `mobile`. Les appels sont
-interceptés conformément au contrat backend, avec `NEXT_PUBLIC_API_MOCK=false` et
-`NEXT_PUBLIC_PARCOURS_MOCK=false`.
+interceptés conformément au contrat backend, avec `NEXT_PUBLIC_MODE=reel`.
 
 ```bash
 cd frontend

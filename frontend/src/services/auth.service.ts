@@ -68,5 +68,5 @@ export const httpAuthService = {
   },
 };
 
-/** Données simulées tant que NEXT_PUBLIC_API_MOCK=true et que la démo ne force pas une vraie connexion. */
+/** L'authentification est réelle dans les deux presets (en demo, le JWT est obtenu automatiquement). */
 export const authService: typeof httpAuthService = AUTH_MOCK ? authMock : httpAuthService;

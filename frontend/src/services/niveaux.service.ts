@@ -30,5 +30,5 @@ export const httpNiveauxService = {
   },
 };
 
-/** Données simulées tant que NEXT_PUBLIC_API_MOCK=true (voir .env.development). */
+/** Données simulées tant que NEXT_PUBLIC_MODE=demo (voir .env.development). */
 export const niveauxService: typeof httpNiveauxService = API_MOCK ? niveauxMock : httpNiveauxService;

@@ -1,7 +1,7 @@
 # Contrat d'API attendu par le frontend
 
 Ce document liste les routes que le frontend appelle déjà, avec le format exact des requêtes et des réponses.
-Tant qu'une route n'existe pas côté backend, le frontend utilise des données simulées (`NEXT_PUBLIC_API_MOCK=true`).
+Le frontend a deux presets : `NEXT_PUBLIC_MODE=reel` utilise ce contrat partout ; `NEXT_PUBLIC_MODE=demo` simule le test et le parcours affiché, mais continue d'appeler le backend pour le chat et les recommandations.
 
 - Côté frontend, les routes sont déclarées dans [`frontend/src/services/endpoints.ts`](../../frontend/src/services/endpoints.ts)
   et les conversions de format dans `frontend/src/services/*.service.ts`.
@@ -874,8 +874,9 @@ désactivé plutôt que supprimé. Un compte `INACTIF` est refusé à la connexi
 ## Parcours personnalisé (US41 à US44) — rôle `APPRENANT` — contrat frontend
 
 Les trois routes de lecture ci-dessous existent côté backend (`backend/app/api/routes/parcours.py`, logique dans
-`backend/app/services/lecture_parcours.py`). Le frontend garde ses données simulées tant que `NEXT_PUBLIC_API_MOCK`
-ou `NEXT_PUBLIC_PARCOURS_MOCK` est à `true` (`frontend/src/mocks/parcours-personnalise.mock.ts`). Conversion côté
+`backend/app/services/lecture_parcours.py`). Le preset `NEXT_PUBLIC_MODE=demo` affiche les données simulées
+(`frontend/src/mocks/parcours-personnalise.mock.ts`) pour ces routes de lecture, mais appelle bien le backend pour
+`POST /parcours/{id}/recommandations` et les routes `/chatbot/*`. Conversion côté
 frontend : `frontend/src/services/parcours-personnalise.mapper.ts`.
 
 Écrans : « Mon parcours » (`/espace/apprenant/parcours`), un module (`/parcours/modules/{numero}`) et une leçon

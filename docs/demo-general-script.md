@@ -54,5 +54,5 @@ npm run test:e2e
 
 La couverture E2E de ce script est regroupée dans `frontend/e2e/demo-general.spec.ts` : 21 scénarios
 (15 étapes et 6 cas limites) exécutés sur les projets Playwright `desktop` et `mobile`. Le serveur de
-test force `NEXT_PUBLIC_API_MOCK=false` et `NEXT_PUBLIC_PARCOURS_MOCK=false` : les appels sont
+test force `NEXT_PUBLIC_MODE=reel` : les appels sont
 interceptés conformément au contrat backend, jamais redirigés vers `src/mocks`.

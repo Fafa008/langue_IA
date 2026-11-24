@@ -44,5 +44,5 @@ export const httpLanguesService = {
   },
 };
 
-/** Données simulées tant que NEXT_PUBLIC_API_MOCK=true (voir .env.development). */
+/** Données simulées tant que NEXT_PUBLIC_MODE=demo (voir .env.development). */
 export const languesService: typeof httpLanguesService = API_MOCK ? languesMock : httpLanguesService;
