@@ -190,6 +190,17 @@ def donnees_prompt(messages: Sequence[MessageLLM]) -> dict[str, object]:
     return json.loads(bloc)
 
 
+def test_budget_json_laisse_la_place_a_la_reecriture() -> None:
+    variables = VariablesCorrectionReponseLibre(
+        contexte_apprenant=ContexteApprenant.model_validate(contexte(56)),
+        phase=phase_de_lecon(56),
+        exercice=EntreeCorrection.model_validate(EXERCICE),
+        descripteurs_rag=[],
+    )
+    rendu = RegistrePrompts().rendre_correction_reponse_libre(variables)
+    assert rendu.max_tokens >= 3000
+
+
 def test_prompt_transmet_la_phase_la_lecon_et_la_reponse() -> None:
     systeme, utilisateur = rendre(56)
     assert "`PASSIVE` (leçons 1 à 49)" in systeme.contenu and "`ACTIVE` (leçon 50 et plus)" in systeme.contenu

@@ -67,6 +67,11 @@ _VARIABLES_TEMPLATE_EXERCICE_CHATBOT = frozenset(
 _VARIABLES_TEMPLATE_CORRECTION = frozenset({"contexte_apprenant", "phase", "exercice", "descripteurs_rag"})
 _VARIABLES_TEMPLATE_RECOMMANDATION = frozenset({"contexte_apprenant", "points_faibles", "niveau_vise"})
 _NOMBRE_EXEMPLES_MAX = 3
+# Les modèles à raisonnement (ex. gpt-oss sur Groq) consomment une part du budget avant d'émettre le JSON. Un
+# plafond trop bas provoque un `json_validate_failed` (HTTP 400) chez Groq, avant même la validation Pydantic :
+# tous les agents en mode JSON gardent une marge commune. Ce plafond ne fait pas partie de l'empreinte du prompt.
+MAX_TOKENS_JSON = 3000
+MAX_TOKENS_JSON_LONG = 4000  # Réécriture complète attendue pour la correction en phase active.
 
 
 @dataclass(frozen=True, slots=True)
@@ -424,7 +429,7 @@ class RegistrePrompts:
             exemples=(),
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.2,
-            max_tokens=900,
+            max_tokens=MAX_TOKENS_JSON,
         )
 
     def _charger_evaluation_diagnostic(self) -> _DefinitionPrompt:
@@ -452,7 +457,7 @@ class RegistrePrompts:
             exemples=exemples,
             empreinte_prompt=f"sha256:{empreinte}",
             temperature=0.2,
-            max_tokens=900,
+            max_tokens=MAX_TOKENS_JSON,
         )
 
     def _charger_evaluation_positionnement(self) -> _DefinitionPrompt:
@@ -489,7 +494,7 @@ class RegistrePrompts:
             exemples=tuple(exemples),
             empreinte_prompt=f"sha256:{empreinte}",
             temperature=0.2,
-            max_tokens=1000,
+            max_tokens=MAX_TOKENS_JSON,
         )
 
     def _charger_conversation_chatbot(self) -> _DefinitionPrompt:
@@ -509,9 +514,7 @@ class RegistrePrompts:
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.5,
             # La traduction et l'explication françaises s'ajoutent à la réponse et aux corrections en marge.
-            # Les modèles à raisonnement (ex. gpt-oss sur Groq) consomment une part du budget avant le JSON :
-            # 900 jetons pouvaient être épuisés avant la fin du document, d'où un refus HTTP 400 en mode JSON.
-            max_tokens=1800,
+            max_tokens=MAX_TOKENS_JSON,
         )
 
     def _charger_conversation_chatbot_v2(self) -> _DefinitionPrompt:
@@ -529,7 +532,7 @@ class RegistrePrompts:
             exemples=(),
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.5,
-            max_tokens=1800,
+            max_tokens=MAX_TOKENS_JSON,
         )
 
     def _charger_correction_chatbot(self) -> _DefinitionPrompt:
@@ -565,7 +568,7 @@ class RegistrePrompts:
             exemples=(),
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.2,
-            max_tokens=1200,
+            max_tokens=MAX_TOKENS_JSON,
         )
 
     def _charger_memoire_chatbot(self) -> _DefinitionPrompt:
@@ -583,7 +586,7 @@ class RegistrePrompts:
             exemples=(),
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.1,
-            max_tokens=900,
+            max_tokens=MAX_TOKENS_JSON,
         )
 
     def _charger_exercice_chatbot(self) -> _DefinitionPrompt:
@@ -601,7 +604,7 @@ class RegistrePrompts:
             exemples=(),
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.3,
-            max_tokens=1000,
+            max_tokens=MAX_TOKENS_JSON,
         )
 
     def _charger_correction_reponse_libre(self) -> _DefinitionPrompt:
@@ -621,7 +624,7 @@ class RegistrePrompts:
             exemples=(),
             empreinte_prompt=f"sha256:{empreinte.hexdigest()}",
             temperature=0.2,
-            max_tokens=1500,
+            max_tokens=MAX_TOKENS_JSON_LONG,
         )
 
     @staticmethod
