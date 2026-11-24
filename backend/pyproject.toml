@@ -1,5 +1,8 @@
 # Configuration des outils du backend (le projet s'installe avec requirements.txt)
 
+[project]
+requires-python = ">=3.11,<3.12"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"

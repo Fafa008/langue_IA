@@ -2,6 +2,14 @@
 # Docker (backend/docker-entrypoint.sh) échouent avec « /bin/sh^M: not found » s'ils arrivent en CRLF.
 * text=auto eol=lf
 
+# Fichiers exécutés dans les conteneurs : LF explicite même si Git est configuré en autocrlf.
+*.py text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
+Dockerfile text eol=lf
+Dockerfile.* text eol=lf
+Makefile text eol=lf
+
 # Fichiers binaires : jamais convertis
 *.png binary
 *.jpg binary
