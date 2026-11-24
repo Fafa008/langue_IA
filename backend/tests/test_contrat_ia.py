@@ -142,6 +142,11 @@ def test_produit_exactement_la_requete_diagnostic_de_reference() -> None:
     assert requete.model_dump(mode="json", exclude_none=True) == reference
 
 
+def test_requete_v2_du_job_docker_reste_identique_a_lexemple_partage() -> None:
+    exemple = json.loads((CONTRATS.parent / "diagnostic-evaluer-v2" / "requete.json").read_text(encoding="utf-8"))
+    assert script_contrat.requete_positionnement_reference().model_dump(mode="json", exclude_none=True) == exemple
+
+
 def test_requete_du_job_docker_reste_identique_a_lexemple_partage() -> None:
     """Le job CI n'a pas le montage `contrats/` : sa requête codée en dur doit rester la référence."""
     assert script_contrat.requete_diagnostic_reference().model_dump(mode="json", exclude_none=True) == lire_diagnostic(

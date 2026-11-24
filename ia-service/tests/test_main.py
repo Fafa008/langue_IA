@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from google.genai import types
 
-from app.agents.diagnostic import CODE_AGENT, VERSION_AGENT
+from app.agents.diagnostic import CODE_AGENT, VERSION_AGENT, VERSION_AGENT_POSITIONNEMENT
 from app.agents.recommandation import CODE_AGENT as CODE_AGENT_RECOMMANDATION
 from app.core.erreurs import ErreurConfiguration, ErreurLlmIndisponible, ErreurServiceIA
 from app.core.gestionnaire_erreurs import gerer_erreur_inattendue, gerer_erreur_service
@@ -45,7 +45,13 @@ def test_health_et_lifespan(env_propre: pytest.MonkeyPatch) -> None:
         assert client_llm.ferme is False
 
         assert CODE_AGENT in app.state.registre_agents
-        assert app.state.registre_agents.resoudre(CODE_AGENT).version == VERSION_AGENT
+        versions = {
+            definition.version for definition in app.state.registre_agents.lister() if definition.code == CODE_AGENT
+        }
+        assert versions == {VERSION_AGENT, VERSION_AGENT_POSITIONNEMENT}
+        # Sans version explicite, le Harness choisit la dernière version ; l'API diagnostique épingle la v1.
+        assert app.state.registre_agents.resoudre(CODE_AGENT).version == VERSION_AGENT_POSITIONNEMENT
+        assert app.state.registre_agents.resoudre(CODE_AGENT, VERSION_AGENT).version == VERSION_AGENT
         assert app.state.registre_agents.resoudre(CODE_AGENT).schema_entree is not None
         assert CODE_AGENT_RECOMMANDATION in app.state.registre_agents
         assert app.state.registre_agents.resoudre(CODE_AGENT_RECOMMANDATION).version == "1.0.0"

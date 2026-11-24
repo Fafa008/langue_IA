@@ -25,7 +25,7 @@ from collections.abc import Sequence
 from pydantic import BaseModel, ValidationError
 
 from app.llm.base import MessageLLM
-from app.prompts.variables import VariablesEvaluationDiagnostic
+from app.prompts.variables import VariablesEvaluationDiagnostic, VariablesEvaluationPositionnement
 from app.schemas.chatbot import (
     CORRECTIONS_CHATBOT_MAX,
     EXPLICATION_CORRECTION_MAX,
@@ -40,8 +40,10 @@ from app.schemas.diagnostic import (
     PointFaible,
     PreuveReponse,
     ResultatDiagnostic,
+    ResultatDiagnosticPositionnement,
     calculer_ecart,
     preuve_directe,
+    statut_positionnement,
 )
 from app.schemas.recommandation import (
     TYPE_PAR_DOMAINE,
@@ -172,6 +174,54 @@ def resultat_diagnostic_demonstration(messages: Sequence[MessageLLM]) -> Resulta
         score_confiance=SCORE_CONFIANCE,
         niveau_preliminaire=niveau_preliminaire,
         ecart_avec_niveau_preliminaire=calculer_ecart(referentiel, niveau_preliminaire, niveau_estime),
+    )
+
+
+JUSTIFICATION_POSITIONNEMENT = (
+    "Démonstration sans modèle de langue : estimation indicative fondée sur les faits transmis, "
+    "à confirmer avec un vrai fournisseur."
+)
+
+
+def resultat_positionnement_demonstration(messages: Sequence[MessageLLM]) -> ResultatDiagnosticPositionnement | None:
+    """Réponse de démonstration du contrat v2, déterministe et sans appel réseau."""
+    donnees = _donnees_diagnostic(messages)
+    if donnees is None:
+        return None
+    try:
+        variables = VariablesEvaluationPositionnement.model_validate(donnees)
+    except ValidationError:
+        return None
+    if variables.score_preliminaire is None:
+        return None
+    referentiel = variables.referentiel
+    niveau_preliminaire = variables.contexte_apprenant.niveau_preliminaire
+    score = float(variables.score_preliminaire)
+    preuves = [
+        PreuveReponse(
+            id_question=reponse.id_question,
+            competence=reponse.competence,
+            type_reponse=reponse.type_reponse,
+        )
+        for reponse in variables.reponses
+    ]
+    production = any(preuve.type_reponse in ("texte", "audio") for preuve in preuves)
+    niveau_estime = _niveau_estime(referentiel, niveau_preliminaire, score)
+    phase = PhaseAssimil.ACTIVATION if production and score >= SCORE_ACTIVATION else PhaseAssimil.IMPREGNATION
+    resultat_v1 = ResultatDiagnostic(
+        code_langue=variables.code_langue,
+        referentiel=referentiel,
+        niveau_estime=niveau_estime,
+        phase_assimil=phase,
+        points_faibles=_points_faibles(preuves),
+        score_confiance=SCORE_CONFIANCE,
+        niveau_preliminaire=niveau_preliminaire,
+        ecart_avec_niveau_preliminaire=calculer_ecart(referentiel, niveau_preliminaire, niveau_estime),
+    )
+    return ResultatDiagnosticPositionnement(
+        **resultat_v1.model_dump(),
+        justification=JUSTIFICATION_POSITIONNEMENT,
+        statut=statut_positionnement([reponse.confiance_stt for reponse in variables.reponses]),
     )
 
 
@@ -386,6 +436,8 @@ def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseMode
     """Répondeur du faux client : diagnostic, correction, recommandation et chat ont une démonstration."""
     if schema is ResultatDiagnostic:
         return resultat_diagnostic_demonstration(messages)
+    if schema is ResultatDiagnosticPositionnement:
+        return resultat_positionnement_demonstration(messages)
     if schema is ResultatCorrection:
         return resultat_correction_demonstration(messages)
     if schema is ResultatRecommandation:

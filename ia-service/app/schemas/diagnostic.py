@@ -242,3 +242,28 @@ class ResultatDiagnostic(ModeleStrict):
             )
         if reponses is not None:
             self.verifier_preuves(reponses)
+
+
+# --- Test de positionnement 4 compétences : contrat diagnostic v2 (agent 1.2.0) ---
+
+SEUIL_CONFIANCE_STT = 0.7
+StatutAnalyse = Literal["succes", "a_verifier"]
+FormatExercice = Literal["qcm", "vrai_faux", "texte_a_trous", "dictee", "parler"]
+
+
+class ResultatDiagnosticPositionnement(ResultatDiagnostic):
+    """Interprétation versionnée du test de positionnement.
+
+    Aucune note n'est produite ici : le score, le niveau et le détail par compétence restent calculés par le backend.
+    ``statut`` vaut ``a_verifier`` dès qu'une transcription a une confiance inférieure au seuil (STT non fiable).
+    """
+
+    justification: str = Field(min_length=1, max_length=500)
+    statut: StatutAnalyse
+
+
+def statut_positionnement(confiances_stt: Sequence[float | None]) -> StatutAnalyse:
+    """Déterminer le statut de l'analyse à partir des confiances STT transmises."""
+    if any(confiance is not None and confiance < SEUIL_CONFIANCE_STT for confiance in confiances_stt):
+        return "a_verifier"
+    return "succes"

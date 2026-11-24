@@ -2,15 +2,58 @@
 
 import json
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Langue, Niveau, Question, StatutDiagnostic, TypeExercice
 from app.models import TestDiagnostic as TentativeDiagnostic
+from app.schemas.ia import ReponsePositionnementIA
+from app.services import analyse_diagnostic
 from tests.conftest import creer_utilisateur, entete
 
 COMPETENCES = ("lecture", "ecoute", "ecrit", "oral")
 FORMATS = ("qcm", "dictee", "texte_a_trous", "parler")
+
+
+@pytest.fixture
+def ia_positionnement(monkeypatch: pytest.MonkeyPatch) -> list:
+    """Remplace l'appel HTTP : le test vérifie la persistance de l'enveloppe v2, pas la disponibilité du service IA."""
+    appels: list = []
+
+    def faux_positionnement(requete):
+        appels.append(requete)
+        return ReponsePositionnementIA.model_validate(
+            {
+                "request_id": str(requete.request_id),
+                "agent": "diagnostic",
+                "version_agent": "1.2.0",
+                "version_prompt": "diagnostic/evaluation@1.2.0",
+                "statut": "succes",
+                "resultat": {
+                    "code_langue": requete.contexte.code_langue,
+                    "referentiel": requete.contexte.referentiel,
+                    "niveau_estime": requete.contexte.niveau_preliminaire,
+                    "phase_assimil": "impregnation",
+                    "points_faibles": [],
+                    "score_confiance": 0.6,
+                    "niveau_preliminaire": requete.contexte.niveau_preliminaire,
+                    "ecart_avec_niveau_preliminaire": 0,
+                    "justification": "Les faits transmis montrent une production écrite correcte.",
+                    "statut": "succes",
+                },
+                "meta": {
+                    "duree_ms": 1200,
+                    "fournisseur": "factice",
+                    "modele": "modele-test",
+                    "version_corpus": None,
+                    "empreinte_prompt": "sha256:" + "a" * 64,
+                },
+            }
+        )
+
+    monkeypatch.setattr(analyse_diagnostic, "evaluer_positionnement", faux_positionnement)
+    return appels
 
 
 def _creer_exercice_enrichi(
@@ -71,7 +114,7 @@ def test_expose_les_champs_du_positionnement_sans_correction(db: Session, client
     assert "élève" not in reponse.text
 
 
-def test_score_sur_100_et_dossier_factuel_par_exercice(db: Session, client):
+def test_score_sur_100_et_dossier_factuel_par_exercice(db: Session, client, ia_positionnement: list):
     apprenant = creer_utilisateur(db)
     tentative = TentativeDiagnostic(
         apprenant=apprenant.apprenant,
@@ -133,3 +176,9 @@ def test_score_sur_100_et_dossier_factuel_par_exercice(db: Session, client):
 
     db.refresh(tentative)
     assert tentative.statut == StatutDiagnostic.TERMINE
+    assert len(ia_positionnement) == 1
+    assert tentative.analyse_ia["version_agent"] == "1.2.0"
+    assert tentative.analyse_ia["version_prompt"] == "diagnostic/evaluation@1.2.0"
+    assert "justification" in tentative.analyse_ia["resultat"]
+    assert isinstance(donnees["points_faibles"], list)
+    assert "justification" not in donnees

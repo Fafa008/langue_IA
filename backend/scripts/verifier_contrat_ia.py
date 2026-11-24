@@ -15,20 +15,26 @@ import httpx
 from app.core.config import get_settings
 from app.schemas.ia import (
     VERSION_AGENT_DIAGNOSTIC,
+    VERSION_AGENT_POSITIONNEMENT,
+    VERSION_PROMPT_POSITIONNEMENT,
     ContexteApprenantIA,
     EntreeCorrectionIA,
     EntreeDiagnosticIA,
+    EntreePositionnementIA,
     PreuveDiagnosticIA,
+    PreuvePositionnementIA,
     RequeteCorrectionIA,
     RequeteDiagnosticIA,
+    RequetePositionnementIA,
 )
-from app.services.analyse_diagnostic import verifier_reponse_diagnostic
+from app.services.analyse_diagnostic import verifier_reponse_diagnostic, verifier_reponse_diagnostic_v2
 from app.services.correction_exercice import verifier_feedback
 from app.services.ia import (
     CHEMIN_CORRECTION,
     ErreurServiceIA,
     corriger_reponse_libre,
     evaluer_diagnostic,
+    evaluer_positionnement,
 )
 from app.services.phase_parcours import phase_parcours
 
@@ -140,6 +146,69 @@ def verifier_diagnostic() -> str | None:
     return None
 
 
+def requete_positionnement_reference() -> RequetePositionnementIA:
+    """Requête canonique v2, identique à ``contrats/ia/diagnostic-evaluer-v2/requete.json``."""
+    return RequetePositionnementIA(
+        request_id=UUID("9c25e67a-13bd-4f80-a6c1-7b2d3e4f5a6b"),
+        version_agent=VERSION_AGENT_POSITIONNEMENT,
+        contexte=ContexteApprenantIA(
+            code_langue="en", referentiel="CECRL", niveau_preliminaire="B1", niveau_confirme=False
+        ),
+        entree=EntreePositionnementIA(
+            scenario="quotidien",
+            reponses=[
+                PreuvePositionnementIA(
+                    id_question="ex-12",
+                    competence="ecrit",
+                    type_reponse="texte",
+                    contenu="I usually go to work by bus, but yesterday I walked.",
+                    enonce="Décrivez votre trajet habituel et celui d'hier.",
+                    format="dictee",
+                    difficulte=2,
+                    justesse=True,
+                    score_competence=80.0,
+                    temps_reponse_secondes=12.5,
+                ),
+                PreuvePositionnementIA(
+                    id_question="ex-18",
+                    competence="oral",
+                    type_reponse="audio",
+                    contenu="Hello, my name is Rova and I live in Antananarivo.",
+                    format="parler",
+                    difficulte=3,
+                    justesse=False,
+                    score_competence=40.0,
+                    temps_reponse_secondes=8.0,
+                    transcription="Hello, my name is Rova and I live in Antananarivo.",
+                    confiance_stt=0.82,
+                ),
+            ],
+            score_preliminaire=64,
+        ),
+    )
+
+
+def verifier_positionnement() -> str | None:
+    """Appel réel de la v2 : versions publiées et absence de résultat partiel inattendu."""
+    demande = requete_positionnement_reference()
+    try:
+        enveloppe = evaluer_positionnement(demande)
+    except ErreurServiceIA as erreur:
+        return f"appel refusé ou réponse hors contrat ({erreur.code})"
+    if not verifier_reponse_diagnostic_v2(enveloppe, demande):
+        return "réponse incohérente avec la requête de référence v2"
+    if (
+        enveloppe.version_agent != VERSION_AGENT_POSITIONNEMENT
+        or enveloppe.version_prompt != VERSION_PROMPT_POSITIONNEMENT
+    ):
+        return "versions inattendues dans la réponse v2"
+    print(
+        f"OK  positionnement : statut {enveloppe.resultat.statut}, "
+        f"version {enveloppe.version_agent} ({enveloppe.version_prompt})"
+    )
+    return None
+
+
 def main() -> int:
     if not get_settings().ia_service_url.strip():
         print("ÉCHEC IA_SERVICE_URL n'est pas configurée dans le conteneur backend.")
@@ -149,9 +218,14 @@ def main() -> int:
         echecs.append(f"sans leçon : {raison}")
     if raison := verifier_diagnostic():
         echecs.append(f"diagnostic : {raison}")
+    if raison := verifier_positionnement():
+        echecs.append(f"positionnement : {raison}")
     for echec in echecs:
         print(f"ÉCHEC {echec}")
-    print("Contrat backend ↔ service IA (correction et diagnostic) : " + ("non conforme" if echecs else "conforme"))
+    print(
+        "Contrat backend ↔ service IA (correction, diagnostic, positionnement) : "
+        + ("non conforme" if echecs else "conforme")
+    )
     return 1 if echecs else 0
 
 

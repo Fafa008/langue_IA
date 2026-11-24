@@ -1,0 +1,32 @@
+{
+  "request_id": "9c25e67a-13bd-4f80-a6c1-7b2d3e4f5a6b",
+  "agent": "diagnostic",
+  "version_agent": "1.2.0",
+  "version_prompt": "diagnostic/evaluation@1.2.0",
+  "statut": "succes",
+  "resultat": {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_estime": "B1",
+    "phase_assimil": "activation",
+    "points_faibles": [
+      {
+        "domaine": "expression_orale",
+        "id_question": "ex-99",
+        "observation": "La production orale reste hésitante.",
+        "justification": "À confirmer avec un vrai fournisseur."
+      }
+    ],
+    "score_confiance": 0.6,
+    "niveau_preliminaire": "B1",
+    "ecart_avec_niveau_preliminaire": 0,
+    "justification": "Les faits transmis ne suffisent pas à établir un niveau.",
+    "statut": "succes"
+  },
+  "meta": {
+    "duree_ms": 1200,
+    "fournisseur": "factice",
+    "modele": "modele-test",
+    "empreinte_prompt": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}

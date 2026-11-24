@@ -18,7 +18,13 @@ from app.schemas.chatbot import (
 )
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.correction import EntreeCorrection, phase_de_lecon
-from app.schemas.diagnostic import PointFaible, PreuveReponse, ResultatDiagnostic
+from app.schemas.diagnostic import (
+    FormatExercice,
+    PointFaible,
+    PreuveReponse,
+    ResultatDiagnostic,
+    ResultatDiagnosticPositionnement,
+)
 from app.schemas.recommandation import RECOMMANDATIONS_MAX, TYPE_PAR_DOMAINE
 from app.schemas.regles import (
     RESUME_MEMOIRE_MAX,
@@ -45,6 +51,23 @@ class ReponseDiagnosticPrompt(ModeleStrict):
     type_reponse: Literal["choix", "texte", "audio"]
     contenu: str = Field(min_length=1, max_length=5000)
     enonce: str | None = Field(default=None, max_length=2000, exclude=True)
+
+
+class ReponsePositionnementPrompt(ModeleStrict):
+    """Fait factuel du test 4 compétences, transmis au prompt v2 sans le corrigé."""
+
+    id_question: str = Field(min_length=1, max_length=64)
+    competence: Competence
+    type_reponse: Literal["choix", "texte", "audio"]
+    contenu: str = Field(min_length=1, max_length=5000)
+    enonce: str | None = Field(default=None, max_length=2000, exclude=True)
+    format: FormatExercice
+    difficulte: int = Field(ge=1)
+    justesse: bool
+    score_competence: float = Field(ge=0, le=100)
+    temps_reponse_secondes: float = Field(ge=0)
+    transcription: str | None = None
+    confiance_stt: float | None = Field(default=None, ge=0, le=1)
 
 
 def preuves_depuis_reponses(reponses: Sequence[ReponseDiagnosticPrompt]) -> tuple[PreuveReponse, ...]:
@@ -158,6 +181,29 @@ class VariablesEvaluationDiagnostic(ModeleStrict):
             for descripteur in self.descripteurs_rag
         ):
             raise erreur("Les descripteurs RAG doivent correspondre à la langue et au référentiel du diagnostic.")
+        return self
+
+
+class VariablesEvaluationPositionnement(VariablesEvaluationDiagnostic):
+    """Variables du prompt d'évaluation v2 : les faits enrichis sont sérialisés tels quels."""
+
+    reponses: list[ReponsePositionnementPrompt] = Field(max_length=100)
+
+
+class ExempleFewShotPositionnement(ModeleStrict):
+    """Exemple few-shot du contrat v2 : même entrée pédagogique, sortie avec justification et statut."""
+
+    scenario: ScenarioDiagnostic = "quotidien"
+    entree: EntreeExempleFewShot
+    sortie: ResultatDiagnosticPositionnement
+    justification: str = Field(min_length=1, max_length=500)
+
+    @model_validator(mode="after")
+    def verifier_sortie(self) -> "ExempleFewShotPositionnement":
+        self.sortie.verifier_coherence(
+            self.entree.contexte_apprenant,
+            preuves_depuis_reponses(self.entree.reponses),
+        )
         return self
 
 

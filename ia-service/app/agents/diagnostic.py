@@ -18,11 +18,14 @@ from pydantic import Field, ValidationError, field_validator
 from app.core.erreurs import ErreurCorpusIndisponible, ErreurRegistre, ErreurReponseLlm, ErreurServiceIA
 from app.harness.agent import ContexteExecution, DefinitionAgent
 from app.prompts import RegistrePrompts
+from app.prompts.registre import VERSION_EVALUATION_POSITIONNEMENT
 from app.prompts.variables import (
     DescripteurRAGPrompt,
     ReponseDiagnosticPrompt,
+    ReponsePositionnementPrompt,
     ScenarioDiagnostic,
     VariablesEvaluationDiagnostic,
+    VariablesEvaluationPositionnement,
     preuves_depuis_reponses,
 )
 from app.rag.base import (
@@ -39,13 +42,20 @@ from app.rag.base import (
 from app.rag.repli import est_descripteur_synthetique
 from app.schemas.base import ModeleStrict
 from app.schemas.contexte import ContexteApprenant
-from app.schemas.diagnostic import DiagnosticIncoherent, PreuveReponse, ResultatDiagnostic
+from app.schemas.diagnostic import (
+    DiagnosticIncoherent,
+    PreuveReponse,
+    ResultatDiagnostic,
+    ResultatDiagnosticPositionnement,
+    statut_positionnement,
+)
 from app.schemas.regles import erreur
 
 logger = logging.getLogger(__name__)
 
 CODE_AGENT = "diagnostic"
 VERSION_AGENT = "1.0.0"
+VERSION_AGENT_POSITIONNEMENT = "1.2.0"
 BUDGET_MS = 45_000
 SEUIL_ECART_IMPORTANT = 2
 
@@ -280,4 +290,64 @@ def construire_definition(registre_prompts: RegistrePrompts) -> DefinitionAgent[
         version_prompt=version_prompt,
         empreinte_prompt=empreinte_prompt,
         executer=DiagnosticAgent().executer,
+    )
+
+
+class EntreeDiagnosticPositionnement(EntreeDiagnostic):
+    """Entrée du contrat v2 : chaque réponse porte les faits calculés par le scoring backend."""
+
+    reponses: list[ReponsePositionnementPrompt] = Field(min_length=1, max_length=100)
+
+
+class DiagnosticPositionnementAgent(DiagnosticAgent):
+    """Agent Diagnostic v2 : interprète les faits du test 4 compétences, sans recalculer la note."""
+
+    async def executer(
+        self,
+        entree: EntreeDiagnosticPositionnement,
+        contexte: ContexteExecution,
+    ) -> ResultatDiagnosticPositionnement:
+        apprenant = contexte.contexte
+        descripteurs = await self._recuperer_descripteurs(entree, contexte)
+        variables = VariablesEvaluationPositionnement(
+            scenario=entree.scenario,
+            code_langue=apprenant.code_langue,
+            referentiel=apprenant.referentiel,
+            reponses=entree.reponses,
+            score_preliminaire=entree.score_preliminaire,
+            contexte_apprenant=apprenant,
+            descripteurs_rag=list(descripteurs),
+        )
+        rendu = contexte.outils.registre_prompts.rendre_evaluation_diagnostic(
+            variables, version=VERSION_EVALUATION_POSITIONNEMENT
+        )
+        resultat, _meta_llm = await contexte.outils.client_llm.generer_json(
+            rendu.messages,
+            schema=ResultatDiagnosticPositionnement,
+            temperature=rendu.temperature,
+            max_tokens=rendu.max_tokens,
+        )
+        self._verifier_coherence(resultat, apprenant, list(entree.reponses))
+        # Le statut est déterministe : une transcription sous le seuil ne peut pas être tenue pour fiable.
+        resultat.statut = statut_positionnement([reponse.confiance_stt for reponse in entree.reponses])
+        self._signaler_ecart(resultat, contexte)
+        return resultat
+
+
+def construire_definition_positionnement(
+    registre_prompts: RegistrePrompts,
+) -> DefinitionAgent[EntreeDiagnosticPositionnement, ResultatDiagnosticPositionnement]:
+    """Déclarer la version 1.2.0 à côté de la v1 : le Harness sélectionne par `version_agent`."""
+    version_prompt, empreinte_prompt = registre_prompts.identite_evaluation_diagnostic(
+        version=VERSION_EVALUATION_POSITIONNEMENT
+    )
+    return DefinitionAgent(
+        code=CODE_AGENT,
+        version=VERSION_AGENT_POSITIONNEMENT,
+        schema_entree=EntreeDiagnosticPositionnement,
+        schema_sortie=ResultatDiagnosticPositionnement,
+        budget_ms=BUDGET_MS,
+        version_prompt=version_prompt,
+        empreinte_prompt=empreinte_prompt,
+        executer=DiagnosticPositionnementAgent().executer,
     )

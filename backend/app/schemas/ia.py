@@ -38,6 +38,12 @@ ScenarioDiagnosticIA = Literal["quotidien", "entretien", "examen"]
 VERSION_AGENT_DIAGNOSTIC = "1.0.0"
 VERSION_PROMPT_DIAGNOSTIC = "diagnostic/evaluation@1.1.0"
 
+# Test de positionnement 4 compétences : entrée enrichie et sortie interprétative (phase 3).
+# Changement incompatible (champs nouveaux + `statut`) : version incrémentée, exemples v1 inchangés.
+VERSION_AGENT_POSITIONNEMENT = "1.2.0"
+VERSION_PROMPT_POSITIONNEMENT = "diagnostic/evaluation@1.2.0"
+SEUIL_CONFIANCE_STT = 0.7
+
 
 class _ModeleIA(BaseModel):
     """Modèle de la frontière IA : aucun champ inconnu n'est accepté."""
@@ -130,6 +136,43 @@ class ReponseDiagnosticIA(_ModeleIA):
     statut: Literal["succes"] = "succes"
     resultat: ResultatDiagnosticIA
     meta: MetaExecutionIA
+
+
+# --- Test de positionnement : contrat diagnostic v2 (agent 1.2.0, prompt 1.2.0) ---
+
+FormatExerciceIA = Literal["qcm", "vrai_faux", "texte_a_trous", "dictee", "parler"]
+StatutAnalyseIA = Literal["succes", "a_verifier"]
+
+
+class PreuvePositionnementIA(PreuveDiagnosticIA):
+    """Fait factuel par exercice. Les faits viennent du scoring backend, jamais de l'agent."""
+
+    format: FormatExerciceIA
+    difficulte: int = Field(ge=1)
+    justesse: bool
+    score_competence: float = Field(ge=0, le=100)
+    temps_reponse_secondes: float = Field(ge=0)
+    transcription: str | None = None
+    confiance_stt: float | None = Field(default=None, ge=0, le=1)
+
+
+class EntreePositionnementIA(EntreeDiagnosticIA):
+    reponses: list[PreuvePositionnementIA] = Field(min_length=1, max_length=100)
+
+
+class RequetePositionnementIA(RequeteDiagnosticIA):
+    entree: EntreePositionnementIA
+
+
+class ResultatPositionnementIA(ResultatDiagnosticIA):
+    """Interprétation de l'agent : aucun score, aucune pondération."""
+
+    justification: str = Field(min_length=1, max_length=500)
+    statut: StatutAnalyseIA
+
+
+class ReponsePositionnementIA(ReponseDiagnosticIA):
+    resultat: ResultatPositionnementIA
 
 
 # --- US157 : correction d'une réponse libre, contrat v2 (``POST /correction/reponse-libre``) ---

@@ -32,3 +32,8 @@ la CI fait un appel réel du backend vers le service IA démarré (`backend/scri
   contrat IA ne suit pas le renommage de la clé primaire en base. `version_agent` (`1.0.0`) et `version_prompt`
   (`diagnostic/evaluation@1.1.0`) sont gelés par les exemples : un changement incompatible de schéma doit passer par
   une nouvelle version, publiée atomiquement avec les schémas des deux services.
+- `diagnostic-evaluer-v2/` — même route, contrat du test de positionnement 4 compétences. `version_agent` (`1.2.0`)
+  et `version_prompt` (`diagnostic/evaluation@1.2.0`) sont gelés par les exemples. L'entrée ajoute les faits calculés
+  par le backend (`format`, `difficulte`, `justesse`, `score_competence`, `temps_reponse_secondes`, `transcription`,
+  `confiance_stt`) et la sortie ajoute `justification` et `statut` : l'agent interprète, il ne calcule aucun score.
+  Les exemples v1 restent inchangés ; le Harness sélectionne la version explicitement demandée par le backend.

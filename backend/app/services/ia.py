@@ -19,6 +19,7 @@ from app.schemas.ia import (
     ReponseCorrectionIA,
     ReponseDiagnosticIA,
     ReponseExerciceIA,
+    ReponsePositionnementIA,
     ReponseRecommandationIA,
     ReponseTraductionChatbotIA,
     RequeteChatbotIA,
@@ -27,6 +28,7 @@ from app.schemas.ia import (
     RequeteCorrectionIA,
     RequeteDiagnosticIA,
     RequeteExerciceIA,
+    RequetePositionnementIA,
     RequeteRecommandationIA,
     RequeteTraductionChatbotIA,
 )
@@ -100,6 +102,15 @@ def evaluer_diagnostic(
     ``transport`` sert uniquement aux tests (``httpx.MockTransport``) ; il reste ``None`` en production.
     """
     return _poster(CHEMIN_EVALUATION, requete, ReponseDiagnosticIA, transport)
+
+
+def evaluer_positionnement(
+    requete: RequetePositionnementIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponsePositionnementIA:
+    """Appeler l'agent Diagnostic v2 pour le test de positionnement 4 compétences."""
+    return _poster(CHEMIN_EVALUATION, requete, ReponsePositionnementIA, transport)
 
 
 def corriger_reponse_libre(

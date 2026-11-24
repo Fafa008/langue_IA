@@ -1,8 +1,8 @@
 # Plan — Test de positionnement MVP (4 compétences, front prioritaire)
 
-**Statut : PHASE 1 LIVRÉE sur les mocks (PR #115) — PHASE 2 backend en cours.**
+**Statut : PHASES 1 à 3 livrées (PR #115, #117 et PR contrat IA en attente de fusion).**
 **Date : 23/11/2026.**
-**Branche de travail : `feature/test-positionnement-4-competences`.*
+**Branche de travail phase 3 : `feature/test-positionnement-contrat-ia`.**
 
 ## Objectif
 
@@ -57,7 +57,7 @@ Règle conservée : **le backend calcule la note, l'agent interprète et ne calc
 
 ---
 
-## Phase 2 — BACKEND
+## Phase 2 — BACKEND (PR #117 fusionnée)
 
 **Livrable :** sélection, barème et persistance réels, sans toucher au contrat IA.
 
@@ -87,14 +87,22 @@ Règle conservée : **le backend calcule la note, l'agent interprète et ne calc
 
 ---
 
-## Phase 3 — IA
+## Phase 3 — IA (en attente de fusion)
 
 **Livrable :** interprétation versionnée, sans calcul de score.
 
-- Nouvelle version du contrat `contrats/ia/diagnostic-evaluer/` + `backend/app/schemas/ia.py` + prompts + `VERSION_AGENT` : entrée avec `competence`, `type`, `difficulte`, `justesse`, `score_competence`, `transcription`, `confiance_stt`, `temps_reponse_s` ; sortie `niveau_estime`, `points_faibles[]`, `justification`, `statut`.
+- Nouveau dossier `contrats/ia/diagnostic-evaluer-v2/` à côté de `diagnostic-evaluer/` (v1 inchangé).
+  `version_agent` `1.2.0` et `version_prompt` `diagnostic/evaluation@1.2.0` sont gelés par les exemples partagés.
+- Entrée enrichie avec les faits calculés par le backend (`competence`, `type_reponse`, `format`, `difficulte`,
+  `justesse`, `score_competence`, `temps_reponse_secondes`, `transcription`, `confiance_stt`) ; sortie avec
+  `justification` et `statut`. Le champ `temps_reponse_secondes` suit le nom déjà exposé en phase 2.
 - `extra="forbid"` conservé ; anciens exemples non réécrits (changement incompatible = nouvelle version).
-- Repli si sortie invalide : résultat partiel sans détail technique pour l'apprenant.
-- Tests : sortie conforme au schéma, statut `a_verifier` sous le seuil, aucun score produit par l'agent, mode démonstration sans clé.
+- Le Harness enregistre deux versions de l'agent `diagnostic` ; la v1 reste le défaut, la v2 est appelée quand le
+  backend transmet `donnees_analyse`. Le script CI `verifier_contrat_ia.py` teste les deux versions.
+- Le statut est déterministe côté IA : `a_verifier` si une confiance STT est sous 0,7. Le backend transforme ce
+  statut en résultat partiel (points faibles écartés) sans exposer le seuil ni la justification brute à l'apprenant.
+- Tests des deux services : exemples partagés acceptés/refusés, versions gelées, absence de score produit,
+  statut `a_verifier`, mode démonstration sans clé et requête canonique du job Docker.
 
 ---
 

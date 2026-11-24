@@ -1,0 +1,33 @@
+{
+  "request_id": "9c25e67a-13bd-4f80-a6c1-7b2d3e4f5a6b",
+  "agent": "diagnostic",
+  "version_agent": "1.2.0",
+  "version_prompt": "diagnostic/evaluation@1.2.0",
+  "statut": "succes",
+  "resultat": {
+    "code_langue": "en",
+    "referentiel": "CECRL",
+    "niveau_estime": "B1",
+    "phase_assimil": "activation",
+    "points_faibles": [
+      {
+        "domaine": "expression_orale",
+        "id_question": "ex-18",
+        "observation": "La transcription se limite à une présentation en formules apprises.",
+        "justification": "Cette observation ne permet pas de conclure à une réutilisation autonome ; à confirmer."
+      }
+    ],
+    "score_confiance": 0.6,
+    "niveau_preliminaire": "B1",
+    "ecart_avec_niveau_preliminaire": 0,
+    "justification": "Les faits transmis montrent une production écrite correcte et une production orale encore guidée.",
+    "statut": "succes"
+  },
+  "meta": {
+    "duree_ms": 1200,
+    "fournisseur": "factice",
+    "modele": "modele-test",
+    "version_corpus": "2026.10",
+    "empreinte_prompt": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}
