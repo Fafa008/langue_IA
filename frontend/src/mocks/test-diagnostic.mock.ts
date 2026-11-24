@@ -27,25 +27,6 @@ import {
 export const POINTS_PAR_EXERCICE = 5;
 const NOMBRE_PAR_ETAPE = 5;
 
-/**
- * Démo : reconstruit la bonne réponse à partir de la banque simulée, sans jamais l'exposer au composant
- * avant validation. Le service HTTP refuse cette variante : le backend ne transmet pas les corrections.
- */
-function reponseAutomatique(question: QuestionMock): ReponseTest {
-  if (question.typeReponse === "choix") {
-    if (question.bonneReponse === undefined) {
-      throw new ApiError(422, "Correction simulée indisponible pour cette question.");
-    }
-    return { type: "choix", choix: question.bonneReponse };
-  }
-  if (!question.reponseAttendue) {
-    throw new ApiError(422, "Correction simulée indisponible pour cette question.");
-  }
-  return question.typeReponse === "texte"
-    ? { type: "texte", texte: question.reponseAttendue }
-    : { type: "audio", audio: new Blob([question.reponseAttendue], { type: "audio/webm" }) };
-}
-
 /** Plan visé, réduit si la banque d'une langue n'a pas assez d'exercices. */
 const PLAN_VISE: EtapePlan[] = [
   { etape: "qcm", nombreQuestions: NOMBRE_PAR_ETAPE },
@@ -301,11 +282,10 @@ export const testDiagnosticMockService = {
       throw new ApiError(409, "Cette question a déjà reçu une réponse.");
     }
     const question = session.questionCourante;
-    // Le bouton « Passer » demande au mock de fournir la correction : on la transforme en vraie réponse
-    // avant la validation, pour réutiliser exactement le même calcul de score que pour un apprenant.
-    const reponseEffective: ReponseTest = reponse.type === "automatique"
-      ? reponseAutomatique(question)
-      : reponse;
+    // « Passer » est un abandon explicite, pas une bonne réponse : l'exercice est compté comme sans réponse
+    // (0 point) et la correction de la banque n'est jamais utilisée pour gonfler le diagnostic.
+    const abandonnee = reponse.type === "automatique";
+    const reponseEffective: ReponseTest = abandonnee ? { type: "sans_reponse" } : reponse;
     const choixValide = reponseEffective.type === "choix"
       && Number.isInteger(reponseEffective.choix)
       && reponseEffective.choix >= 0
@@ -369,7 +349,7 @@ export const testDiagnosticMockService = {
       resultat: suivante ? null : calculerResultat(session),
     };
     const retour: RetourReponse = sansReponse
-      ? { ...suite, typeReponse: "en_attente" }
+      ? { ...suite, typeReponse: "en_attente", abandonnee }
       : question.typeReponse === "choix"
         ? { ...suite, typeReponse: "choix", correcte, bonneReponse: question.bonneReponse ?? 0 }
         : {

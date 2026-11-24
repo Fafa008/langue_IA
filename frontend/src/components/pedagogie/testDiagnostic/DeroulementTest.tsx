@@ -161,7 +161,7 @@ export default function DeroulementTest() {
               onClick={test.passer}
               data-testid="passer-question"
             >
-              Passer (réponse automatique)
+              Passer (exercice abandonné : 0 point)
             </button>
           )}
 
@@ -202,8 +202,12 @@ export default function DeroulementTest() {
                 </p>
               ) : etat.retour.typeReponse === "en_attente" ? (
                 <div>
-                  <p className="font-semibold">Réponse enregistrée</p>
-                  <p className="mt-1 text-content-secondary">Cette réponse est enregistrée. Le score sera calculé à la fin du test.</p>
+                  <p className="font-semibold">{etat.retour.abandonnee ? "Exercice abandonné" : "Réponse enregistrée"}</p>
+                  <p className="mt-1 text-content-secondary">
+                    {etat.retour.abandonnee
+                      ? "Aucune réponse n'a été donnée : cet exercice compte 0 point dans le diagnostic."
+                      : "Cette réponse est enregistrée. Le score sera calculé à la fin du test."}
+                  </p>
                 </div>
               ) : (
                 <div>

@@ -12,7 +12,8 @@ Il n'y a que ces deux presets. En `demo`, `src/lib/env.ts` expose `API_MOCK=true
 `PARCOURS_MOCK=true` (parcours affiché simulé), mais `parcoursPersonnaliseService` délègue le chat et les
 recommandations au service HTTP : le navigateur ne parle toujours qu'au backend, jamais au service IA.
 `app/providers.tsx` obtient automatiquement un JWT pour le compte apprenant du seed. Le test simulé affiche son
-résultat en fin de parcours (les exercices « Passer » sont comptés comme réussis) ; le store de session garde sa
+résultat en fin de parcours (les exercices « Passer » sont des abandons comptés 0 point, sans bonne réponse
+inventée) ; le store de session garde sa
 langue, qui pilote alors le contenu du parcours simulé (`frontend/src/mocks/parcours-langues.ts`) : test anglais →
 mock anglais (`fr`, `en`, `it`, `de`, `zh` / HSK). Sans test terminé, la langue vient du `code_langue` du parcours
 backend ; sans backend ni test, le mock reste en français.

@@ -73,8 +73,9 @@ NEXT_PUBLIC_MODE=demo npm run build
 - Connexion automatique au compte apprenant du seed (`SEED_DEMO=true`) pour obtenir un JWT : le navigateur ne parle
   qu'au backend, jamais au service IA.
 - Le chat et les recommandations passent par le backend puis le service IA réel (Groq ou `factice` selon la config).
-- Le test simulé donne bien son résultat (les exercices « Passer » comptent comme réussis) et sa langue pilote le
-  parcours simulé : un test d'anglais terminé affiche le parcours en anglais (`fr`, `en`, `it`, `de`, `zh` / HSK).
+- Le test simulé donne bien son résultat, mais les exercices « Passer » sont des abandons comptés **0 point**
+  (aucune bonne réponse n'est inventée) ; sa langue pilote le parcours simulé : un test d'anglais terminé affiche
+  le parcours en anglais (`fr`, `en`, `it`, `de`, `zh` / HSK).
   Sans test terminé, la langue vient du parcours backend de l'apprenant.
 - Le backend doit être démarré pour le chat et les recommandations ; sans lui, le résultat du test et le parcours
   simulé restent utilisables (en français si aucun test n'a été terminé).
