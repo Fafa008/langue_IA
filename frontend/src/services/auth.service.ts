@@ -1,5 +1,5 @@
 import { ApiError, HTTP_STATUS, apiRequest } from "@/lib/api-client";
-import { API_MOCK } from "@/lib/env";
+import { AUTH_MOCK } from "@/lib/env";
 import { authMock } from "@/mocks/auth.mock";
 import type {
   AuthSession,
@@ -68,5 +68,5 @@ export const httpAuthService = {
   },
 };
 
-/** Données simulées tant que NEXT_PUBLIC_API_MOCK=true (voir .env.development). */
-export const authService: typeof httpAuthService = API_MOCK ? authMock : httpAuthService;
+/** Données simulées tant que NEXT_PUBLIC_API_MOCK=true et que la démo ne force pas une vraie connexion. */
+export const authService: typeof httpAuthService = AUTH_MOCK ? authMock : httpAuthService;

@@ -148,7 +148,7 @@ function RecommandationsParcours({ parcours }: { parcours: ParcoursPersonnalise 
             <Sparkles size={20} aria-hidden /> Mes recommandations
           </h2>
           <p className="mt-1 text-small text-content-secondary">
-            Des actions ciblées, calculées à partir de vos résultats pour progresser vers le niveau {parcours.niveauVise}.
+            Des actions ciblées proposées par le tuteur IA à partir de vos résultats pour progresser vers le niveau {parcours.niveauVise}.
           </p>
         </div>
         <button
@@ -175,8 +175,8 @@ function RecommandationsParcours({ parcours }: { parcours: ParcoursPersonnalise 
           <p className="text-content">{donnees.resume}</p>
           {donnees.statut === "PARTIEL" && (
             <p role="status" className="msg-warning">
-              Analyse partielle : le service de recommandation n&apos;a pas répondu. Les actions ci-dessous restent
-              indicatives.
+              Analyse partielle : aucune proposition exploitable n&apos;a pu être obtenue (données insuffisantes ou
+              service indisponible). Les actions ci-dessous restent indicatives.
             </p>
           )}
           {donnees.recommandations.length === 0 ? (

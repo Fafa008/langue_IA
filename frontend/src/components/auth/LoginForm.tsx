@@ -9,7 +9,7 @@ import PasswordInput from "@/components/ui/PasswordInput";
 import { useLogin } from "@/hooks/useAuth";
 import { useForm } from "@/hooks/useForm";
 import { ApiError, HTTP_STATUS, getErrorMessage } from "@/lib/api-client";
-import { API_MOCK } from "@/lib/env";
+import { AUTH_MOCK } from "@/lib/env";
 import { ROUTES } from "@/lib/routes";
 import { formatEmail, normaliserEmail } from "@/lib/saisie";
 import { validateLogin } from "@/lib/validation/auth";
@@ -126,7 +126,7 @@ export default function LoginForm({ passwordReset = false, sessionExpiree = fals
         </Link>
       </p>
 
-      {API_MOCK && <ComptesDemo onChoisir={choisirCompteDemo} />}
+      {AUTH_MOCK && <ComptesDemo onChoisir={choisirCompteDemo} />}
     </form>
   );
 }

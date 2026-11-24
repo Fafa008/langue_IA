@@ -69,7 +69,9 @@ export type ReponseTest =
   | { type: "texte"; texte: string }
   | { type: "audio"; audio: Blob }
   /** Temps imparti écoulé : l'exercice est compté comme faux et le test passe au suivant. */
-  | { type: "sans_reponse" };
+  | { type: "sans_reponse" }
+  /** Démo uniquement : le mock répond avec la correction de la banque, sans l'exposer avant validation. */
+  | { type: "automatique" };
 
 export interface SessionTest {
   id: string;

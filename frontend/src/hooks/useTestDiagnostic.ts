@@ -188,6 +188,41 @@ export function useTestDiagnostic() {
     });
   };
 
+  /**
+   * Démo uniquement : le mock fournit la bonne réponse et on enchaîne immédiatement, sans afficher le feedback.
+   * Le backend ne connaît pas les corrections : cette action n'est donc exposée qu'en mode API simulée.
+   */
+  const passer = () => {
+    const { sessionId, courante, questionsRestantes } = etat;
+    if (!sessionId || !courante || etat.phase !== "question" || reponse.isPending) return;
+    reponse.reset();
+    reponse.mutate(
+      {
+        idSession: sessionId,
+        idQuestion: courante.id,
+        reponse: { type: "automatique" },
+        progression: {
+          questionSuivante: questionsRestantes[0] ?? null,
+          numeroQuestion: etat.numeroQuestion,
+          totalQuestions: etat.totalQuestions,
+        },
+      },
+      {
+        onSuccess: (retour) => {
+          dispatch({ type: "repondre", choix: null, retour });
+          if (retour.resultat) {
+            dispatch({ type: "suivante" });
+            afficherResultat();
+          } else if (retour.questionSuivante) {
+            dispatch({ type: "suivante" });
+          } else {
+            terminer();
+          }
+        },
+      },
+    );
+  };
+
   const suivante = () => {
     if (etat.phase !== "retour" || !etat.retour) return;
     if (etat.retour.questionSuivante) {
@@ -261,6 +296,7 @@ export function useTestDiagnostic() {
     repondreAudio,
     reessayerReponse,
     expirerQuestion,
+    passer,
     suivante,
     /** Termine le test maintenant (temps écoulé, ou nouvel essai après une erreur de calcul). */
     terminer,

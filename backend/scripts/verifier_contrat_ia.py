@@ -21,11 +21,14 @@ from app.schemas.ia import (
     EntreeCorrectionIA,
     EntreeDiagnosticIA,
     EntreePositionnementIA,
+    EntreeRecommandationIA,
+    PointFaibleIA,
     PreuveDiagnosticIA,
     PreuvePositionnementIA,
     RequeteCorrectionIA,
     RequeteDiagnosticIA,
     RequetePositionnementIA,
+    RequeteRecommandationIA,
 )
 from app.services.analyse_diagnostic import verifier_reponse_diagnostic, verifier_reponse_diagnostic_v2
 from app.services.correction_exercice import verifier_feedback
@@ -35,8 +38,10 @@ from app.services.ia import (
     corriger_reponse_libre,
     evaluer_diagnostic,
     evaluer_positionnement,
+    recommander_actions,
 )
 from app.services.phase_parcours import phase_parcours
+from app.services.recommandation import verifier_recommandation
 
 # Réponse fictive avec des erreurs visibles même sans LLM (majuscule initiale, point final absents).
 REPONSE = "yesterday I go to the market with my sister and we buy apples"
@@ -209,6 +214,40 @@ def verifier_positionnement() -> str | None:
     return None
 
 
+def verifier_recommandation_reference() -> str | None:
+    """Une requête canonique vers `/recommandation/actions`, avec les mêmes contrôles que la route du parcours."""
+    demande = RequeteRecommandationIA(
+        request_id=uuid4(),
+        contexte=ContexteApprenantIA(
+            code_langue="en", referentiel="CECRL", niveau_preliminaire="B1", niveau_confirme=True
+        ),
+        entree=EntreeRecommandationIA(
+            points_faibles=[
+                PointFaibleIA(
+                    domaine="grammaire",
+                    id_question="q-verification-contrat",
+                    observation="Accord du participe passé hésitant",
+                    justification="Erreur observée sur la requête canonique de vérification.",
+                )
+            ],
+            niveau_vise="B2",
+        ),
+    )
+    try:
+        enveloppe = recommander_actions(demande)
+    except ErreurServiceIA as erreur:
+        return f"appel refusé ou réponse hors contrat ({erreur.code})"
+    if enveloppe.request_id != demande.request_id:
+        return "request_id différent de celui envoyé"
+    if not verifier_recommandation(enveloppe.resultat, demande):
+        return "proposition incohérente avec la langue, le niveau ou le domaine demandé"
+    print(
+        f"OK  recommandation : {len(enveloppe.resultat.recommandations)} action(s), "
+        f"version {enveloppe.version_agent} ({enveloppe.version_prompt})"
+    )
+    return None
+
+
 def main() -> int:
     if not get_settings().ia_service_url.strip():
         print("ÉCHEC IA_SERVICE_URL n'est pas configurée dans le conteneur backend.")
@@ -220,10 +259,12 @@ def main() -> int:
         echecs.append(f"diagnostic : {raison}")
     if raison := verifier_positionnement():
         echecs.append(f"positionnement : {raison}")
+    if raison := verifier_recommandation_reference():
+        echecs.append(f"recommandation : {raison}")
     for echec in echecs:
         print(f"ÉCHEC {echec}")
     print(
-        "Contrat backend ↔ service IA (correction, diagnostic, positionnement) : "
+        "Contrat backend ↔ service IA (correction, diagnostic, positionnement, recommandation) : "
         + ("non conforme" if echecs else "conforme")
     )
     return 1 if echecs else 0

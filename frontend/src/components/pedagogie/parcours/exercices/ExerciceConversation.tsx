@@ -10,6 +10,7 @@ import {
 } from "@/hooks/useParcoursPersonnalise";
 import { useReconnaissanceVocale } from "@/hooks/useReconnaissanceVocale";
 import { PARCOURS_MOCK } from "@/lib/env";
+import { libellesChat } from "@/lib/libellesChat";
 import { messageErreurParcours } from "@/lib/parcours-personnalise";
 import { creerIdentifiantMessage } from "@/lib/session-chatbot";
 import { lireAVoixHaute, syntheseDisponible } from "@/lib/voix";
@@ -65,6 +66,7 @@ export default function ExerciceConversation({
   const traduction = useTraduireChatbot();
   const exercice = useExerciceChatbot();
   const voix = useReconnaissanceVocale(langue);
+  const libelles = libellesChat(langue);
   const finRef = useRef<HTMLDivElement>(null);
   const echanges = messages.filter((m) => m.role === "apprenant").length;
   const derniereTraduction = [...messages]
@@ -136,89 +138,109 @@ export default function ExerciceConversation({
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
       {derniereTraduction && (
         <aside
           data-testid="traduction-explication"
           aria-label="Traduction et explication en français"
-          className="self-start rounded-card border border-border bg-surface p-3 text-small shadow-card"
+          className="w-full shrink-0 self-start rounded-card border border-primary/15 bg-gradient-to-b from-primary/5 to-surface p-4 text-small shadow-card lg:w-64 xl:w-72"
         >
-          <p className="font-semibold text-primary">Traduction en français</p>
-          <p data-testid="traduction-chat">{derniereTraduction.traduction}</p>
-          <p className="mt-2 font-semibold text-primary">Explication</p>
-          <p data-testid="explication-chat">{derniereTraduction.explication}</p>
+          <p className="font-semibold text-primary">{libelles.traductionFr}</p>
+          <p data-testid="traduction-chat" className="mt-1 italic text-content">{derniereTraduction.traduction}</p>
+          <p className="mt-3 font-semibold text-primary">{libelles.explication}</p>
+          <p data-testid="explication-chat" className="mt-1 text-content-secondary">{derniereTraduction.explication}</p>
         </aside>
       )}
-      <div className="min-w-0">
-        <p className="text-small text-content-secondary">
-          Sujet : <strong className="text-content">{contenu.sujet}</strong> · {Math.min(echanges, contenu.echangesMinimum)}/
-          {contenu.echangesMinimum} échanges
-          {PARCOURS_MOCK && " · tuteur IA simulé (démonstration)"}
-        </p>
-        {quotaRestant !== null && (
-          <p role="status" data-testid="quota-chat" className="mt-1 text-small text-content-secondary">
-            Messages restants dans cette session : {quotaRestant}
-            {quotaRestant === 0 ? " — terminez et recommencez une conversation." : ""}
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-background px-3 py-2 text-small text-content-secondary">
+          <p>
+            {libelles.sujet} <strong className="text-content">{contenu.sujet}</strong> ·{" "}
+            {Math.min(echanges, contenu.echangesMinimum)}/{contenu.echangesMinimum} {libelles.echanges}
+            {PARCOURS_MOCK && ` · ${libelles.simule}`}
           </p>
-        )}
+          {quotaRestant !== null && (
+            <p role="status" data-testid="quota-chat" className="text-small text-content-secondary">
+              {libelles.quota} {quotaRestant}
+              {quotaRestant === 0 ? ` ${libelles.quotaEpuise}` : ""}
+            </p>
+          )}
+        </div>
 
-        <div role="log" aria-live="polite" aria-label="Conversation avec le tuteur IA" className="mt-3 max-h-80 space-y-3 overflow-y-auto rounded-card bg-background p-3">
+        <p className="mt-3 text-small font-medium text-content-secondary">{contenu.consigne}</p>
+
+        <div
+          role="log"
+          aria-live="polite"
+          aria-label={libelles.journal}
+          className="mt-3 max-h-[26rem] min-h-[18rem] space-y-4 overflow-y-auto rounded-card border border-border/60 bg-background p-4 shadow-inner"
+        >
           {messages.map((message, index) => (
-            <Bulle key={index} message={message} langue={langue} />
+            <Bulle key={index} message={message} langue={langue} libelles={libelles} />
           ))}
-          {chatbot.isPending && <p className="text-small text-content-secondary">Le tuteur IA écrit…</p>}
+          {chatbot.isPending && (
+            <p className="flex items-center gap-2 text-small text-content-secondary">
+              <span aria-hidden className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
+              {libelles.tuteurEcrit}
+            </p>
+          )}
           <div ref={finRef} />
         </div>
         {chatbot.isError && (
           <p role="alert" className="msg-error mt-2">
-            {messageErreurParcours(chatbot.error, "La réponse du tuteur IA")}
+            {messageErreurParcours(chatbot.error, libelles.erreurTuteur)}
           </p>
         )}
 
         <form
-          className="mt-3 flex flex-wrap items-end gap-2"
+          className="mt-4 flex flex-wrap items-center gap-2 rounded-card border border-border bg-surface p-2 shadow-card focus-within:ring-2 focus-within:ring-primary/30"
           onSubmit={(e) => {
             e.preventDefault();
             envoyer();
           }}
         >
           <label className="min-w-0 flex-1 basis-56">
-            <span className="sr-only">Votre message</span>
+            <span className="sr-only">{libelles.votreMessage}</span>
             <input
               type="text"
               disabled={quotaRestant === 0}
               value={brouillon}
               onChange={(e) => setBrouillon(e.target.value)}
-              placeholder={voix.ecoute ? "Je vous écoute…" : "Écrivez ou dictez votre réponse…"}
+              placeholder={voix.ecoute ? libelles.placeholderEcoute : libelles.placeholder}
               maxLength={2000}
               lang={langue}
-              className="input"
+              className="input border-0 bg-transparent shadow-none focus:ring-0"
             />
           </label>
-          {voix.disponible && <BoutonMicro ecoute={voix.ecoute} onDemarrer={voix.demarrer} onArreter={voix.arreter} libelle="Dicter" />}
-          <button type="submit" disabled={!brouillon.trim() || chatbot.isPending || quotaRestant === 0} className="btn-secondary min-h-11 px-4 py-2 disabled:opacity-50">
-            <Send size={16} aria-hidden /> Envoyer
+          {voix.disponible && (
+            <BoutonMicro ecoute={voix.ecoute} onDemarrer={voix.demarrer} onArreter={voix.arreter} libelle={libelles.dicter} />
+          )}
+          <button
+            type="submit"
+            disabled={!brouillon.trim() || chatbot.isPending || quotaRestant === 0}
+            className="btn-primary inline-flex min-h-11 items-center gap-2 px-4 py-2 disabled:opacity-50"
+          >
+            <Send size={16} aria-hidden /> {libelles.envoyer}
           </button>
         </form>
         {!voix.disponible && (
           <p role="note" className="mt-2 text-small text-content-secondary">
-            Dictée indisponible dans ce navigateur : le mode écrit de secours reste actif.
+            {libelles.dictéeIndisponible}
           </p>
         )}
         {voix.erreur && (
           <p role="alert" className="mt-2 text-small text-content-secondary">
-            {voix.erreur} Le mode écrit reste disponible.
+            {voix.erreur}
           </p>
         )}
 
         {(correction.isPending || traduction.isPending) && (
           <p role="status" className="mt-2 text-small text-content-secondary">
-            Correction et traduction en cours…
+            {libelles.correctionTraductionEnCours}
           </p>
         )}
         {(correction.isError || traduction.isError) && (
           <p role="status" className="mt-2 text-small text-content-secondary">
-            La correction et la traduction n&apos;ont pas pu être chargées ; la réponse du tuteur reste disponible.
+            {libelles.secondairesIndisponibles}
           </p>
         )}
 
@@ -228,22 +250,22 @@ export default function ExerciceConversation({
             data-testid="exercice-cible"
             onClick={genererExerciceCible}
             disabled={exercice.isPending}
-            className="btn-secondary mt-3 min-h-11 px-4 py-2 disabled:opacity-50"
+            className="btn-secondary mt-3 inline-flex min-h-11 items-center gap-2 px-4 py-2 disabled:opacity-50"
           >
-            <Sparkles size={16} aria-hidden /> {exercice.isPending ? "Exercice en cours…" : "Générer un exercice ciblé"}
+            <Sparkles size={16} aria-hidden /> {exercice.isPending ? libelles.exerciceEnCours : libelles.genererExercice}
           </button>
         ) : null}
         {exerciceCible && (
-          <section data-testid="exercice-cible-result" className="mt-2 rounded-card border border-border bg-surface p-3">
-            <p className="font-semibold text-primary">Exercice ciblé — {exerciceCible.niveau}</p>
-            <p lang={langue}>{exerciceCible.enonce}</p>
-            <p className="text-small text-content-secondary">{exerciceCible.consigne}</p>
-            <p className="text-small text-content-secondary">Descripteur : {exerciceCible.descripteurId}</p>
+          <section data-testid="exercice-cible-result" className="mt-2 rounded-card border border-primary/20 bg-primary/5 p-4">
+            <p className="font-semibold text-primary">{libelles.exerciceCible} — {exerciceCible.niveau}</p>
+            <p lang={langue} className="mt-1">{exerciceCible.enonce}</p>
+            <p className="mt-1 text-small text-content-secondary">{exerciceCible.consigne}</p>
+            <p className="text-small text-content-secondary">{libelles.descripteur} {exerciceCible.descripteurId}</p>
           </section>
         )}
         {exercice.isError && (
           <p role="status" className="mt-2 text-small text-content-secondary">
-            L&apos;exercice ciblé est momentanément indisponible.
+            {libelles.exerciceIndisponible}
           </p>
         )}
 
@@ -252,9 +274,9 @@ export default function ExerciceConversation({
             type="button"
             onClick={() => onSoumettre({ format: "conversation", messages: messages.map(({ role, contenu }) => ({ role, contenu })) })}
             disabled={echanges === 0 || enCours || chatbot.isPending}
-            className="btn-primary mt-4 px-5 py-2.5 disabled:opacity-50"
+            className="btn-primary mt-4 w-full px-5 py-3 disabled:opacity-50 sm:w-auto"
           >
-            {enCours ? "Évaluation en cours…" : libelleTerminer ?? "Terminer et évaluer la conversation"}
+            {enCours ? libelles.evaluationEnCours : libelleTerminer ?? libelles.terminerDefaut}
           </button>
         )}
       </div>
@@ -262,19 +284,19 @@ export default function ExerciceConversation({
   );
 }
 
-function Bulle({ message, langue }: { message: MessageEnChat; langue: string }) {
+function Bulle({ message, langue, libelles }: { message: MessageEnChat; langue: string; libelles: ReturnType<typeof libellesChat> }) {
   const assistant = message.role === "assistant";
   return (
-    <div className={`flex items-start gap-2 ${assistant ? "" : "flex-row-reverse"}`}>
-      <span aria-hidden className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${assistant ? "bg-primary text-white" : "bg-surface text-primary ring-1 ring-border"}`}>
-        {assistant ? <Bot size={16} /> : <UserRound size={16} />}
+    <div className={`flex items-start gap-3 ${assistant ? "" : "flex-row-reverse"}`}>
+      <span aria-hidden className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-sm ${assistant ? "bg-primary text-white" : "bg-surface text-primary ring-1 ring-border"}`}>
+        {assistant ? <Bot size={17} /> : <UserRound size={17} />}
       </span>
-      <div className={`max-w-[80%] rounded-card px-3 py-2 ${assistant ? "bg-surface shadow-card" : "bg-primary text-white"}`}>
-        <span className="sr-only">{assistant ? "Tuteur IA : " : "Vous : "}</span>
-        <span lang={langue}>{message.contenu}</span>
+      <div className={`max-w-[82%] rounded-2xl px-4 py-3 shadow-card ${assistant ? "rounded-tl-sm bg-surface" : "rounded-tr-sm bg-primary text-white"}`}>
+        <span className="sr-only">{assistant ? `${libelles.titre} : ` : `${libelles.votreMessage} : `}</span>
+        <span lang={langue} className="block leading-relaxed">{message.contenu}</span>
         {message.corrections && message.corrections.length > 0 && (
-          <div data-testid="corrections-marge" className="mt-2 space-y-1 border-l-2 border-warning pl-2 text-small text-content">
-            <p className="font-semibold text-warning-dark">Corrections en marge</p>
+          <div data-testid="corrections-marge" className="mt-3 space-y-1 rounded-lg bg-warning/5 p-2 text-small text-content">
+            <p className="font-semibold text-warning-dark">{libelles.correctionsMarge}</p>
             <ul aria-label="Corrections du message">
               {message.corrections.map((c) => (
                 <li key={c.extrait}>
@@ -289,7 +311,7 @@ function Bulle({ message, langue }: { message: MessageEnChat; langue: string }) 
           <button
             type="button"
             onClick={() => lireAVoixHaute(message.contenu, langue)}
-            aria-label="Écouter ce message"
+            aria-label={libelles.ecouter}
             className="ml-2 inline-flex h-7 w-7 items-center justify-center rounded-full align-middle text-primary hover:bg-background"
           >
             <Volume2 size={14} aria-hidden />

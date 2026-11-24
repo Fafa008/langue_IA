@@ -114,6 +114,19 @@ async function intercepterChatbot(page: Page, requetes: RequetesChat, secondaire
 }
 
 test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
+  test("le fil de discussion occupe toute la largeur disponible du conteneur", async ({ page }) => {
+    await loginAs(page, APPRENANT);
+    await intercepterParcours(page);
+    await page.goto("/espace/apprenant/chat");
+
+    const main = await page.locator("main").boundingBox();
+    const fil = await page.getByRole("log").boundingBox();
+    expect(main).not.toBeNull();
+    expect(fil).not.toBeNull();
+    // Sans panneau de traduction, le fil ne doit pas se retrouver coincé dans une colonne latérale étroite.
+    expect(fil!.width).toBeGreaterThan(main!.width * 0.85);
+  });
+
   test("affiche la correction et la traduction des routes dédiées, pas les champs groupés", async ({ page }) => {
     const requetes = nouvelleCapture();
     await loginAs(page, APPRENANT);
@@ -124,9 +137,9 @@ test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
     await expect(page.getByTestId("contexte-chat")).toContainText("Anglais");
     await expect(page.getByRole("log")).toContainText("Hello! What is your name?");
     await expect(page.getByRole("log")).not.toContainText("Comment vous appelez-vous ?");
-    await expect(page.getByTestId("avertissement-chat-rg11")).toContainText("aucune donnée personnelle");
-    await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("hier j'ai allé au cinéma");
-    await page.getByRole("button", { name: "Envoyer" }).click();
+    await expect(page.getByTestId("avertissement-chat-rg11")).toContainText("personal details");
+    await page.getByPlaceholder("Write or dictate your reply…").fill("hier j'ai allé au cinéma");
+    await page.getByRole("button", { name: "Send" }).click();
 
     await expect(page.getByTestId("corrections-marge")).toContainText("j'ai allé");
     await expect(page.getByTestId("corrections-marge")).toContainText("je suis allé");
@@ -138,8 +151,8 @@ test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
     await expect(marge.getByTestId("explication-chat")).toContainText(TRADUCTION_DETAIL);
     // Les champs groupés du relais historique ne doivent plus piloter l'affichage.
     await expect(page.locator("main")).not.toContainText("ANCIEN");
-    await expect(page.getByTestId("quota-chat")).toContainText("Messages restants dans cette session : 19");
-    await expect(page.getByPlaceholder("Écrivez ou dictez votre réponse…")).toBeEnabled();
+    await expect(page.getByTestId("quota-chat")).toContainText("Messages left in this session: 19");
+    await expect(page.getByPlaceholder("Write or dictate your reply…")).toBeEnabled();
 
     expect(requetes.message).toHaveLength(1);
     expect(requetes.message[0].message).toBe("hier j'ai allé au cinéma");
@@ -161,8 +174,8 @@ test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
     await intercepterChatbot(page, requetes);
     await page.goto("/espace/apprenant/chat");
 
-    await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("hier j'ai allé au cinéma");
-    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.getByPlaceholder("Write or dictate your reply…").fill("hier j'ai allé au cinéma");
+    await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByTestId("corrections-marge")).toContainText("je suis allé");
     await page.getByTestId("exercice-cible").click();
 
@@ -185,13 +198,13 @@ test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
     await intercepterChatbot(page, requetes, true);
     await page.goto("/espace/apprenant/chat");
 
-    await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("bonjour");
-    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.getByPlaceholder("Write or dictate your reply…").fill("bonjour");
+    await page.getByRole("button", { name: "Send" }).click();
 
     await expect(page.getByRole("log")).toContainText(REPONSE_TUTEUR);
     await expect(page.getByTestId("traduction-explication")).toHaveCount(0);
     await expect(page.getByTestId("corrections-marge")).toHaveCount(0);
-    await expect(page.getByRole("status").filter({ hasText: "n'ont pas pu être chargées" })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "could not be loaded" })).toBeVisible();
     expect(requetes.traduction).toHaveLength(1);
   });
 
@@ -202,11 +215,11 @@ test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
     await intercepterChatbot(page, requetes);
     await page.goto("/espace/apprenant/chat");
 
-    await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("bonjour");
-    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.getByPlaceholder("Write or dictate your reply…").fill("bonjour");
+    await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByTestId("corrections-marge")).toBeVisible();
 
-    await page.getByRole("button", { name: "Terminer et voir le rapport" }).click();
+    await page.getByRole("button", { name: "Finish and view the report" }).click();
     const rapport = page.getByTestId("rapport-chat");
     await expect(rapport).toContainText("Synthèse indicative");
     await expect(rapport).toContainText("Vos messages");
@@ -214,8 +227,8 @@ test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
     expect(requetes.sessionsFermees).toEqual([requetes.message[0].identifiant_session]);
 
     await rapport.getByRole("button", { name: /Recommencer une conversation/ }).click();
-    await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("encore bonjour");
-    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.getByPlaceholder("Write or dictate your reply…").fill("encore bonjour");
+    await page.getByRole("button", { name: "Send" }).click();
     await expect(requetes.message).toHaveLength(2);
     expect(requetes.message[1].identifiant_session).not.toBe(requetes.message[0].identifiant_session);
   });

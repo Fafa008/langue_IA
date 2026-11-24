@@ -221,8 +221,8 @@ test.describe("Démonstration générale — scénarios 1 à 15", () => {
     const chat = await installerChat(page, 200, "en");
     await aller(page, "/espace/apprenant/chat");
     await expect(page.getByRole("log")).toContainText("Hello! What is your name?");
-    await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("bonjour");
-    await page.getByRole("button", { name: "Envoyer" }).click();
+    await page.getByPlaceholder("Write or dictate your reply…").fill("bonjour");
+    await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByTestId("quota-chat")).toContainText("19");
     await expect(page.getByTestId("corrections-marge")).toContainText("je suis allé");
     const panneau = page.getByTestId("traduction-explication");
@@ -232,7 +232,7 @@ test.describe("Démonstration générale — scénarios 1 à 15", () => {
     expect(chat.traductions).toHaveLength(1);
     expect(chat.traductions[0].id_message).toMatch(/^[0-9a-f-]{36}$/i);
     expect(chat.traductions[0].identifiant_session).toBe(chat.requetes[0].identifiant_session);
-    await page.getByRole("button", { name: "Terminer et voir le rapport" }).click();
+    await page.getByRole("button", { name: "Finish and view the report" }).click();
     await expect(page.getByTestId("rapport-chat")).toContainText("Synthèse indicative");
     expect(chat.sessionsFermees).toEqual([chat.requetes[0].identifiant_session]);
   });
