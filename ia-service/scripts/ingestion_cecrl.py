@@ -37,8 +37,7 @@ from app.rag.corpus import (
     composer_manifeste,
     serialiser_descripteurs,
 )
-
-RACINE_DEPOT = Path(__file__).resolve().parents[2]
+from scripts._depot import RACINE_DEPOT
 
 FEUILLES = {"en": "English", "fr": "Francais"}
 
