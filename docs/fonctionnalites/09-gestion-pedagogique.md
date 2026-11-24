@@ -18,6 +18,9 @@
 >   [`../plan/gestion_pedagogique_validation.md`](../plan/gestion_pedagogique_validation.md) ;
 > - contrat frontend source de vérité : [`../api/contrat-frontend.md`](../api/contrat-frontend.md) et
 >   `frontend/src/services/endpoints.ts`.
+>
+> Premier écran livré, **frontend seul et données simulées** : rubrique « Contenus » du formateur (modules, leçons,
+> activités, parcours), décrite dans [`../gestion-pedagogique.md`](../gestion-pedagogique.md) (USPxx).
 
 ---
 

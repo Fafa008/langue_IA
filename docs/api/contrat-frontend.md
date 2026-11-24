@@ -1191,3 +1191,114 @@ Erreurs : `403`, `404` (aucun parcours), `422` (langue/niveau non pris en charge
 
 Supprime l'historique et le quota de la session. Le journal anonymisé (durée, modèle, version, nombre de corrections)
 reste conservé côté backend, sans texte brut.
+
+## Contenus pédagogiques du formateur (USPxx) — rôle `FORMATEUR` — **proposition, non implémentée**
+
+> Le frontend utilise aujourd'hui des données simulées (`frontend/src/lib/contenus/mock-service.ts`) derrière
+> l'interface `ContenusService` (`frontend/src/lib/contenus/service.ts`). Les routes ci-dessous en sont la traduction
+> directe ; elles ne figurent pas encore dans `frontend/src/services/endpoints.ts`. Les brancher demande une
+> implémentation HTTP de `ContenusService` (avec un `contenus.mapper.ts` pour le `snake_case`), choisie dans
+> `frontend/src/hooks/useContenus.ts`. Règles RG-GP-01 à RG-GP-10 : [`../gestion-pedagogique.md`](../gestion-pedagogique.md).
+>
+> Points à trancher avec le backend : codes de permission du formateur (voir
+> [`../fonctionnalites/09-gestion-pedagogique.md`](../fonctionnalites/09-gestion-pedagogique.md), §2) ; une activité
+> est-elle un `exercice` de la banque unique (D1, `usage = parcours`, D3) ; `framework` CECRL/HSK du niveau (D6).
+
+Le backend **revalide** toutes les règles (le frontend les applique aussi, mais ne fait pas foi). Les
+identifiants sont des chaînes côté frontend : un entier sérialisé convient.
+
+### Champs communs
+
+`statut` : `BROUILLON` | `PUBLIE` | `ARCHIVE` (Brouillon → Publié → Archivé, sans retour en arrière ; `ARCHIVE`
+seulement par la route `/archiver`). Traçabilité (RG-GP-10), posée par le backend à partir du JWT :
+
+```json
+{ "cree_par": "Hery RANDRIA", "cree_le": "2026-11-24T10:00:00Z", "modifie_par": "Hery RANDRIA", "modifie_le": "2026-11-24T10:00:00Z" }
+```
+
+### `GET /contenus/langues`
+
+Toutes les langues, avec leurs niveaux ouverts et leurs compteurs (toutes les entités, archivées comprises).
+
+```json
+[
+  {
+    "code": "zh",
+    "libelle": "Mandarin",
+    "niveaux": [{ "id_niveau": 7, "code": "HSK 1", "referentiel": "HSK" }],
+    "compteurs": { "modules": 1, "lecons": 8, "activites": 48, "parcours": 1 }
+  }
+]
+```
+
+Une langue sans niveau (`niveaux: []`) reste listée : le frontend y interdit toute création.
+
+### Listes : `GET /contenus/{code}/modules`, `/lecons`, `/activites`, `/parcours`
+
+| Paramètre | Rôle |
+| --- | --- |
+| `search` | Titre (consigne pour une activité), insensible à la casse et aux accents |
+| `statut` | Filtre par statut |
+| `id_lecon` | `/activites` seulement : activités d'une leçon |
+
+**200** : tableau complet, non paginé (tri : `ordre` pour modules et leçons ; ordre de la leçon puis type pour les
+activités ; titre pour les parcours). **404** langue inconnue.
+
+### Objets
+
+Chaque objet porte aussi les quatre champs de traçabilité ci-dessus.
+
+```json
+// Module
+{ "id": "12", "code_langue": "en", "titre": "Module 1", "ordre": 1, "statut": "PUBLIE" }
+
+// Leçon (phase Assimil calculée par le frontend : passive de 1 à 49, active à partir de 50)
+{ "id": "40", "code_langue": "en", "id_module": "12", "id_niveau": 1, "titre": "Leçon 1", "ordre": 1,
+  "description": "", "statut": "PUBLIE" }
+
+// Activité ; caracteres, pinyin, tons_attendus : langue zh seulement (chaînes vides sinon)
+{ "id": "301", "code_langue": "zh", "id_lecon": "41", "type": "QCM", "competence": "LECTURE", "difficulte": 2,
+  "consigne": "…", "contenu": "…", "critere_correction": "", "emplacement_media": "", "caracteres": "", "pinyin": "",
+  "tons_attendus": "", "statut": "BROUILLON" }
+
+// Parcours : éléments ordonnés
+{ "id": "7", "code_langue": "en", "titre": "Parcours A1", "id_niveau_cible": 1, "statut": "PUBLIE",
+  "elements": [{ "type": "lecon", "id": "40" }, { "type": "activite", "id": "301" }] }
+```
+
+- `type` d'activité (D5) : `QCM`, `ASSOCIATION`, `TEXTE_A_TROUS`, `VRAI_FAUX_NON_MENTIONNE`, `REMISE_EN_ORDRE`,
+  `PRODUCTION_LIBRE`. `competence` : `LECTURE`, `ECOUTE`, `ECRITURE`, `ORAL`. `difficulte` : 1 à 5.
+- `emplacement_media` : texte décrivant l'emplacement attendu d'un fichier audio ou image (aucun téléversement ; D7).
+
+### `GET /contenus/{modules|lecons|activites|parcours}/{id}`
+
+**200** : l'objet. **404** inconnu.
+
+### `POST /contenus/{code}/{modules|lecons|activites|parcours}`
+
+Corps : l'objet sans `id`, `code_langue` ni traçabilité. **201** : l'objet créé.
+
+### `PATCH /contenus/{modules|lecons|activites|parcours}/{id}`
+
+Champs modifiés seulement ; `elements` d'un parcours remplace toute la liste. **200** : l'objet à jour.
+**409** si l'élément est archivé (il ne se modifie plus).
+
+### `POST /contenus/{modules|lecons|activites|parcours}/{id}/archiver`
+
+**204**. **409** déjà archivé.
+
+### `DELETE /contenus/{modules|lecons|activites|parcours}/{id}`
+
+**204**. **409** si l'élément est utilisé (RG-GP-08) : leçon ou activité présente dans un parcours, module qui
+contient des leçons, leçon qui contient des activités.
+
+### Erreurs de règles (création, modification)
+
+| Code | Cas |
+| --- | --- |
+| **409** | Numéro d'ordre déjà utilisé dans la langue (RG-GP-01) |
+| **422** | Niveau hors de la langue (RG-GP-02) ; leçon publiée sans activité publiée (RG-GP-03) ; production libre sans critère (RG-GP-04) ; parcours vide (RG-GP-05) ; élément archivé ajouté (RG-GP-06) ; parcours publié avec un élément non publié (RG-GP-07) ; transition de statut interdite ; langue sans niveau |
+
+Pour afficher l'erreur sous le bon champ, le frontend attend `detail` en texte et, si possible, `champs` :
+`{ "detail": "Le formulaire contient des erreurs.", "champs": { "ordre": "Le numéro 1 est déjà utilisé…" } }`
+(noms de champs en `snake_case`, convertis par le mapper).
