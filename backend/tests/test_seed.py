@@ -95,6 +95,21 @@ class TestBanqueDeQuestions:
 class TestParcoursDeDemonstration:
     """Ce que fait un membre de l'équipe après `make up` : connexion du compte apprenant puis test complet."""
 
+    def test_l_apprenant_demo_voit_l_anglais_et_le_francais_disponibles(self, client, monkeypatch):
+        """Même contrôle que le job Docker de la CI, après filtrage par langues d'inscription."""
+        monkeypatch.setenv("SEED_DEMO", "true")
+        seed.main()
+
+        connexion = client.post(
+            "/api/v1/auth/login",
+            json={"email": "apprenant@digitheque.mg", "mot_de_passe": seed.MOT_DE_PASSE_DEMO},
+        )
+        entete = {"Authorization": f"Bearer {connexion.json()['access_token']}"}
+
+        langues = client.get("/api/v1/diagnostic/langues", headers=entete)
+        assert langues.status_code == 200, langues.text
+        assert {langue["code"] for langue in langues.json() if langue["disponible"]} == {"en", "fr"}
+
     def test_l_apprenant_demo_passe_le_diagnostic_d_anglais(self, client, monkeypatch):
         monkeypatch.setenv("SEED_DEMO", "true")
         seed.main()

@@ -146,9 +146,10 @@ def charger_comptes_demo(db: Session) -> None:
             statut=StatutUtilisateur.ACTIF,
         )
         if role == Role.APPRENANT:
-            anglais = db.scalar(select(Langue).where(Langue.code == "en"))
+            # Anglais et français : le diagnostic ne propose que les langues choisies à l'inscription.
+            langues = db.scalars(select(Langue).where(Langue.code.in_(["en", "fr"])).order_by(Langue.code)).all()
             formule = db.scalar(select(Formule).where(Formule.libelle == "Luxe"))
-            utilisateur.apprenant = Apprenant(date_naissance=date(2000, 5, 1), langues=[anglais] if anglais else [])
+            utilisateur.apprenant = Apprenant(date_naissance=date(2000, 5, 1), langues=list(langues))
             if formule:
                 utilisateur.apprenant.abonnements.append(
                     Abonnement(
