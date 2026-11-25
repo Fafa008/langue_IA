@@ -89,7 +89,7 @@ def preuve_directe(domaine: str, preuve: PreuveReponse) -> bool:
 
     Une réponse à choix seule ne prouve jamais une compréhension : le service IA ne reçoit pas le corrigé. Les
     compétences réceptives ne sont donc exploitables que par une réponse rédigée ou transcrite qui exprime
-    elle-même l'incompréhension. La grammaire et le vocabulaire s'observent sur une production libre.
+    elle-même l'incompréhension. Pour l'oral, la transcription navigateur est une réponse texte, pas un audio.
     """
     production = preuve.type_reponse in ("texte", "audio")
     if domaine in ("grammaire", "vocabulaire"):
@@ -97,7 +97,8 @@ def preuve_directe(domaine: str, preuve: PreuveReponse) -> bool:
     if domaine == "expression_ecrite":
         return preuve.competence == "ecrit" and preuve.type_reponse == "texte"
     if domaine == "expression_orale":
-        return preuve.competence == "oral" and preuve.type_reponse == "audio"
+        # Le diagnostic envoie une transcription navigateur comme texte, sans fichier audio.
+        return preuve.competence == "oral" and preuve.type_reponse in ("texte", "audio")
     if domaine == "comprehension_ecrite":
         return preuve.competence == "lecture" and production
     if domaine == "comprehension_orale":

@@ -253,7 +253,7 @@ def test_verifier_coherence_avec_les_reponses_ok() -> None:
         ("expression_ecrite", "ecrit", "texte", True),
         ("expression_ecrite", "ecrit", "choix", False),
         ("expression_orale", "oral", "audio", True),
-        ("expression_orale", "oral", "texte", False),
+        ("expression_orale", "oral", "texte", True),
         ("comprehension_ecrite", "lecture", "texte", True),
         ("comprehension_ecrite", "lecture", "choix", False),
         ("comprehension_orale", "ecoute", "audio", True),

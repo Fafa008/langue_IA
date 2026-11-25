@@ -38,7 +38,7 @@ backend/app/
 ├── schemas/                # contrats Pydantic d'entrée/sortie
 ├── services/               # logique métier (diagnostic, scoring, IA, e-mails, photos)
 ├── seed.py                 # référentiel + comptes de démonstration
-└── seed_diagnostic.py      # banque de 35 questions (EN/FR)
+└── seed_diagnostic.py      # banque de 100 questions (20 × 5 langues, quatre compétences)
 ```
 
 Règle de lecture : **route = contrôle d'accès + validation + appel d'un service**. Un routeur ne contient
@@ -331,12 +331,10 @@ def _niveau_de_depart(db, langue):
 C'est le **premier niveau ouvert qui contient au moins une question enregistrable**. Conséquences :
 
 - le test **n'est pas adaptatif** : il ne monte ni ne descend selon les réponses ;
-- avec le seed, le niveau de départ est **A1**, qui contient **2 questions par langue** (EN et FR) ;
-- le « test » réel dure donc quelques secondes, pas 15 minutes ;
-- `zh`, `it`, `de` n'ont **aucune question** → `disponible: false` dans la réponse.
+- avec le pack de démonstration, chaque langue propose **20 questions** couvrant quatre compétences ;
+- le pack est uniquement un jeu de démonstration, pas un référentiel certifiant.
 
-Le frontend, lui, simule un plan de 15 minutes (8 QCM + 2 orales + 1 orale + 1 écrite) en mode mock. En
-mode réel, il affiche ce que le backend envoie.
+Le frontend trie les questions réelles selon les étapes du test ; le pack couvre les cinq langues.
 
 ### 7.3 Enregistrement d'une réponse
 
@@ -536,9 +534,9 @@ La CI impose **`pytest --cov=app --cov-fail-under=70`** : en dessous de 70 % de 
 | --- | --- |
 | Aucune reprise de tentative | fermer l'onglet perd le test en cours |
 | Test non adaptatif | le niveau de départ est toujours le premier niveau ouvert |
-| 2 questions par langue dans le seed | le test réel est très court |
-| `texte` stocké mais non corrigé | une réponse écrite ne compte jamais |
-| `audio` refusé (422) | pas de test oral côté backend |
+| Banque de démonstration de 20 questions par langue | données non certifiantes, contenu pédagogique à valider |
+| `texte` corrigé par correspondance exacte | les productions libres ne sont pas évaluées sémantiquement |
+| Fichier `audio` refusé (422) | l'oral utilise la transcription du navigateur, sans évaluer la prononciation |
 | `justification` jamais renvoyée | le frontend a un composant qui reste vide |
 | IA facultative | sans fournisseur LLM, résultat partiel |
 | Photos publiques sous `/media` | toute personne connaissant l'URL lit l'image |

@@ -28,23 +28,29 @@ describe("httpTestDiagnosticService", () => {
     expect(headers.Authorization).toBe("Bearer jwt-test");
   });
 
-  it("crée une tentative puis charge les questions de son niveau", async () => {
+  it("crée une tentative avec sa banque de questions figée sur plusieurs niveaux", async () => {
     const fetchMock = mockFetch({
       status: 201,
       body: {
         id_tentative: 42,
         code_langue: "en",
         code_niveau: "A1",
+        questions: [{
+          id_question: "1",
+          niveau: "A1",
+          competence: "grammaire",
+          type_reponse: "choix",
+          enonce: "She ___ a student.",
+          choix: ["is", "are"],
+        }, {
+          id_question: "2",
+          niveau: "A2",
+          competence: "lecture",
+          type_reponse: "choix",
+          enonce: "Question A2",
+          choix: ["a", "b"],
+        }],
       },
-    }, {
-      body: [{
-        id_question: "1",
-        niveau: "A1",
-        competence: "grammaire",
-        type_reponse: "choix",
-        enonce: "She ___ a student.",
-        choix: ["is", "are"],
-      }],
     });
 
     await expect(httpTestDiagnosticService.demarrer("en", "professionnel", ["matin"])).resolves.toEqual({
@@ -52,8 +58,8 @@ describe("httpTestDiagnosticService", () => {
       langue: "en",
       niveaux: ["A1"],
       numeroQuestion: 1,
-      totalQuestions: 1,
-      plan: [{ etape: "qcm", nombreQuestions: 1 }],
+      totalQuestions: 2,
+      plan: [{ etape: "qcm", nombreQuestions: 2 }],
       question: {
         id: "1",
         niveau: "A1",
@@ -69,19 +75,22 @@ describe("httpTestDiagnosticService", () => {
         typeReponse: "choix",
         enonce: "She ___ a student.",
         choix: ["is", "are"],
+      }, {
+        id: "2",
+        niveau: "A2",
+        competence: "lecture",
+        typeReponse: "choix",
+        enonce: "Question A2",
+        choix: ["a", "b"],
       }],
     });
     const debut = fetchCall(fetchMock, 0);
-    const questions = fetchCall(fetchMock, 1);
     expect([debut.url, debut.init.method, debut.body]).toEqual([
       `${API}/diagnostic/tentatives`,
       "POST",
       { code_langue: "en" },
     ]);
-    expect([questions.url, questions.init.method]).toEqual([
-      `${API}/diagnostic/questions?code_langue=en&code_niveau=A1`,
-      "GET",
-    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(debut.headers.Authorization).toBeDefined();
   });
 
@@ -89,14 +98,20 @@ describe("httpTestDiagnosticService", () => {
     const question = (id_question: string, competence: string, type_reponse = "choix") => ({
       id_question, niveau: "A1", competence, type_reponse, enonce: id_question, choix: ["a", "b"],
     });
-    mockFetch({ status: 201, body: { id_tentative: 7, code_langue: "en", code_niveau: "A1" } }, {
-      body: [
+    mockFetch({
+      status: 201,
+      body: {
+        id_tentative: 7,
+        code_langue: "en",
+        code_niveau: "A1",
+        questions: [
         question("ecrit", "ecrit", "texte"),
         question("oral", "oral", "audio"),
         question("ecoute", "ecoute"),
         question("grammaire", "grammaire"),
         question("lecture", "lecture"),
-      ],
+        ],
+      },
     });
 
     const session = await httpTestDiagnosticService.demarrer("en", "professionnel", []);
@@ -138,6 +153,25 @@ describe("httpTestDiagnosticService", () => {
       "POST",
       { id_tentative: 42, id_question: "1", reponse_fournie: "is" },
     ]);
+  });
+
+  it("envoie la transcription orale comme réponse texte sans fichier audio", async () => {
+    const fetchMock = mockFetch({
+      body: {
+        id_reponse: 82,
+        id_tentative: 42,
+        id_question: "oral-1",
+        reponse_fournie: "I live in London.",
+      },
+    });
+
+    await httpTestDiagnosticService.repondre("42", "oral-1", { type: "texte", texte: "I live in London." });
+
+    expect(fetchCall(fetchMock).body).toEqual({
+      id_tentative: 42,
+      id_question: "oral-1",
+      reponse_fournie: "I live in London.",
+    });
   });
 
   it("termine la tentative et transforme le résultat du scoring pour l'écran", async () => {
@@ -316,10 +350,10 @@ describe("httpTestDiagnosticService", () => {
     await expect(httpTestDiagnosticService.terminer("42")).rejects.toThrow("résultat de scoring");
   });
 
-  it("refuse l'envoi de réponses audio tant qu'aucun stockage média n'est disponible", async () => {
+  it("refuse l'envoi d'un fichier audio : l'oral doit être transcrit par le navigateur", async () => {
     await expect(
       httpTestDiagnosticService.repondre("42", "1", { type: "audio", audio: new Blob(["audio"]) }),
-    ).rejects.toThrow("stockage des médias");
+    ).rejects.toThrow("reconnaissance vocale du navigateur");
   });
 
   it("refuse la réponse automatique hors mode démonstration", async () => {

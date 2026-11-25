@@ -8,7 +8,7 @@ reste nulle tant qu'elle n'a pas été calculée.
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, Text, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
 
@@ -35,6 +35,10 @@ class TestDiagnostic(Base):
     date_fin: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Pourcentage déterministe sur 100, calculé à la clôture du test.
     score: Mapped[float | None] = mapped_column(Numeric(5, 2))
+    # Questions exactes de cette tentative, ordonnées et figées à son démarrage.
+    questions_ids: Mapped[list[int]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb"), nullable=False
+    )
     # Niveau de référence estimé à l'issue du diagnostic.
     id_niveau_final: Mapped[int | None] = mapped_column(ForeignKey("niveau.id_niveau", ondelete="RESTRICT"))
     # Enveloppe validée de l'agent Diagnostic (PRE-05) ; null tant que l'analyse n'a pas abouti.

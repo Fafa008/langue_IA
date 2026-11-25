@@ -440,7 +440,7 @@ remplacer le contrat de persistance des réponses. Aucune suppression automatiqu
 
 ### `GET /diagnostic/langues` — rôle `APPRENANT`
 
-Langues proposées sur l'écran d'accueil du test, triées par libellé.
+Langues choisies à l'inscription par l'apprenant connecté, triées par libellé. Une langue inscrite reste incluse même si elle n'a pas encore de questions ; dans ce cas, `disponible` vaut `false`.
 
 **200** :
 
@@ -451,7 +451,7 @@ Langues proposées sur l'écran d'accueil du test, triées par libellé.
     "libelle": "Anglais",
     "cadre": "CECRL",
     "niveaux": ["A1", "A2", "B1", "B2", "C1", "C2"],
-    "nombre_questions": 10,
+    "nombre_questions": 20,
     "disponible": true
   },
   {
@@ -468,17 +468,19 @@ Langues proposées sur l'écran d'accueil du test, triées par libellé.
 - `cadre` vaut `HSK` pour le chinois (`zh`) et `CECRL` pour les autres langues : c'est aussi le référentiel du score
   final.
 - `niveaux` liste les niveaux ouverts pour la langue, du plus bas au plus haut.
-- `nombre_questions` compte les questions à choix ou à réponse textuelle du niveau de départ, c'est-à-dire le niveau
-  que `POST /diagnostic/tentatives` choisira. C'est le nombre de questions du test.
+- `nombre_questions` compte les questions à choix ou à réponse textuelle retenues sur les niveaux ouverts, jusqu'à
+  20 questions. La tentative conserve la liste choisie afin que réponses et score portent sur le même ensemble.
 - `disponible` vaut `false` tant que la langue n'a aucune question de ce type. Le frontend l'affiche alors
   « Bientôt disponible » et ne permet pas de la choisir.
+- La liste ne contient pas les langues du catalogue auxquelles l'apprenant n'est pas inscrit.
 
 Erreurs : **401** session absente ou invalide, **403** rôle autre qu'`APPRENANT`.
 
 ### `POST /diagnostic/tentatives` — rôle `APPRENANT`
 
-Crée une tentative pour la langue demandée. Le backend choisit le premier niveau ouvert qui possède au moins une
-question à choix ou à réponse textuelle.
+Crée une tentative pour la langue demandée. Le backend choisit jusqu'à 20 questions enregistrables sur les niveaux
+ouverts, en commençant par les niveaux les plus bas, puis fige leurs identifiants dans la tentative. La réponse
+contient la banque exacte à afficher, sans correction.
 
 ```json
 { "code_langue": "en" }
@@ -487,8 +489,25 @@ question à choix ou à réponse textuelle.
 **201** :
 
 ```json
-{ "id_tentative": 42, "code_langue": "en", "code_niveau": "A1" }
+{
+  "id_tentative": 42,
+  "code_langue": "en",
+  "code_niveau": "A1",
+  "questions": [
+    {
+      "id_question": "12",
+      "niveau": "A1",
+      "competence": "grammaire",
+      "type_reponse": "choix",
+      "enonce": "She ___ a student.",
+      "choix": ["is", "are", "am", "be"]
+    }
+  ]
+}
 ```
+
+`questions` contient jusqu'à 20 objets sans clé de correction. `code_niveau` est le niveau le plus bas présent dans
+la banque figée.
 
 Erreurs : **401** session absente ou invalide, **403** rôle autre qu'`APPRENANT`, **404** langue inconnue ou aucune
 question enregistrable n'est disponible.
@@ -522,8 +541,10 @@ Une question peut également contenir `support`, `audio_url` ou `audio_texte`. L
 #### Test de positionnement enrichi (champs facultatifs)
 
 Le mock frontend (`src/mocks/questions-test.mock.ts`) fournit 20 exercices par langue : 5 par compétence
-`lecture` (lire), `ecoute` (écouter), `ecrit` (écrire), `oral` (parler). Ces champs sont **optionnels** et absents des
-questions historiques ; le backend les expose depuis la phase 2 quand l'exercice les porte dans son `contenu`.
+`lecture` (lire), `ecoute` (écouter), `ecrit` (écrire), `oral` (parler). Le backend réel sélectionne jusqu'à 20
+questions sur plusieurs niveaux à partir de sa banque publiée. Les réponses audio restent indisponibles côté backend ;
+les banques de démonstration actuelles proposent donc des QCM enregistrables pour l'anglais et le français.
+Les champs ci-dessous sont **optionnels** et absents des questions historiques ; le backend les expose depuis la phase 2 quand l'exercice les porte dans son `contenu`.
 Le frontend les ignore s'ils manquent. Le format pédagogique est stocké dans `contenu.format_exercice` ;
 `contenu.format` reste le type de réponse (`choix`, `texte`, `audio`).
 

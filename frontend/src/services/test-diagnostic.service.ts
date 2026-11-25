@@ -59,6 +59,10 @@ interface SessionTestDto {
   code_niveau: string;
 }
 
+interface TentativeAvecQuestionsDto extends SessionTestDto {
+  questions: QuestionDto[];
+}
+
 /** GET /diagnostic/tentatives/en-cours : la tentative et les réponses déjà enregistrées. */
 interface TentativeEnCoursDto extends SessionTestDto {
   date_debut: string;
@@ -230,7 +234,7 @@ export interface TestDiagnosticGateway {
 async function questionsDeTentative(codeLangue: string, codeNiveau: string): Promise<Question[]> {
   const params = new URLSearchParams({ code_langue: codeLangue, code_niveau: codeNiveau });
   const questionDtos = await apiRequest<QuestionDto[]>(`${ENDPOINTS.diagnostic.questions}?${params}`);
-  // Les réponses orales attendent le stockage des médias côté backend ; le reste suit l'ordre des étapes
+  // Les réponses vocales sont des transcriptions texte ; seuls les anciens payloads audio sont exclus.
   const questions = trierParEtape(questionDtos.filter((question) => question.type_reponse !== "audio").map(toQuestion));
   if (questions.length === 0) {
     throw new Error("Aucune question textuelle ou à choix n'est disponible pour cette tentative.");
@@ -287,11 +291,19 @@ export const httpTestDiagnosticService = {
   },
 
   async demarrer(langue: string, _objectif: ObjectifFormation, _creneaux: string[]): Promise<SessionTest> {
-    const tentative = await apiRequest<SessionTestDto>(ENDPOINTS.diagnostic.tentatives, {
+    const tentative = await apiRequest<TentativeAvecQuestionsDto>(ENDPOINTS.diagnostic.tentatives, {
       method: "POST",
       body: { code_langue: langue },
     });
-    const questions = await questionsDeTentative(tentative.code_langue, tentative.code_niveau);
+    if (!Array.isArray(tentative.questions)) {
+      throw new Error("Le serveur n'a pas renvoyé les questions figées de la tentative.");
+    }
+    const questions = trierParEtape(
+      tentative.questions.filter((question) => question.type_reponse !== "audio").map(toQuestion),
+    );
+    if (questions.length === 0) {
+      throw new Error("Aucune question textuelle ou à choix n'est disponible pour cette tentative.");
+    }
     return sessionDepuis(tentative, questions, questions)!;
   },
 
@@ -303,7 +315,7 @@ export const httpTestDiagnosticService = {
     progression: ReponseProgression = { numeroQuestion: 1, totalQuestions: 1, questionSuivante: null },
   ): Promise<RetourReponse> {
     if (reponse.type === "audio") {
-      throw new Error("L'enregistrement des réponses audio sera disponible après la mise en place du stockage des médias.");
+      throw new Error("Les fichiers de réponse audio ne sont pas pris en charge ; utilisez la reconnaissance vocale du navigateur.");
     }
     if (reponse.type === "sans_reponse" || reponse.type === "automatique") {
       throw new Error(

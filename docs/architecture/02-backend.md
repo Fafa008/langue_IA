@@ -503,8 +503,8 @@ ignorée par `_normaliser_competence`, donc la liste peut être partielle.
 
 - **toujours** : les 5 langues, les 12 niveaux CECRL/HSK, les 3 formules, les 3 rôles et les
   9 permissions ;
-- **si `SEED_DEMO=true`** : trois comptes de démonstration, un abonnement et **35 questions**
-  (`app/seed_diagnostic.py` : 18 en anglais, 17 en français, toutes à choix).
+- **si `SEED_DEMO=true`** : trois comptes de démonstration, un abonnement et **100 questions**
+  (`app/seed_diagnostic.py` : 20 dans chacune des cinq langues, couvrant les quatre compétences).
 
 ```python
 MOT_DE_PASSE_DEMO = "Demo2026"

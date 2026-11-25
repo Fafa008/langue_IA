@@ -79,8 +79,8 @@ test.describe("Accès au module Diagnostic", () => {
     await demarrer(page);
     await repondre(page);
     await expect(page.getByTestId("feedback")).toBeVisible();
-    // langues, tentative, questions, réponse
-    expect(autorisations.length).toBeGreaterThanOrEqual(4);
+    // langues, tentative avec questions, réponse
+    expect(autorisations.length).toBeGreaterThanOrEqual(3);
     expect(new Set(autorisations)).toEqual(new Set([`Bearer ${ACCESS_TOKEN}`]));
   });
 });
@@ -90,14 +90,14 @@ test.describe("Écran d'accueil du diagnostic", () => {
     const appelsLangues = page.waitForRequest((request) => request.url().endsWith("/api/v1/diagnostic/langues"));
     await ouvrir(page);
     await appelsLangues;
-    await page.getByTestId("language-select").click();
-    await expect(page.getByRole("option")).toHaveCount(4);
-    await expect(page.getByTestId("language-option-en")).toContainText("Échelle CECRL, A1 à C2");
-    await expect(page.getByTestId("language-option-fr")).toContainText("Échelle CECRL, A1 à C2");
-    await expect(page.getByTestId("language-option-zh")).toContainText("Échelle HSK, HSK 1 à 6");
-    await expect(page.getByTestId("language-option-zh")).not.toHaveAttribute("aria-disabled", "true");
-    await expect(page.getByTestId("language-option-es")).toContainText("Espagnol");
-    await expect(page.getByTestId("language-option-es")).toContainText("Bientôt disponible");
+    await expect(page.getByRole("radio")).toHaveCount(4);
+    await expect(page.getByRole("radio", { name: /Anglais/ })).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Français/ })).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Chinois/ })).toBeEnabled();
+    await expect(page.getByRole("radio", { name: /Espagnol/ })).toBeDisabled();
+    await expect(page.getByText("Échelle CECRL, A1 à C2")).toHaveCount(2);
+    await expect(page.getByText("Échelle HSK, HSK 1 à 6")).toBeVisible();
+    await expect(page.getByText("Bientôt disponible")).toBeVisible();
   });
 
   test("affiche les consignes avant le démarrage", async ({ page }) => {
@@ -111,47 +111,39 @@ test.describe("Écran d'accueil du diagnostic", () => {
 
   test("ne permet pas de démarrer sans langue choisie", async ({ page }) => {
     await ouvrir(page);
-    await expect(page.getByTestId("language-select")).toContainText("Choisissez une langue");
+    await expect(page.getByRole("radio")).toHaveCount(4);
+    await expect(page.getByRole("radio", { name: /Anglais/ })).not.toBeChecked();
     await expect(boutonCommencer(page)).toBeDisabled();
-    await expect(page.getByText("Choisissez une langue pour commencer.")).toBeVisible();
+    await expect(page.getByText("Sélectionnez une langue disponible pour commencer.")).toBeVisible();
     await expect(page.getByTestId("chiffres-test").getByRole("definition")).toHaveText(["–", "–", "–"]);
   });
 
   test("une langue « Bientôt disponible » ne peut pas être choisie", async ({ page }) => {
     await ouvrir(page, "es");
-    await expect(page.getByTestId("language-select")).toContainText("Choisissez une langue");
-    await page.getByTestId("language-select").click();
-    await expect(page.getByTestId("language-option-es")).toHaveAttribute("aria-disabled", "true");
-    // Clic forcé : l'option est désactivée, le clic ne doit rien choisir
-    await page.getByTestId("language-option-es").click({ force: true });
-    await expect(page.getByTestId("language-select")).toContainText("Choisissez une langue");
+    await expect(page.getByRole("radio", { name: /Espagnol/ })).toBeDisabled();
     await expect(boutonCommencer(page)).toBeDisabled();
   });
 
   test("le choix d'une langue affiche le nombre de questions, la durée et les niveaux", async ({ page }) => {
     await ouvrir(page);
-    await page.getByTestId("language-select").click();
-    await page.getByTestId("language-option-en").click();
+    await page.getByRole("radio", { name: /Anglais/ }).check();
     const chiffres = page.getByTestId("chiffres-test");
     await expect(chiffres.getByRole("term")).toHaveText(["questions", "de durée estimée", "niveaux estimés"]);
     await expect(chiffres.getByRole("definition")).toHaveText(["2", "15 min", "6"]);
     await expect(boutonCommencer(page)).toBeEnabled();
-    await expect(page.getByText("Choisissez une langue pour commencer.")).toHaveCount(0);
+    await expect(page.getByText("Sélectionnez une langue disponible pour commencer.")).toHaveCount(0);
   });
 
   test("préselectionne la langue indiquée dans l'URL", async ({ page }) => {
     await ouvrir(page, "fr");
-    await expect(page.getByTestId("language-select")).toContainText("Français");
+    await expect(page.getByRole("radio", { name: /Français/ })).toBeChecked();
     await expect(boutonCommencer(page)).toBeEnabled();
   });
 
-  test("permet de chercher et changer la langue avant de commencer", async ({ page }) => {
+  test("permet de changer de langue avec les boutons radio", async ({ page }) => {
     await ouvrir(page, "fr");
-    await page.getByTestId("language-select").click();
-    await page.getByRole("combobox", { name: "Rechercher une langue" }).fill("angl");
-    await expect(page.getByRole("option")).toHaveCount(1);
-    await page.getByTestId("language-option-en").click();
-    await expect(page.getByTestId("language-select")).toContainText("Anglais");
+    await page.getByRole("radio", { name: /Anglais/ }).check();
+    await expect(page.getByRole("radio", { name: /Anglais/ })).toBeChecked();
   });
 
   test("propose de réessayer si les langues ne se chargent pas", async ({ page }) => {
@@ -162,7 +154,7 @@ test.describe("Écran d'accueil du diagnostic", () => {
     await page.unrouteAll({ behavior: "wait" });
     await mockTestDiagnosticApi(page);
     await alerte.getByRole("button", { name: "Réessayer" }).click();
-    await expect(page.getByTestId("language-select")).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Anglais/ })).toBeVisible();
   });
 
   test("« Commencer le test » mène à la personnalisation, puis au test", async ({ page }) => {
@@ -170,13 +162,13 @@ test.describe("Écran d'accueil du diagnostic", () => {
     await boutonCommencer(page).click();
     await expect(page.getByRole("heading", { name: /Quelques questions avant de commencer/ })).toBeVisible();
     await page.getByTestId("test-back").click();
-    await expect(page.getByTestId("language-select")).toContainText("Anglais");
+    await expect(page.getByRole("radio", { name: /Anglais/ })).toBeChecked();
     await demarrer(page);
   });
 });
 
 test.describe("Test de positionnement — réponses et score déterministe", () => {
-  test("crée une tentative et charge les questions depuis le backend", async ({ page }) => {
+  test("crée une tentative avec les questions figées renvoyées par le backend", async ({ page }) => {
     await ouvrir(page, "en");
     await demarrer(page);
     await expect(page.getByTestId("question-card")).toHaveAttribute("data-question-id", "en-lire-1");
@@ -187,7 +179,7 @@ test.describe("Test de positionnement — réponses et score déterministe", () 
   test("affiche l'étape en cours et le temps restant", async ({ page }) => {
     await ouvrir(page, "en");
     await demarrer(page);
-    await expect(page.getByRole("heading", { name: "Étape 1/1 : Grammaire et lexique" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Étape 1/1 : Grammaire, lexique et compréhension écrite" })).toBeVisible();
     await expect(page.getByTestId("temps-restant")).toHaveText(/^1[45]:\d\d$/);
     await expect(page.getByRole("button", { name: "Valider et continuer" })).toBeDisabled();
   });
@@ -481,13 +473,13 @@ test.describe("Parcours complet du diagnostic", () => {
     // Démarrage : langue, consignes, personnalisation
     await ouvrir(page, "en", OPTIONS);
     await expect(page.getByRole("heading", { name: "Évaluez votre niveau" })).toBeVisible();
-    await expect(page.getByTestId("language-select")).toContainText("Anglais");
+    await expect(page.getByRole("radio", { name: /Anglais/ })).toBeChecked();
     await demarrer(page);
 
     // Étape 1 : QCM de grammaire (deux bonnes réponses)
-    await expectEtape(page, "Étape 1/3 : Grammaire et lexique", 1);
+    await expectEtape(page, "Étape 1/3 : Grammaire, lexique et compréhension écrite", 1);
     await choisirEtContinuer(page, 0);
-    await expectEtape(page, "Étape 1/3 : Grammaire et lexique", 2);
+    await expectEtape(page, "Étape 1/3 : Grammaire, lexique et compréhension écrite", 2);
     await choisirEtContinuer(page, 1);
 
     // Étape 2 : compréhension orale

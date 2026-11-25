@@ -3,7 +3,7 @@ const path = require("path");
 const webpack = require("webpack");
 
 module.exports = {
-  output: "standalone",
+  ...(process.env.NEXT_OUTPUT_STANDALONE === "false" ? {} : { output: "standalone" }),
   // Les tests E2E lancent leur propre `next dev` : un dossier de build séparé
   // évite qu'il écrase celui du serveur de développement (ChunkLoadError).
   distDir: process.env.NEXT_DIST_DIR || ".next",

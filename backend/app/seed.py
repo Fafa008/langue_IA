@@ -4,7 +4,8 @@
   Les valeurs reprennent celles du frontend en mode simulé (frontend/src/mocks).
 - Comptes de démonstration (un par rôle, mot de passe Demo2026), seulement si SEED_DEMO=true :
   ce sont les comptes proposés sur la page de connexion. Jamais en production.
-- Banque de questions du diagnostic (anglais, français), seulement si SEED_DEMO=true (app/seed_diagnostic.py).
+- Banque de démonstration du diagnostic (5 langues, 20 questions chacune), seulement si
+  SEED_DEMO=true (`app/seed_diagnostic.py`).
 - Exercices de la leçon 1 du parcours (anglais, A1), seulement si SEED_DEMO=true (app/seed_parcours.py).
 
 Relancer à la main (Docker) : `make seed`, ou `docker compose exec backend python -m app.seed`.
@@ -80,10 +81,14 @@ def charger_referentiel(db: Session) -> None:
 
     langues = {langue.code: langue for langue in db.scalars(select(Langue))}
     for code, libelle in LANGUES:
-        if code not in langues:
-            # Mandarin : niveaux HSK ; langues européennes : niveaux CECRL
-            ouverts = HSK if code == "zh" else CECRL
+        # Mandarin : niveaux HSK ; langues européennes : niveaux CECRL.
+        ouverts = HSK if code == "zh" else CECRL
+        langue = langues.get(code)
+        if langue is None:
             db.add(Langue(code=code, libelle=libelle, niveaux=[niveaux[c] for c, _ in ouverts]))
+            continue
+        codes_ouverts = {niveau.code for niveau in langue.niveaux}
+        langue.niveaux.extend(niveaux[c] for c, _ in ouverts if c not in codes_ouverts)
 
     existantes = set(db.scalars(select(Formule.libelle)))
     for libelle, prix, duree, heures, ateliers in FORMULES:

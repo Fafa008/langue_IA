@@ -27,6 +27,8 @@ from app.models.enums import EnumEntier, StatutParcours, TypeExercice
 from app.models.pedagogie import Langue, Niveau
 from app.services.phase_parcours import PhaseParcours, est_lecon_de_revision, phase_parcours
 
+PACK_DIAGNOSTIC_COMPLET = "positionnement-4-competences-v1"
+
 
 class Parcours(Base):
     __tablename__ = "parcours"
@@ -231,6 +233,11 @@ class Exercice(Base):
     def format_exercice(self) -> str | None:
         """Format pédagogique (`qcm`, `dictee`, …), distinct de `type_reponse` (`choix`, `texte`, `audio`)."""
         return self._contenu_dict().get("format_exercice")
+
+    @property
+    def diagnostic_pack(self) -> str | None:
+        """Identifiant du pack de questions utilisé pour figer une tentative homogène."""
+        return self._contenu_dict().get("diagnostic_pack")
 
     @property
     def lettres_melangees(self) -> list[str] | None:

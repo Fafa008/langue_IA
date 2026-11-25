@@ -359,7 +359,7 @@ def preuve_directe(domaine: str, preuve: PreuveReponse) -> bool:
     if domaine == "expression_ecrite":
         return preuve.competence == "ecrit" and preuve.type_reponse == "texte"
     if domaine == "expression_orale":
-        return preuve.competence == "oral" and preuve.type_reponse == "audio"
+        return preuve.competence == "oral" and preuve.type_reponse in ("texte", "audio")
     if domaine == "comprehension_ecrite":
         return preuve.competence == "lecture" and production
     if domaine == "comprehension_orale":
@@ -368,8 +368,8 @@ def preuve_directe(domaine: str, preuve: PreuveReponse) -> bool:
 ```
 
 **Une réponse à choix ne prouve jamais une compréhension** : le service ne reçoit pas le corrigé, il ne sait
-donc pas si elle est juste. Résultat concret avec les données actuelles : le seed ne contient que des QCM, donc
-`points_faibles` revient presque toujours **vide**. Ce n'est pas un bug, c'est une conséquence du contrat.
+donc pas si elle est juste. La banque de démonstration inclut désormais dictées et réponses orales transcrites ;
+seule la transcription texte, et non l'audio ni la prononciation, est transmise au service.
 
 ---
 
@@ -668,7 +668,7 @@ docker compose logs ia-service | Select-String "Corpus|LLM|démarrage"
 | Limite | Effet concret |
 | --- | --- |
 | `factice` par défaut | démonstration = résultat partiel |
-| QCM seuls dans le seed | `points_faibles` presque toujours vide |
+| Réponses libres du seed | seules les transcriptions et réponses écrites sont exploitables comme preuves |
 | `retryable` ignoré par le backend | pas de reprise automatique |
 | Port 8001 publié sans auth | n'importe qui sur l'hôte peut appeler le LLM (et consommer la clé) |
 | Pas de quota | un appel en boucle peut coûter cher |
