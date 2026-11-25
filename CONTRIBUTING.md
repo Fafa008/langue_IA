@@ -33,7 +33,13 @@ Ce guide explique comment travailler efficacement avec l'équipe.
    ```bash
    cp .env.example .env
    ```
-5. Rejoindre le Trello et les canaux de communication
+5. Pour installer les dépendances frontend après un nouveau clone :
+   ```bash
+   cd frontend
+   npm install
+   cd ..
+   ```
+6. Rejoindre le Trello et les canaux de communication
 
 ---
 
@@ -198,6 +204,7 @@ make test            # pytest dans Docker, sur une base PostgreSQL de test (voir
 
 ```bash
 cd frontend
+npm install          # après le clone ou une mise à jour des dépendances
 npm run check        # typecheck + lint + tests unitaires
 npm run test:e2e     # tests E2E Playwright (voir frontend/README.md)
 ```

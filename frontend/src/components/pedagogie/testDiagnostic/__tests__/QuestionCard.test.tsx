@@ -173,6 +173,8 @@ describe("QuestionCard", () => {
     render(<QuestionInteractive {...p} />);
 
     expect(screen.getByText("Complétez le mot manquant avec les lettres proposées.")).toBeInTheDocument();
+    expect(screen.getByTestId("question-prompt")).toHaveTextContent("I live in ___ .");
+    expect(screen.getAllByText("I live in ___ .")).toHaveLength(1);
     expect(screen.getByTestId("texte-a-trous")).toBeInTheDocument();
     expect(screen.getAllByText("N")).toHaveLength(2);
     const valider = screen.getByRole("button", { name: "Valider et continuer" });
@@ -196,6 +198,7 @@ describe("QuestionCard", () => {
     render(<QuestionCard {...props(parler)} />);
 
     expect(screen.getByText("Répétez la phrase suivante.")).toBeInTheDocument();
+    expect(screen.getAllByText(/Répétez la phrase suivante/)).toHaveLength(1);
     expect(screen.getByTestId("consigne-parler")).toHaveTextContent("2 s");
     expect(screen.getByText("« I live in London. »")).toBeInTheDocument();
     expect(screen.getByTestId("enregistrement-oral")).toBeInTheDocument();

@@ -82,10 +82,6 @@ export default function QuestionCard({
           (Durée minimale : {question.dureeMinimaleSecondes ?? DUREE_ORALE_MINIMALE_SECONDES} s)
         </p>
       )}
-      {question.typeReponse === "texte" && format === "texte_a_trous" && (
-        <p className="mt-3 text-h4 font-semibold text-content" data-testid="support-question">{question.enonce}</p>
-      )}
-
       {question.support && (
         <div className="mt-4 rounded-btn bg-background p-4 leading-relaxed" data-testid="question-support">
           {question.support}
@@ -167,7 +163,6 @@ export default function QuestionCard({
           disabled={verrouille}
           phraseACible={format === "parler" ? question.enonce : undefined}
           afficherPhrase={format === "parler"}
-          titre={format === "parler" ? "Répétez la phrase suivante" : undefined}
         />
       )}
 

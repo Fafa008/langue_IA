@@ -16,8 +16,6 @@ interface EnregistrementOralProps {
   phraseACible?: string;
   /** Faut-il afficher la phrase ? Un sujet d'expression orale libre ne l'affiche pas. */
   afficherPhrase?: boolean;
-  /** Titre du cadre, par exemple « Répétez la phrase suivante ». */
-  titre?: string;
 }
 
 type Etat = "pret" | "enregistrement" | "termine";
@@ -40,7 +38,7 @@ function Action({ libelle, onClick, children }: { libelle: string; onClick: () =
  */
 export default function EnregistrementOral(
   {
-    audio, dureeMinimale, onChange, disabled = false, phraseACible, afficherPhrase = false, titre,
+    audio, dureeMinimale, onChange, disabled = false, phraseACible, afficherPhrase = false,
   }: EnregistrementOralProps,
 ) {
   const [etat, setEtat] = useState<Etat>(audio ? "termine" : "pret");
@@ -135,7 +133,6 @@ export default function EnregistrementOral(
 
   return (
     <div className="mt-6 flex flex-col items-center" data-testid="enregistrement-oral">
-      {titre && <p className="text-small font-semibold text-content-secondary">{titre}</p>}
       {afficherPhrase && phraseACible && (
         <blockquote className="mb-2 rounded-btn bg-background px-6 py-3 text-center text-h5 font-semibold text-content">
           « {phraseACible} »

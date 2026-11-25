@@ -10,7 +10,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section id="ateliers" className="bg-surface py-16">
+    <section id="parcours" className="bg-surface py-16">
       <div className="container-page text-center">
         <p className="eyebrow">Comment ça fonctionne ?</p>
         <h2 className="mt-2">Un parcours simple et efficace</h2>
