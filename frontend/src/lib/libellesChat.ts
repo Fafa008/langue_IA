@@ -51,6 +51,17 @@ export interface LibellesChat {
   terminerDefaut: string;
   ecouter: string;
   erreurTuteur: string;
+  tuteurLinguistique: string;
+  rapportTermine: string;
+  rapportTitre: string;
+  rapportScenario: string;
+  rapportLangue: string;
+  rapportVosMessages: string;
+  rapportDernierEchange: string;
+  rapportTuteur: string;
+  rapportVous: string;
+  rapportNote: string;
+  recommencer: string;
 }
 
 const FR: LibellesChat = {
@@ -100,6 +111,17 @@ const FR: LibellesChat = {
   terminerDefaut: "Terminer et évaluer la conversation",
   ecouter: "Écouter ce message",
   erreurTuteur: "La réponse du tuteur IA",
+  tuteurLinguistique: "Tuteur linguistique IA",
+  rapportTermine: "Conversation terminée",
+  rapportTitre: "Votre synthèse",
+  rapportScenario: "Scénario",
+  rapportLangue: "Langue",
+  rapportVosMessages: "Vos messages",
+  rapportDernierEchange: "Dernier échange",
+  rapportTuteur: "Tuteur IA : ",
+  rapportVous: "Vous : ",
+  rapportNote: "Synthèse indicative : aucun score ni niveau n'est attribué pour une conversation libre. Les corrections, traductions et explications affichées pendant l'échange restent disponibles dans la conversation.",
+  recommencer: "Recommencer une conversation",
 };
 
 const EN: LibellesChat = {
@@ -149,6 +171,17 @@ const EN: LibellesChat = {
   terminerDefaut: "Finish and evaluate the conversation",
   ecouter: "Listen to this message",
   erreurTuteur: "The AI tutor's reply",
+  tuteurLinguistique: "AI language tutor",
+  rapportTermine: "Conversation finished",
+  rapportTitre: "Your summary",
+  rapportScenario: "Scenario",
+  rapportLangue: "Language",
+  rapportVosMessages: "Your messages",
+  rapportDernierEchange: "Last exchange",
+  rapportTuteur: "AI tutor: ",
+  rapportVous: "You: ",
+  rapportNote: "Indicative summary: no score or level is given for a free conversation. The corrections, translations and explanations shown during the exchange remain available in the conversation.",
+  recommencer: "Start a new conversation",
 };
 
 const IT: LibellesChat = {
@@ -198,6 +231,17 @@ const IT: LibellesChat = {
   terminerDefaut: "Termina e valuta la conversazione",
   ecouter: "Ascolta questo messaggio",
   erreurTuteur: "La risposta del tutore IA",
+  tuteurLinguistique: "Tutore linguistico IA",
+  rapportTermine: "Conversazione terminata",
+  rapportTitre: "Il tuo riepilogo",
+  rapportScenario: "Scenario",
+  rapportLangue: "Lingua",
+  rapportVosMessages: "I tuoi messaggi",
+  rapportDernierEchange: "Ultimo scambio",
+  rapportTuteur: "Tutore IA: ",
+  rapportVous: "Tu: ",
+  rapportNote: "Riepilogo indicativo: nessun punteggio né livello viene assegnato a una conversazione libera. Correzioni, traduzioni e spiegazioni mostrate durante lo scambio restano disponibili nella conversazione.",
+  recommencer: "Inizia una nuova conversazione",
 };
 
 const DE: LibellesChat = {
@@ -247,6 +291,17 @@ const DE: LibellesChat = {
   terminerDefaut: "Beenden und Gespräch auswerten",
   ecouter: "Diese Nachricht anhören",
   erreurTuteur: "Die Antwort des KI-Tutors",
+  tuteurLinguistique: "KI-Sprachtutor",
+  rapportTermine: "Gespräch beendet",
+  rapportTitre: "Deine Zusammenfassung",
+  rapportScenario: "Szenario",
+  rapportLangue: "Sprache",
+  rapportVosMessages: "Deine Nachrichten",
+  rapportDernierEchange: "Letzter Austausch",
+  rapportTuteur: "KI-Tutor: ",
+  rapportVous: "Du: ",
+  rapportNote: "Unverbindliche Zusammenfassung: Für ein freies Gespräch wird weder eine Punktzahl noch ein Niveau vergeben. Die während des Austauschs angezeigten Korrekturen, Übersetzungen und Erklärungen bleiben im Gespräch verfügbar.",
+  recommencer: "Neues Gespräch beginnen",
 };
 
 const ZH: LibellesChat = {
@@ -296,9 +351,32 @@ const ZH: LibellesChat = {
   terminerDefaut: "结束并评估对话",
   ecouter: "朗读此消息",
   erreurTuteur: "AI 导师的回复",
+  tuteurLinguistique: "AI 语言导师",
+  rapportTermine: "对话已结束",
+  rapportTitre: "你的总结",
+  rapportScenario: "场景",
+  rapportLangue: "语言",
+  rapportVosMessages: "你的消息",
+  rapportDernierEchange: "最后一轮对话",
+  rapportTuteur: "AI 导师：",
+  rapportVous: "你：",
+  rapportNote: "参考性总结：自由对话不评分也不评定等级。对话中显示的批改、翻译和解释仍可在对话中查看。",
+  recommencer: "开始新的对话",
 };
 
 const LIBELLES: Record<string, LibellesChat> = { fr: FR, en: EN, it: IT, de: DE, zh: ZH };
 
 /** Libellés dans la langue demandée, avec repli sur le français pour une langue non traduite. */
 export const libellesChat = (langue: string): LibellesChat => LIBELLES[langue] ?? FR;
+
+/** Nom de chaque langue de parcours, écrit dans cette langue (le backend renvoie un libellé français). */
+const NOMS_LANGUES: Record<string, string> = {
+  fr: "Français",
+  en: "English",
+  it: "Italiano",
+  de: "Deutsch",
+  zh: "中文",
+};
+
+/** Nom de la langue du parcours dans cette langue, avec repli sur le libellé fourni par le backend. */
+export const nomLangueChat = (langue: string, repli: string): string => NOMS_LANGUES[langue] ?? repli;

@@ -1,8 +1,8 @@
 /** Scénarios de conversation proposés dans la page du chat (US73-FE). Données fictives, sans donnée d'apprenant. */
 export interface ScenarioChat {
   id: string;
-  libelle: string;
-  sujet: string;
+  /** Intitulé du scénario (affiché comme contexte et comme sujet), dans chaque langue de parcours prise en charge. */
+  libelles: Record<string, string>;
   /** Message d'ouverture du tuteur, dans chaque langue de parcours prise en charge. */
   messagesInitiaux: Record<string, string>;
 }
@@ -10,8 +10,13 @@ export interface ScenarioChat {
 export const SCENARIOS_CHAT: ScenarioChat[] = [
   {
     id: "presentation",
-    libelle: "Se présenter",
-    sujet: "Se présenter",
+    libelles: {
+      fr: "Se présenter",
+      en: "Introducing yourself",
+      it: "Presentarsi",
+      de: "Sich vorstellen",
+      zh: "自我介绍",
+    },
     messagesInitiaux: {
       fr: "Bonjour ! Comment vous appelez-vous ?",
       en: "Hello! What is your name?",
@@ -22,8 +27,13 @@ export const SCENARIOS_CHAT: ScenarioChat[] = [
   },
   {
     id: "restaurant",
-    libelle: "Commander au restaurant",
-    sujet: "Commander au restaurant",
+    libelles: {
+      fr: "Commander au restaurant",
+      en: "Ordering at a restaurant",
+      it: "Ordinare al ristorante",
+      de: "Im Restaurant bestellen",
+      zh: "在餐厅点餐",
+    },
     messagesInitiaux: {
       fr: "Bonjour, vous êtes prêt à commander ?",
       en: "Hello, are you ready to order?",
@@ -34,8 +44,13 @@ export const SCENARIOS_CHAT: ScenarioChat[] = [
   },
   {
     id: "gare",
-    libelle: "Demander son chemin",
-    sujet: "Demander son chemin",
+    libelles: {
+      fr: "Demander son chemin",
+      en: "Asking for directions",
+      it: "Chiedere indicazioni",
+      de: "Nach dem Weg fragen",
+      zh: "问路",
+    },
     messagesInitiaux: {
       fr: "Bonjour, je peux vous aider à trouver votre chemin.",
       en: "Hello, can I help you find your way?",
@@ -45,6 +60,10 @@ export const SCENARIOS_CHAT: ScenarioChat[] = [
     },
   },
 ];
+
+/** Intitulé du scénario dans la langue du parcours ; le français sert de repli. */
+export const libelleScenario = (scenario: ScenarioChat, langue: string): string =>
+  scenario.libelles[langue] ?? scenario.libelles.fr;
 
 /** Le tuteur ouvre la conversation dans la langue du parcours ; le français sert de repli. */
 export const messageInitialChat = (scenario: ScenarioChat, langue: string): string =>

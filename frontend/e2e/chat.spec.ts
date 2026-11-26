@@ -147,7 +147,7 @@ test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
     await intercepterChatbot(page, requetes);
     await page.goto("/espace/apprenant/chat");
 
-    await expect(page.getByTestId("contexte-chat")).toContainText("Anglais");
+    await expect(page.getByTestId("contexte-chat")).toContainText("English");
     await expect(page.getByRole("log")).toContainText("Hello! What is your name?");
     await expect(page.getByRole("log")).not.toContainText("Comment vous appelez-vous ?");
     await expect(page.getByTestId("avertissement-chat-rg11")).toContainText("personal details");
@@ -235,12 +235,12 @@ test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
 
     await page.getByRole("button", { name: "Finish and view the report" }).click();
     const rapport = page.getByTestId("rapport-chat");
-    await expect(rapport).toContainText("Synthèse indicative");
-    await expect(rapport).toContainText("Vos messages");
+    await expect(rapport).toContainText("Indicative summary");
+    await expect(rapport).toContainText("Your messages");
     await expect(rapport).toContainText("1");
     expect(requetes.sessionsFermees).toEqual([requetes.message[0].identifiant_session]);
 
-    await rapport.getByRole("button", { name: /Recommencer une conversation/ }).click();
+    await rapport.getByRole("button", { name: /Start a new conversation/ }).click();
     await page.getByPlaceholder("Write or dictate your reply…").fill("encore bonjour");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(requetes.message).toHaveLength(2);

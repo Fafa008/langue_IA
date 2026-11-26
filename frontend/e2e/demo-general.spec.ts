@@ -235,7 +235,7 @@ test.describe("Démonstration générale — scénarios 1 à 15", () => {
     expect(chat.traductions[0].id_message).toMatch(/^[0-9a-f-]{36}$/i);
     expect(chat.traductions[0].identifiant_session).toBe(chat.requetes[0].identifiant_session);
     await page.getByRole("button", { name: "Finish and view the report" }).click();
-    await expect(page.getByTestId("rapport-chat")).toContainText("Synthèse indicative");
+    await expect(page.getByTestId("rapport-chat")).toContainText("Indicative summary");
     expect(chat.sessionsFermees).toEqual([chat.requetes[0].identifiant_session]);
   });
 
