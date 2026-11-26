@@ -161,7 +161,7 @@ export default function ChatView() {
       </p>
 
       <section className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside aria-label={libelles.historique} className="card h-fit space-y-3 p-4">
+        <aside aria-label={libelles.historique} className="card h-fit min-w-0 space-y-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-semibold text-content">{libelles.historique}</h2>
             <button
