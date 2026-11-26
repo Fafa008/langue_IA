@@ -16,7 +16,7 @@ import ChoixLangueTest from "./ChoixLangueTest";
 import PersonalisationForm from "./PersonalisationForm";
 
 const CONSIGNES = [
-  `Le test dure ${DUREE_TEST_MINUTES} minutes et comporte 4 étapes : grammaire et lexique, compréhension orale, expression orale, expression écrite.`,
+  `Le test dure ${DUREE_TEST_MINUTES} minutes et comporte 4 étapes : grammaire, lexique et compréhension écrite ; compréhension orale ; expression orale ; expression écrite.`,
   "Répondez seul, sans dictionnaire ni traducteur. Prévoyez des écouteurs et un micro.",
   "Pour les questions à choix, une seule réponse est correcte.",
   "Chaque réponse est enregistrée dès que vous la validez : relisez-la avant de valider.",
@@ -35,7 +35,7 @@ function Chiffre({ valeur, libelle }: { valeur: string | number | null; libelle:
 }
 
 /**
- * Écran d'accueil du test : choix de la langue (chargée depuis l'API), consignes et durée estimée,
+ * Écran d'accueil du test : choix parmi les langues inscrites, consignes et durée estimée,
  * puis personnalisation, jusqu'à la création de la tentative.
  */
 export default function PlacementTest({ langueDemandee }: { langueDemandee?: string }) {
@@ -57,13 +57,17 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
     else if (store.etat.phase === "resultat") store.dispatch({ type: "recommencer" });
   }, [router]);
 
-  // La langue de l'URL (?langue=en) est présélectionnée si elle est disponible.
+  // Ne proposer que les langues inscrites ; présélectionner celle de l'URL ou l'unique langue inscrite.
   useEffect(() => {
-    const demandee = langues.data?.find((l) => l.code === langueDemandee && l.disponible);
+    if (!langues.data) return;
     const { etat: actuel, dispatch } = useTestDiagnosticStore.getState();
-    if (demandee && actuel.phase === "intro" && actuel.langue !== demandee.code) {
-      dispatch({ type: "choisirLangue", langue: demandee.code });
-    }
+    if (actuel.phase !== "intro") return;
+
+    const demandee = langues.data.find((l) => l.code === langueDemandee);
+    const langueExistante = langues.data.some((l) => l.code === actuel.langue);
+    const langueParDefaut = demandee?.code
+      ?? (langueExistante ? actuel.langue : langues.data.length === 1 ? langues.data[0].code : null);
+    if (actuel.langue !== langueParDefaut) dispatch({ type: "choisirLangue", langue: langueParDefaut });
   }, [langues.data, langueDemandee]);
 
   if (enCours) return null;
@@ -129,11 +133,18 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
     <div className="mx-auto max-w-3xl">
       {entete}
       <p className="mt-2 text-content-secondary">
-        Un test court pour situer votre niveau et construire un parcours adapté. Commencez par choisir la langue à évaluer.
+        Un test court pour situer votre niveau et construire un parcours adapté.
       </p>
 
       <section className="card mt-6" aria-labelledby="etape-langue">
-        <h2 id="etape-langue" className="mb-4 text-h3 text-content">1. Choisissez la langue</h2>
+        <h2 id="etape-langue" className="mb-2 text-h3 text-content">
+          1. {langues.data?.length === 1 ? "Votre langue choisie" : "Vos langues choisies"} à l&apos;inscription
+        </h2>
+        {langues.data && langues.data.length > 1 && (
+          <p className="mb-4 text-small text-content-secondary">
+            Vous avez choisi plusieurs langues. Laquelle souhaitez-vous évaluer en premier ?
+          </p>
+        )}
         {langues.isPending ? (
           <p role="status" className="input flex min-h-[3.5rem] animate-pulse items-center text-content-secondary">
             Chargement des langues…
@@ -186,7 +197,7 @@ export default function PlacementTest({ langueDemandee }: { langueDemandee?: str
       </button>
       {!langueChoisie && (
         <p id="aide-demarrage" className="mt-2 text-center text-small text-content-secondary">
-          Choisissez une langue pour commencer.
+          Sélectionnez une langue disponible pour commencer.
         </p>
       )}
     </div>

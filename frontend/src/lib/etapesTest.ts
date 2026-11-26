@@ -21,7 +21,7 @@ interface DefinitionEtape {
 /** Les étapes, dans l'ordre où l'apprenant les passe. */
 export const ETAPES: Record<EtapeTest, DefinitionEtape> = {
   qcm: {
-    libelle: "Grammaire et lexique",
+    libelle: "Grammaire, lexique et compréhension écrite",
     consigne: "Choisissez la bonne réponse parmi les propositions.",
     competences: ["grammaire", "lecture"],
   },
@@ -32,7 +32,7 @@ export const ETAPES: Record<EtapeTest, DefinitionEtape> = {
   },
   expression_orale: {
     libelle: "Expression orale",
-    consigne: "Enregistrez votre réponse au micro, sans lire de notes.",
+    consigne: "Répétez la phrase au micro.",
     competences: ["oral"],
   },
   expression_ecrite: {

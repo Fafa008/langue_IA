@@ -40,7 +40,7 @@ const MESSAGES_ERREUR: Record<string, string> = {
 
 /**
  * Reconnaissance vocale du navigateur : transforme la parole en texte dans la langue étudiée.
- * Sans prise en charge (Firefox par exemple), `disponible` est faux et l'écran propose la saisie au clavier.
+ * Sans prise en charge (Firefox par exemple), `disponible` est faux ; l'écran signale explicitement l'indisponibilité.
  */
 export function useReconnaissanceVocale(langue: string) {
   const [disponible, setDisponible] = useState(false);
@@ -55,29 +55,46 @@ export function useReconnaissanceVocale(langue: string) {
     return () => reconnaissanceRef.current?.abort();
   }, []);
 
-  const demarrer = useCallback(() => {
+  const demarrer = useCallback((apresArret?: (texte: string) => void) => {
     const Constructeur = constructeur();
-    if (!Constructeur) return;
+    if (!Constructeur) {
+      setErreur("La reconnaissance vocale n’est pas prise en charge par ce navigateur.");
+      setDisponible(false);
+      return;
+    }
     reconnaissanceRef.current?.abort();
     const reconnaissance = new Constructeur();
+    let texteReconnu = "";
+    let reconnaissanceEnErreur = false;
     reconnaissance.lang = localeDe(langue);
     reconnaissance.interimResults = true; // le texte s'affiche pendant que l'apprenant parle
     reconnaissance.continuous = false;
     reconnaissance.onresult = (evenement) => {
       let texte = "";
       for (let i = 0; i < evenement.results.length; i++) texte += evenement.results[i][0].transcript;
-      setTranscription(texte.trim());
+      texteReconnu = texte.trim();
+      setTranscription(texteReconnu);
     };
     reconnaissance.onerror = (evenement) => {
+      reconnaissanceEnErreur = true;
       if (evenement.error !== "aborted") setErreur(MESSAGES_ERREUR[evenement.error] ?? "La reconnaissance vocale a échoué. Réessayez.");
       setEcoute(false);
     };
-    reconnaissance.onend = () => setEcoute(false);
+    reconnaissance.onend = () => {
+      setEcoute(false);
+      if (!reconnaissanceEnErreur) apresArret?.(texteReconnu);
+    };
     reconnaissanceRef.current = reconnaissance;
     setTranscription("");
     setErreur(null);
     setEcoute(true);
-    reconnaissance.start();
+    try {
+      reconnaissance.start();
+    } catch {
+      reconnaissanceEnErreur = true;
+      setEcoute(false);
+      setErreur("Impossible de démarrer la reconnaissance vocale. Vérifiez l’autorisation du micro, puis réessayez.");
+    }
   }, [langue]);
 
   const arreter = useCallback(() => reconnaissanceRef.current?.stop(), []);

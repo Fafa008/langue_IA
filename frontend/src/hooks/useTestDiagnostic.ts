@@ -88,7 +88,7 @@ export function useTestDiagnostic() {
 
   /* Démarrage */
 
-  const choisirLangue = (langue: string) => {
+  const choisirLangue = (langue: string | null) => {
     reinitialiserRequetes();
     dispatch({ type: "choisirLangue", langue });
   };

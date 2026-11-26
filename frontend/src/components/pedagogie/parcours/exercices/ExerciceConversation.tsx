@@ -48,6 +48,7 @@ export default function ExerciceConversation({
   verrouille,
   onSoumettre,
   libelleTerminer,
+  modeVocalParTours = false,
   messagesInitiales,
   onMessagesChange,
   lectureSeule = false,
@@ -58,6 +59,7 @@ export default function ExerciceConversation({
   verrouille: boolean;
   onSoumettre: (reponse: ReponseExercice) => void;
   libelleTerminer?: string;
+  modeVocalParTours?: boolean;
   messagesInitiales?: MessageEnChat[];
   onMessagesChange?: (messages: MessageEnChat[]) => void;
   lectureSeule?: boolean;
@@ -85,10 +87,10 @@ export default function ExerciceConversation({
     if (!lectureSeule) onMessagesChange?.(messages);
   }, [lectureSeule, messages, onMessagesChange]);
 
-  // La dictée remplit la zone de saisie ; l'apprenant relit avant d'envoyer
+  // En mode vocal par tours, la transcription est envoyée directement ; sinon elle remplit la zone de saisie.
   useEffect(() => {
-    if (voix.transcription) setBrouillon(voix.transcription);
-  }, [voix.transcription]);
+    if (!modeVocalParTours && voix.transcription) setBrouillon(voix.transcription);
+  }, [modeVocalParTours, voix.transcription]);
 
   useEffect(() => {
     finRef.current?.scrollIntoView?.({ block: "nearest" });
@@ -98,8 +100,8 @@ export default function ExerciceConversation({
    * Un échange appelle trois routes backend distinctes : le tuteur répond, puis la correction et la traduction
    * sont demandées en parallèle. Une panne de l'une des deux tâches ne supprime pas la réponse du tuteur.
    */
-  const envoyer = async () => {
-    const message = brouillon.trim();
+  const envoyer = async (texte = brouillon, vocal = false) => {
+    const message = texte.trim();
     if (!message || chatbot.isPending) return;
     const historique = messages;
     setMessages([...historique, { role: "apprenant", contenu: message }]);
@@ -109,6 +111,7 @@ export default function ExerciceConversation({
     try {
       const reponse = await chatbot.mutateAsync({ message, historique });
       setQuotaRestant(reponse.quotaRestant);
+      if (vocal) lireAVoixHaute(reponse.reponse, langue);
       const [resultatCorrection, resultatTraduction] = await Promise.allSettled([
         correction.mutateAsync({ message, historique }),
         traduction.mutateAsync({ idMessage, message: reponse.reponse }),
@@ -212,7 +215,23 @@ export default function ExerciceConversation({
               />
             </label>
             {voix.disponible && (
-              <BoutonMicro ecoute={voix.ecoute} onDemarrer={voix.demarrer} onArreter={voix.arreter} libelle={libelles.dicter} />
+              <BoutonMicro
+                ecoute={voix.ecoute}
+                onDemarrer={() =>
+                  voix.demarrer(
+                    modeVocalParTours
+                      ? (transcription) => {
+                        if (transcription) void envoyer(transcription, true);
+                      }
+                      : undefined,
+                  )
+                }
+                onArreter={voix.arreter}
+                disabled={chatbot.isPending || quotaRestant === 0}
+                libelle={modeVocalParTours ? libelles.parler : libelles.dicter}
+                libelleArreter={modeVocalParTours ? libelles.arreter : undefined}
+                iconeSeule={modeVocalParTours}
+              />
             )}
             <button
               type="submit"

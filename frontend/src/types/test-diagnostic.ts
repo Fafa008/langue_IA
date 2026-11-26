@@ -168,7 +168,7 @@ export interface DonneeAnalyse {
   difficulte: number;
   justesse: boolean;
   tempsReponseSecondes: number;
-  /** Transcription et confiance renseignées plus tard par le service STT (phase 4). */
+  /** Réservés aux intégrations STT qui renverront une transcription et sa confiance. */
   transcription?: string;
   confianceStt?: number;
 }
@@ -250,7 +250,7 @@ export interface EtatTest {
 }
 
 export type ActionTest =
-  | { type: "choisirLangue"; langue: string }
+  | { type: "choisirLangue"; langue: string | null }
   | { type: "personnaliser"; personnalisation: PersonnalisationTest }
   | { type: "retourIntroduction" }
   | { type: "demarrer"; session: SessionTest; debut: number }

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Langue, Niveau, Question, StatutDiagnostic
 from app.models import TestDiagnostic as TentativeDiagnostic
-from app.schemas.ia import NIVEAUX_IA, VERSION_AGENT_DIAGNOSTIC, ReponseDiagnosticIA
+from app.schemas.ia import NIVEAUX_IA, VERSION_AGENT_DIAGNOSTIC, PreuveDiagnosticIA, ReponseDiagnosticIA
 from app.services import analyse_diagnostic
 from app.services.ia import ErreurServiceIA
 from tests.conftest import creer_utilisateur, entete
@@ -134,6 +134,17 @@ def _references(db: Session, code_langue: str = "en"):
     langue = db.scalar(select(Langue).where(Langue.code == code_langue))
     niveau = db.scalar(select(Niveau).where(Niveau.code == "A1"))
     return langue, niveau
+
+
+def test_transcription_texte_reconnue_comme_preuve_d_expression_orale():
+    preuve = PreuveDiagnosticIA(
+        id_question="oral-1",
+        competence="oral",
+        type_reponse="texte",
+        contenu="I live in London.",
+    )
+
+    assert analyse_diagnostic._preuve_directe("expression_orale", preuve)
 
 
 def test_persiste_l_analyse_et_expose_les_champs_publics(client, db: Session, ia: FauxServiceIA):

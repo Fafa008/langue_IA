@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import ExerciceConversation from "@/components/pedagogie/parcours/exercices/ExerciceConversation";
 import { mockParcoursPersonnaliseService } from "@/services/parcours-personnalise.service";
 import { mockFetch } from "@/test/fetch-mock";
@@ -20,13 +20,74 @@ const contenu = {
   echangesMinimum: 3,
 };
 
-function rendre() {
+type EvenementReconnaissance = {
+  results: {
+    length: number;
+    [index: number]: { length: number; [index: number]: { transcript: string } };
+  };
+};
+
+function installerReconnaissanceVocale() {
+  let reconnaissance: {
+    onresult: ((evenement: EvenementReconnaissance) => void) | null;
+    onerror: ((evenement: { error: string }) => void) | null;
+    onend: (() => void) | null;
+  } | null = null;
+
+  class ReconnaissanceFactice {
+    onresult: ((evenement: EvenementReconnaissance) => void) | null = null;
+    onerror: ((evenement: { error: string }) => void) | null = null;
+    onend: (() => void) | null = null;
+    start = jest.fn();
+    stop = jest.fn();
+    abort = jest.fn();
+
+    constructor() {
+      reconnaissance = this;
+    }
+  }
+
+  Object.defineProperty(window, "SpeechRecognition", { configurable: true, value: ReconnaissanceFactice });
+  return { reconnaissance: () => reconnaissance };
+}
+
+function installerSyntheseVocale() {
+  class EnonceFactice {
+    lang = "";
+    rate = 1;
+    onend: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor(readonly text: string) {}
+  }
+  const parler = jest.fn((_enonce: EnonceFactice) => undefined);
+  Object.defineProperty(window, "speechSynthesis", {
+    configurable: true,
+    value: { cancel: jest.fn(), speak: parler },
+  });
+  Object.defineProperty(window, "SpeechSynthesisUtterance", { configurable: true, value: EnonceFactice });
+  return { parler };
+}
+
+function rendre(modeVocalParTours = false) {
   return afficher(
-    <ExerciceConversation contenu={contenu} langue="fr" enCours={false} verrouille={false} onSoumettre={jest.fn()} />,
+    <ExerciceConversation
+      contenu={contenu}
+      langue="fr"
+      enCours={false}
+      verrouille={false}
+      modeVocalParTours={modeVocalParTours}
+      onSoumettre={jest.fn()}
+    />,
   );
 }
 
 describe("US72/US74-FE — chat avec le tuteur IA", () => {
+  afterEach(() => {
+    Reflect.deleteProperty(window, "SpeechRecognition");
+    Reflect.deleteProperty(window, "speechSynthesis");
+    Reflect.deleteProperty(window, "SpeechSynthesisUtterance");
+  });
+
   it("étiquette le tuteur comme simulé quand le parcours est simulé", () => {
     rendre();
     expect(screen.getByText(/tuteur IA simulé \(démonstration\)/)).toBeInTheDocument();
@@ -84,5 +145,66 @@ describe("US72/US74-FE — chat avec le tuteur IA", () => {
     fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
     await waitFor(() => expect(chatbot).toHaveBeenCalled());
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("affiche une icône micro compacte et envoie la transcription avant de lire la réponse", async () => {
+    const reconnaissance = installerReconnaissanceVocale();
+    const synthese = installerSyntheseVocale();
+    const chatbot = jest.spyOn(mockParcoursPersonnaliseService, "chatbot");
+    chatbot.mockClear();
+    rendre(true);
+
+    const boutonMicro = await screen.findByRole("button", { name: "Parler" });
+    expect(boutonMicro.textContent).toBe("");
+    expect(boutonMicro.querySelector("svg")).not.toBeNull();
+    fireEvent.click(boutonMicro);
+
+    act(() => {
+      reconnaissance.reconnaissance()?.onresult?.({
+        results: { length: 1, 0: { length: 1, 0: { transcript: "Je m'appelle Rova" } } },
+      });
+      reconnaissance.reconnaissance()?.onend?.();
+    });
+
+    await waitFor(() => expect(chatbot).toHaveBeenCalledWith("Je m'appelle Rova", expect.any(Array)));
+    await waitFor(() => expect(synthese.parler).toHaveBeenCalledWith(expect.objectContaining({ text: expect.any(String) })));
+  });
+
+  it("conserve la dictée manuelle dans les exercices de conversation", async () => {
+    const reconnaissance = installerReconnaissanceVocale();
+    const chatbot = jest.spyOn(mockParcoursPersonnaliseService, "chatbot");
+    chatbot.mockClear();
+    rendre();
+
+    const boutonDictee = await screen.findByRole("button", { name: "Dicter" });
+    expect(boutonDictee.textContent).toContain("Dicter");
+    fireEvent.click(boutonDictee);
+
+    act(() => {
+      reconnaissance.reconnaissance()?.onresult?.({
+        results: { length: 1, 0: { length: 1, 0: { transcript: "Bonjour" } } },
+      });
+      reconnaissance.reconnaissance()?.onend?.();
+    });
+
+    expect(screen.getByPlaceholderText(/Écrivez ou dictez/)).toHaveValue("Bonjour");
+    expect(chatbot).not.toHaveBeenCalled();
+  });
+
+  it("n'envoie pas de message si la reconnaissance vocale échoue", async () => {
+    const reconnaissance = installerReconnaissanceVocale();
+    const chatbot = jest.spyOn(mockParcoursPersonnaliseService, "chatbot");
+    chatbot.mockClear();
+    rendre(true);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Parler" }));
+
+    act(() => {
+      reconnaissance.reconnaissance()?.onerror?.({ error: "network" });
+      reconnaissance.reconnaissance()?.onend?.();
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("La reconnaissance vocale a besoin d'une connexion internet.");
+    expect(chatbot).not.toHaveBeenCalled();
   });
 });

@@ -274,14 +274,14 @@ def verifier_reponse_diagnostic_v2(
 
 
 def _preuve_directe(domaine: str, preuve: PreuveDiagnosticIA) -> bool:
-    """Miroir backend de ``preuve_directe`` du service IA : une réponse à choix ne prouve rien seule."""
+    """Miroir backend de ``preuve_directe`` : l'oral est transmis en transcription texte."""
     production = preuve.type_reponse in ("texte", "audio")
     if domaine in ("grammaire", "vocabulaire"):
         return production
     if domaine == "expression_ecrite":
         return preuve.competence == "ecrit" and preuve.type_reponse == "texte"
     if domaine == "expression_orale":
-        return preuve.competence == "oral" and preuve.type_reponse == "audio"
+        return preuve.competence == "oral" and preuve.type_reponse in ("texte", "audio")
     if domaine == "comprehension_ecrite":
         return preuve.competence == "lecture" and production
     if domaine == "comprehension_orale":

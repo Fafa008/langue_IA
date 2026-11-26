@@ -33,7 +33,7 @@ Chaque fonctionnalité reçoit **un seul** verdict principal. Le verdict est vol
 | 🟡 **Partiel** | La chaîne existe mais une partie est limitée, incomplète ou dégradée. | Diagnostic (2 questions, non adaptatif), analyse IA (dépend d'un vrai fournisseur) |
 | 🔌 **Non branché** | Le code existe mais aucun appelant ne l'utilise, ou l'appel échoue systématiquement. | Chatbot IA, reprise de test, `justification` du résultat |
 | ⛔ **Absent** | Aucun code, aucune route, aucune table utile. | Ateliers, réservations, paiements, parcours exposés |
-| 🧪 **Simulé** | Fonctionne uniquement avec `NEXT_PUBLIC_API_MOCK=true`. | Tableau de bord apprenant/formateur, banque de 50 questions |
+| 🧪 **Simulé** | Fonctionne uniquement avec `NEXT_PUBLIC_API_MOCK=true`. | Tableau de bord apprenant/formateur, banque mock de 100 questions |
 
 > **Piège à connaître** : « présent dans l'interface » ≠ « fonctionnel ».
 > Plusieurs écrans affichent des cartes marquées **« Bientôt »** : elles ne mènent nulle part, volontairement.
@@ -96,7 +96,7 @@ Frontend Next.js 14 ── HTTP :8000 ──► Backend FastAPI ── SQL ─�
 2. Ouvrir <http://localhost:3000>, se connecter avec `admin@digitheque.mg` / `Demo2026`.
 3. Montrer le tableau de bord, les utilisateurs, les formateurs, les langues et niveaux.
 4. Se déconnecter, se reconnecter avec `apprenant@digitheque.mg` / `Demo2026`.
-5. Lancer le test de positionnement en anglais : le backend pose **2 questions** (niveau A1).
+5. Lancer le test de positionnement dans une langue inscrite : le backend renvoie **20 questions** réparties entre quatre compétences.
 6. Terminer : le score et le niveau s'affichent ; l'analyse IA est **partielle** tant qu'aucun fournisseur LLM
    n'est configuré.
 7. Ouvrir <http://localhost:8000/docs> pour montrer le contrat réel.

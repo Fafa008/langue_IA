@@ -415,7 +415,7 @@ test.describe("Démonstration générale — cas limites", () => {
     await loginAs(page, APPRENANT);
     await installerChat(page);
     await aller(page, "/espace/apprenant/chat");
-    await page.getByRole("button", { name: "Dicter" }).click();
+    await page.getByRole("button", { name: "Parler" }).click();
     await expect(page.getByRole("alert").filter({ hasText: "Le micro est bloqué" })).toBeVisible();
     await page.getByPlaceholder("Écrivez ou dictez votre réponse…").fill("je continue à l'écrit");
     await expect(page.getByRole("button", { name: "Envoyer" })).toBeEnabled();

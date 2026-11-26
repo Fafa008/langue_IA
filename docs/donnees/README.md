@@ -90,11 +90,12 @@ niveaux CECRL.
 | --- | --- | --- |
 | Comptes de démonstration | 3 | un par rôle, mot de passe `Demo2026` |
 | Abonnement de l'apprenant démo | 1 | formule Luxe |
-| Questions de diagnostic | **35** | 18 en anglais, 17 en français |
+| Questions de diagnostic | **100** | 20 par langue (`fr`, `en`, `zh`, `it`, `de`) |
 
-Les questions sont **toutes des QCM** (`type_reponse = "choix"`), avec au moins 2 par niveau.
-Elles couvrent la grammaire, le vocabulaire, la lecture et l'écoute (l'écoute utilise
-`audio_texte`, lu par la synthèse vocale du navigateur).
+La banque de démonstration comprend 5 questions par étape : QCM de grammaire/lexique et lecture,
+compréhension orale, réponse écrite et expression orale. L'écoute utilise `audio_texte`, lu par
+la synthèse vocale ; l'expression orale est transcrite par le navigateur et seule la transcription
+est envoyée au backend. Ces données servent aux tests et démonstrations, pas à une certification.
 
 > **Piège** : `SEED_DEMO` vaut `false` par défaut dans le code Python, mais
 > `docker-compose.yml` force `${SEED_DEMO:-true}`. Avec Compose, les comptes de démo et les
@@ -156,13 +157,9 @@ volume Docker `postgres_data`.
 
 `frontend/src/mocks/` contient un jeu complet utilisé quand `NEXT_PUBLIC_API_MOCK=true` (valeur
 de `frontend/.env.development`) : comptes, langues, niveaux, formules, formateurs, utilisateurs,
-tableau de bord, et **50 questions** (25 anglais + 25 français).
+tableau de bord, et **100 questions** (20 dans chacune des 5 langues).
 
-Ces 50 questions sont **plus riches que les 35 du backend** : elles incluent 3 sujets
-d'expression orale et 3 sujets d'expression écrite par langue, que le seed ne charge pas.
-
-> Conséquence : une question qui « marche » en mode mock peut ne pas exister côté serveur.
-> Toute divergence entre les mocks et le seed doit être documentée.
+Les 20 questions de chaque langue suivent les mêmes étapes que la banque backend.
 
 ---
 

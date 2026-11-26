@@ -123,6 +123,35 @@ def test_generer_json_utilise_les_defauts_de_configuration(env_propre: pytest.Mo
     assert corps_vus[0]["max_tokens"] == 77
 
 
+@pytest.mark.parametrize(
+    ("base_url", "cle_limite_tokens", "cle_inutilisee"),
+    [
+        ("https://api.groq.com/openai/v1", "max_completion_tokens", "max_tokens"),
+        ("https://llm.test/v1", "max_tokens", "max_completion_tokens"),
+    ],
+)
+def test_generer_json_adapte_la_cle_de_limite_tokens_au_fournisseur(
+    env_propre: pytest.MonkeyPatch,
+    base_url: str,
+    cle_limite_tokens: str,
+    cle_inutilisee: str,
+) -> None:
+    corps_vus: list[dict] = []
+
+    def handler(requete: httpx.Request) -> httpx.Response:
+        corps_vus.append(json.loads(requete.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"valeur": "ok"}'}}]})
+
+    async def scenario() -> None:
+        adaptateur = CompatibleOpenAI(config(base_url=base_url), client=client_simule(handler))
+        await adaptateur.generer_json(MESSAGES, schema=Sortie, max_tokens=42)
+        await adaptateur.fermer()
+
+    asyncio.run(scenario())
+    assert corps_vus[0][cle_limite_tokens] == 42
+    assert cle_inutilisee not in corps_vus[0]
+
+
 def test_generer_texte_retourne_le_texte_et_les_metadonnees(env_propre: pytest.MonkeyPatch) -> None:
     captures: list[httpx.Request] = []
 

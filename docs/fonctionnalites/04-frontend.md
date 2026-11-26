@@ -247,13 +247,12 @@ première chose à vérifier quand « les données ne changent pas ».
 | `utilisateurs.mock.ts`, `formateurs.mock.ts` | listes paginées |
 | `tableau-de-bord.mock.ts` | KPI, courbe, répartition |
 | `profil.mock.ts` | profil modifiable |
-| `questions-test.mock.ts` | **50 questions** (25 EN + 25 FR), dont audio/oral/écrit |
+| `questions-test.mock.ts` | **100 questions** (20 dans chacune des 5 langues), quatre compétences |
 | `test-diagnostic.mock.ts` | moteur complet du test (plan 15 min, scoring, reprise) |
 | `referentiel-rag.mock.ts` | sources de justification |
 
-> **Divergence à connaître** : les mocks contiennent **50 questions**, le seed backend **35**. Les 12 sujets
-> d'expression orale/écrite des mocks **n'existent pas en base**. Une démonstration en mode mock peut donc
-> montrer des écrans que le backend réel ne produira jamais.
+> Les banques mock et backend couvrent toutes deux 20 questions par langue. En mode réel, la
+> reconnaissance orale envoie uniquement sa transcription texte ; aucun fichier audio n'est stocké.
 
 ---
 
@@ -373,10 +372,10 @@ frontend est cohérent avec ses propres types et ses mocks.
 | --- | --- |
 | Deux routes de reprise absentes | l'écran « test interrompu » échoue en réel |
 | `justification` jamais renvoyée | bloc de justification vide |
-| Mocks ≠ seed (50 vs 35 questions) | une démo en mock peut ne pas être reproductible en réel |
+| Reconnaissance vocale dépend du navigateur | l'oral est évalué sur la transcription, pas sur la prononciation |
 | `NEXT_PUBLIC_*` figé au build | changer l'URL ou le mode mock exige une reconstruction en prod |
 | Timer 15 min côté client seulement | le backend ne connaît pas la durée ; un appel direct peut dépasser |
-| Audio non persisté | l'oral n'est ni stocké ni corrigé |
+| Audio non persisté | seule la transcription orale est stockée et corrigée |
 | Pas de déconnexion serveur | jeton valide jusqu'à expiration |
 | Entrées « Bientôt » | 404 si l'on force l'URL |
 | Pas de rafraîchissement de jeton | expiration = reconnexion |

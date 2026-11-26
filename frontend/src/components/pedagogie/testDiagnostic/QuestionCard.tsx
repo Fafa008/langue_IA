@@ -5,6 +5,7 @@ import type { Question } from "@/types/test-diagnostic";
 import AnalyseEnCours from "./AnalyseEnCours";
 import EnregistrementOral from "./EnregistrementOral";
 import ListeningAudio from "./ListeningAudio";
+import ReconnaissanceOrale from "./ReconnaissanceOrale";
 import RedactionEcrite from "./RedactionEcrite";
 import TexteATrous from "./TexteATrous";
 
@@ -29,7 +30,7 @@ interface QuestionCardProps {
   onValiderAudio: (audio: Blob) => void;
 }
 
-/** Question du test, présentée selon son étape : QCM, écoute puis QCM, enregistrement oral ou rédaction. */
+/** Question du test, présentée selon son étape : QCM, écoute, transcription orale ou réponse écrite. */
 export default function QuestionCard({
   question,
   langue,
@@ -81,6 +82,11 @@ export default function QuestionCard({
         <p className="mt-2 text-small text-content-secondary" data-testid="consigne-parler">
           (Durée minimale : {question.dureeMinimaleSecondes ?? DUREE_ORALE_MINIMALE_SECONDES} s)
         </p>
+      )}
+      {format === "parler" && question.typeReponse === "texte" && (
+        <blockquote className="mt-4 rounded-btn bg-background px-6 py-3 text-center text-h5 font-semibold text-content">
+          « {question.enonce} »
+        </blockquote>
       )}
       {question.support && (
         <div className="mt-4 rounded-btn bg-background p-4 leading-relaxed" data-testid="question-support">
@@ -145,7 +151,17 @@ export default function QuestionCard({
         />
       )}
 
-      {!retour && question.typeReponse === "texte" && format !== "texte_a_trous" && (
+      {!retour && question.typeReponse === "texte" && format === "parler" && (
+        <ReconnaissanceOrale
+          langue={langue}
+          valeur={reponseLibre}
+          dureeMinimale={question.dureeMinimaleSecondes ?? DUREE_ORALE_MINIMALE_SECONDES}
+          onChange={onTexteChange}
+          disabled={verrouille}
+        />
+      )}
+
+      {!retour && question.typeReponse === "texte" && format !== "texte_a_trous" && format !== "parler" && (
         <RedactionEcrite
           id={`response-${question.id}`}
           valeur={reponseLibre}

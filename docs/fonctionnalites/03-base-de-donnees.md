@@ -235,14 +235,18 @@ migrations. Il est **idempotent** : il compare des clés naturelles et n'ajoute 
 | --- | --- | --- |
 | Comptes | 3 | `apprenant@`, `formateur@`, `admin@digitheque.mg` / `Demo2026` |
 | Abonnement démo | 1 | formule Luxe, `aujourd'hui + 365 jours` |
-| Questions | **35** | **18 anglais**, **17 français**, toutes des QCM |
+| Questions | **100** | **20 par langue**, cinq langues |
 
-Répartition des 35 questions par niveau :
+Répartition des 20 questions par niveau :
 
-| Langue | A1 | A2 | B1 | B2 | C1 | C2 |
+| Langues CECRL (`fr`, `en`, `it`, `de`) | A1 | A2 | B1 | B2 | C1 | C2 |
 | --- | :-: | :-: | :-: | :-: | :-: | :-: |
-| Anglais | 2 | 4 | 3 | 4 | 3 | 2 |
-| Français | 2 | 4 | 3 | 3 | 3 | 2 |
+| Chacune | 4 | 4 | 3 | 4 | 3 | 2 |
+| Mandarin (`zh`, HSK) | HSK 1 | HSK 2 | HSK 3 | HSK 4 | HSK 5 | HSK 6 |
+|  | 4 | 4 | 3 | 4 | 3 | 2 |
+
+Chaque banque comporte 5 questions par compétence : grammaire/lexique et compréhension écrite,
+compréhension orale, expression écrite et expression orale.
 
 > **Piège** : `SEED_DEMO` vaut `false` par défaut dans le code Python, mais `docker-compose.yml` force
 > `${SEED_DEMO:-true}`. **Avec Compose, les données de démo sont chargées par défaut.** En production, il faut
@@ -411,9 +415,9 @@ Get-Content sauvegarde.sql | docker compose exec -T db psql -U admin -d centre_l
 | RBAC persisté | ✅ | `roles`, `permissions` |
 | Comptes et questions de démo | ✅ | `SEED_DEMO=true` |
 | Idempotence du seed | ✅ | `test_seed.py` |
-| Banque de questions EN/FR | 🟡 | 35 questions, 2 par niveau en A1 |
-| Questions `zh`, `it`, `de` | ⛔ | 0 ligne |
-| Questions `audio` / `texte` | 🔌 | type accepté, aucune donnée, audio refusé |
+| Banque de questions des 5 langues | ✅ | 20 questions par langue, quatre compétences |
+| Réponses orales | 🟡 | transcription navigateur scorée, aucun audio stocké ni prononciation évaluée |
+| Fichiers audio en réponse | ⛔ | refusés ; seule la transcription texte est acceptée |
 | Tables de parcours | ⛔ | 0 ligne, aucune route |
 | Ateliers | ⛔ | 0 ligne, aucune route |
 | Sauvegardes | ⛔ | aucun code |

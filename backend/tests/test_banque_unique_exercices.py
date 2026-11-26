@@ -95,4 +95,4 @@ class TestSeedSansAudio:
         assert all(question.donnees_test for question in questions)
         assert all(question.audio_ref is None for question in questions)
         assert all("audio_url" not in json.loads(question.contenu) for question in questions)
-        assert all(question.framework == "CECRL" for question in questions)
+        assert all(question.framework == ("HSK" if question.langue.code == "zh" else "CECRL") for question in questions)

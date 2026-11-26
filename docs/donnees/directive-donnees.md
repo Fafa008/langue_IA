@@ -96,7 +96,9 @@ adaptatif). La durée annoncée est de 15 minutes.
 
 Répartition recommandée par niveau : **5 grammaire, 4 lecture, 3 écoute** (toutes en `choix`).
 
-Priorité de production : `en` et `fr` (déjà 35 questions), puis `zh`, puis `it` et `de`.
+La banque de démonstration comprend déjà 20 questions par langue, mais ne remplace pas un corpus
+pédagogique validé. La production de contenus complets doit suivre les exigences de cette section
+(12 questions par niveau, soit 72 par langue).
 
 ### 5.2 Modèle de données imposé
 
@@ -257,10 +259,10 @@ Un jeu existe déjà : `ia-service/tests/data/diagnostic/jeu_cas.json`, version 
 - 3 comptes, mot de passe `Demo2026`, un par rôle.
 - Chargées **uniquement** si `SEED_DEMO=true`.
 - **Interdit en production** : `SEED_DEMO=false` obligatoire, et la CI doit le vérifier.
-- Les questions de démo restent un sous-ensemble minimal (anglais, français), jamais un jeu
-  réel.
-- Les mocks frontend ne doivent pas être présentés comme la vérité : ils contiennent 50
-  questions, le seed 35. Toute divergence doit être documentée.
+- La banque de démo comprend 20 questions par langue dans les 5 langues du centre, pour
+  valider les parcours et les quatre compétences ; elle ne constitue jamais un jeu certifié.
+- Les mocks frontend et le seed backend couvrent les mêmes 100 questions de démonstration
+  (20 par langue). Toute divergence doit être documentée.
 - Le seed doit rester idempotent : relancer `make seed` ne crée aucun doublon.
 
 ---

@@ -24,7 +24,7 @@ async function ouvrir(page: Page, options: OptionsApiDiagnostic = PARCOURS) {
   await mockTestDiagnosticApi(page, options);
   await loginAs(page, APPRENANT);
   await page.goto(`${URL_TEST}?langue=en`);
-  await expect(page.getByTestId("language-select")).toContainText("Anglais");
+  await expect(page.getByRole("radio", { name: /Anglais/ })).toBeChecked();
 }
 
 async function demarrer(page: Page) {
@@ -70,10 +70,8 @@ async function parcourirLesEcrans(page: Page, verifier: (ecran: string, elements
   await ouvrir(page);
   await verifier("démarrage", [page.getByRole("button", { name: "Commencer le test", exact: true })]);
 
-  await page.getByTestId("language-select").click();
-  await expect(page.getByRole("listbox", { name: "Langues proposées" })).toBeVisible();
-  await verifier("liste des langues", [page.getByRole("combobox", { name: "Rechercher une langue" })]);
-  await page.keyboard.press("Escape");
+  await expect(page.getByRole("radio")).toHaveCount(4);
+  await verifier("liste des langues", [page.getByRole("radio", { name: /Anglais/ })]);
 
   await page.getByRole("button", { name: "Commencer le test", exact: true }).click();
   await verifier("personnalisation", [page.getByRole("button", { name: /Lancer le test/ })]);
@@ -191,13 +189,11 @@ test.describe("Navigation au clavier", () => {
     await loginAs(page, APPRENANT);
     await page.goto(URL_TEST);
 
-    // Choix de la langue : ouverture, recherche, sélection à l'Entrée
-    await tabulerJusqua(page, page.getByTestId("language-select"));
-    await page.keyboard.press("Enter");
-    await expect(page.getByRole("combobox", { name: "Rechercher une langue" })).toBeFocused();
-    await page.keyboard.type("angl");
-    await page.keyboard.press("Enter");
-    await expect(page.getByTestId("language-select")).toContainText("Anglais");
+    // Choix de la langue : sélectionner le bouton radio au clavier
+    const anglais = page.getByRole("radio", { name: /Anglais/ });
+    await tabulerJusqua(page, anglais);
+    await page.keyboard.press("Space");
+    await expect(anglais).toBeChecked();
 
     await tabulerJusqua(page, page.getByRole("button", { name: "Commencer le test", exact: true }));
     await page.keyboard.press("Enter");

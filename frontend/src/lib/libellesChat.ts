@@ -31,6 +31,8 @@ export interface LibellesChat {
   placeholderEcoute: string;
   envoyer: string;
   dicter: string;
+  parler: string;
+  arreter: string;
   dictéeIndisponible: string;
   tuteurEcrit: string;
   correctionTraductionEnCours: string;
@@ -78,6 +80,8 @@ const FR: LibellesChat = {
   placeholderEcoute: "Je vous écoute…",
   envoyer: "Envoyer",
   dicter: "Dicter",
+  parler: "Parler",
+  arreter: "Arrêter",
   dictéeIndisponible: "Dictée indisponible dans ce navigateur : le mode écrit de secours reste actif.",
   tuteurEcrit: "Le tuteur IA écrit…",
   correctionTraductionEnCours: "Correction et traduction en cours…",
@@ -125,6 +129,8 @@ const EN: LibellesChat = {
   placeholderEcoute: "I'm listening…",
   envoyer: "Send",
   dicter: "Dictate",
+  parler: "Speak",
+  arreter: "Stop",
   dictéeIndisponible: "Dictation is unavailable in this browser: you can still type your reply.",
   tuteurEcrit: "The AI tutor is writing…",
   correctionTraductionEnCours: "Correction and translation in progress…",
@@ -172,6 +178,8 @@ const IT: LibellesChat = {
   placeholderEcoute: "Ti ascolto…",
   envoyer: "Invia",
   dicter: "Detta",
+  parler: "Parla",
+  arreter: "Interrompi",
   dictéeIndisponible: "Dettato non disponibile in questo browser: puoi comunque scrivere.",
   tuteurEcrit: "Il tutore IA sta scrivendo…",
   correctionTraductionEnCours: "Correzione e traduzione in corso…",
@@ -219,6 +227,8 @@ const DE: LibellesChat = {
   placeholderEcoute: "Ich höre zu…",
   envoyer: "Senden",
   dicter: "Diktieren",
+  parler: "Sprechen",
+  arreter: "Stoppen",
   dictéeIndisponible: "Diktat in diesem Browser nicht verfügbar: Tippen bleibt möglich.",
   tuteurEcrit: "Der KI-Tutor schreibt…",
   correctionTraductionEnCours: "Korrektur und Übersetzung laufen…",
@@ -266,6 +276,8 @@ const ZH: LibellesChat = {
   placeholderEcoute: "正在聆听…",
   envoyer: "发送",
   dicter: "口述",
+  parler: "开始说话",
+  arreter: "停止",
   dictéeIndisponible: "此浏览器不支持语音输入：仍可打字回复。",
   tuteurEcrit: "AI 导师正在输入…",
   correctionTraductionEnCours: "正在批改和翻译…",
