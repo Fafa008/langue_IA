@@ -69,10 +69,21 @@ describe("US73/US74-FE — page du chat : scénario et langue du parcours", () =
 
   it("affiche la langue du parcours sans proposer de choix manuel", () => {
     afficherChat({ ...PARCOURS, langue: { code: "en", libelle: "Anglais" } });
-    expect(screen.getByTestId("contexte-chat")).toHaveTextContent("Context: Se présenter · Anglais");
+    expect(screen.getByTestId("contexte-chat")).toHaveTextContent("Context: Introducing yourself · English");
     expect(screen.queryByRole("combobox", { name: /Langue|Language/ })).not.toBeInTheDocument();
     expect(screen.getByText("Hello! What is your name?")).toBeInTheDocument();
     expect(screen.queryByText("Bonjour ! Comment vous appelez-vous ?")).not.toBeInTheDocument();
+  });
+
+  it("parcours en anglais : scénarios, sous-titre et sujet ne restent pas en français", () => {
+    afficherChat({ ...PARCOURS, langue: { code: "en", libelle: "Anglais" } });
+    const options = within(screen.getByRole("combobox", { name: /Scenario/ }))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(options).toEqual(["Introducing yourself", "Ordering at a restaurant", "Asking for directions"]);
+    expect(screen.getByText("English · AI language tutor")).toBeInTheDocument();
+    expect(screen.getByText(/Topic:/)).toHaveTextContent("Topic: Introducing yourself");
+    expect(screen.queryByText(/Se présenter|Tuteur linguistique|Anglais/)).not.toBeInTheDocument();
   });
 
   it("remet la conversation à zéro quand le scénario change", () => {

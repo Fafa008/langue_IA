@@ -6,11 +6,11 @@ import { useCallback, useRef, useState } from "react";
 import ExerciceConversation, { type MessageEnChat } from "@/components/pedagogie/parcours/exercices/ExerciceConversation";
 import { useFermerSessionChatbot, useParcoursPersonnalise } from "@/hooks/useParcoursPersonnalise";
 import { ApiError } from "@/lib/api-client";
-import { libellesChat } from "@/lib/libellesChat";
+import { libellesChat, nomLangueChat } from "@/lib/libellesChat";
 import { messageErreurParcours } from "@/lib/parcours-personnalise";
 import { ROUTES } from "@/lib/routes";
 import { nouvelleSessionChatbot, sessionChatbotCourante } from "@/lib/session-chatbot";
-import { messageInitialChat, SCENARIOS_CHAT } from "@/lib/scenariosChat";
+import { libelleScenario, messageInitialChat, SCENARIOS_CHAT } from "@/lib/scenariosChat";
 import type { MessageChatbot } from "@/types/parcours-personnalise";
 import RapportConversation from "./RapportConversation";
 
@@ -24,10 +24,11 @@ interface ConversationMemoire {
   rapport?: MessageChatbot[];
 }
 
-function titreConversation(conversation: ConversationMemoire): string {
+function titreConversation(conversation: ConversationMemoire, langue: string): string {
   const premierMessage = conversation.messages.find((message) => message.role === "apprenant")?.contenu.trim();
   if (!premierMessage) {
-    return SCENARIOS_CHAT.find((scenario) => scenario.id === conversation.scenarioId)?.libelle ?? "";
+    const scenario = SCENARIOS_CHAT.find((item) => item.id === conversation.scenarioId);
+    return scenario ? libelleScenario(scenario, langue) : "";
   }
   return premierMessage.length > 38 ? `${premierMessage.slice(0, 38)}…` : premierMessage;
 }
@@ -100,7 +101,8 @@ export default function ChatView() {
     );
   }
 
-  const libelleLangue = parcours.data.langue.libelle;
+  const libelleLangue = nomLangueChat(langue, parcours.data.langue.libelle);
+  const intituleScenario = libelleScenario(scenario, langue);
   const estEnLectureSeule = conversation.statut !== "active";
 
   return (
@@ -116,7 +118,7 @@ export default function ChatView() {
               <p className="eyebrow">{libelles.espaceApprenant}</p>
               <h1 className="mt-1 text-xl font-bold text-content">{libelles.titre}</h1>
               <p className="text-xs text-content-secondary">
-                {libelleLangue} · Tuteur linguistique IA
+                {libelleLangue} · {libelles.tuteurLinguistique}
               </p>
             </div>
           </div>
@@ -139,7 +141,7 @@ export default function ChatView() {
           >
             {SCENARIOS_CHAT.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.libelle}
+                {libelleScenario(item, langue)}
               </option>
             ))}
           </select>
@@ -147,7 +149,7 @@ export default function ChatView() {
 
         <p data-testid="contexte-chat" className="text-sm text-content-secondary">
           {libelles.contexte}{" "}
-          <strong className="text-content">{scenario.libelle}</strong> · {libelleLangue}
+          <strong className="text-content">{intituleScenario}</strong> · {libelleLangue}
         </p>
       </section>
 
@@ -190,9 +192,9 @@ export default function ChatView() {
                   >
                     <MessageSquare size={16} aria-hidden className="mt-0.5 shrink-0" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{titreConversation(item)}</span>
+                      <span className="block truncate font-medium">{titreConversation(item, langue)}</span>
                       <span className="block truncate text-xs">
-                        {scenarioItem.libelle}
+                        {libelleScenario(scenarioItem, langue)}
                         {item.statut === "active" ? ` · ${libelles.conversationEnCours}` : ""}
                       </span>
                     </span>
@@ -209,7 +211,7 @@ export default function ChatView() {
             contenu={{
               format: "conversation",
               consigne: libelles.consigne,
-              sujet: scenario.sujet,
+              sujet: intituleScenario,
               messageInitial: messageInitialChat(scenario, langue),
               echangesMinimum: 3,
             }}
@@ -234,8 +236,9 @@ export default function ChatView() {
           {conversation.rapport && (
             <RapportConversation
               messages={conversation.rapport}
-              scenario={scenario.libelle}
+              scenario={intituleScenario}
               langue={libelleLangue}
+              codeLangue={langue}
               onRecommencer={() => nouvelleConversation(conversation.scenarioId)}
             />
           )}
