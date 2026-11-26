@@ -170,6 +170,7 @@ export default function ChatView() {
               langue={langue}
               enCours={false}
               verrouille={false}
+              modeVocalParTours
               libelleTerminer={libelles.terminerRapport}
               onSoumettre={(reponse) => {
                 if (reponse.format !== "conversation") return;

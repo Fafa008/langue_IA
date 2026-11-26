@@ -266,10 +266,10 @@ Cocher chaque ligne ; si une ligne échoue, le diagnostic est dans le chapitre i
 | --- | --- |
 | Deux routes de reprise absentes | écran « test interrompu » en erreur |
 | `justification` jamais renvoyée | bloc de résultat vide |
-| Seed à 2 questions par langue en A1 | test trop court pour convaincre |
+| Reconnaissance orale navigateur | transcription évaluée ; prononciation non mesurée |
 | `factice` sans scénario | analyse IA toujours partielle |
 | README `ia-service` obsolète | contredit le code |
-| Mocks à 50 questions vs seed à 35 | démonstration non reproductible en réel |
+| Banque de 100 questions (20 par langue) | démonstration reproductible des quatre compétences |
 
 ### 6.3 P2 — dette assumée
 

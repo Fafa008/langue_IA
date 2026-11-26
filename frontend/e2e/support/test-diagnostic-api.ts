@@ -20,6 +20,7 @@ function questionPublique(question: Question) {
     niveau: question.niveau,
     competence: question.competence,
     type_reponse: question.typeReponse,
+    format: question.format,
     enonce: question.enonce,
     choix: question.choix,
     support: question.support,
@@ -199,7 +200,12 @@ export async function mockTestDiagnosticApi(
         statut: "EN_COURS",
         dateDebut: new Date().toISOString(),
       });
-      await json(route, 201, { id_tentative: id, code_langue: langue, code_niveau: niveau });
+      await json(route, 201, {
+        id_tentative: id,
+        code_langue: langue,
+        code_niveau: niveau,
+        questions: questions.map(questionPublique),
+      });
       return;
     }
 

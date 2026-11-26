@@ -166,7 +166,7 @@ Conséquences :
 
 - **les migrations sont appliquées automatiquement** à chaque démarrage ;
 - **le seed est rejoué** à chaque démarrage (il est idempotent) ;
-- si `SEED_DEMO=true`, les comptes de démonstration et les 35 questions sont (re)chargés ;
+- si `SEED_DEMO=true`, les comptes de démonstration et les 100 questions (20 par langue) sont chargés ;
 - si une migration échoue, le conteneur s'arrête : `docker compose logs backend`.
 
 ### 4.2 Healthchecks
@@ -280,7 +280,7 @@ Le référentiel est **toujours** chargé, même avec `SEED_DEMO=false` :
 - niveaux CECRL A1 → C2 et HSK 1 → HSK 6 ;
 - 3 formules : Simple, Luxe, Premium.
 
-Les 35 questions de diagnostic (18 anglais, 17 français) ne sont chargées que si `SEED_DEMO=true`.
+Les 100 questions de démonstration du diagnostic (20 dans chacune des cinq langues) ne sont chargées que si `SEED_DEMO=true`.
 
 > **Production** : `SEED_DEMO` doit être `false`, et `SECRET_KEY` doit être changée. Le backend refuse de démarrer
 > en `ENVIRONMENT=production` avec la clé d'exemple.

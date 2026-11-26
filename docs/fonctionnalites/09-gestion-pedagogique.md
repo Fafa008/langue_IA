@@ -108,7 +108,7 @@ Cours (langue + référentiel + public cible)
 | `langue` | Langue cible du test. |
 | `framework` / référentiel | Détermine la grille de niveaux (CECRL ou HSK). |
 | Règle de sélection | Tirer les exercices `publiés`, dont `usage` contient `diagnostic`, non exclus par le formateur. |
-| Nombre d'items | Paramétrable par profil (le seed actuel fournit 2 questions par langue). |
+| Nombre d'items | Paramétrable par profil (le pack de démonstration actuel fournit 20 questions par langue). |
 | Durée | Paramétrable par profil ; non implémentée aujourd'hui. |
 | Version du profil | Toute modification du profil crée une nouvelle version, comme pour un exercice publié. |
 

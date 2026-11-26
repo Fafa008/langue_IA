@@ -278,8 +278,9 @@ class CompatibleOpenAI:
             "model": self.modele,
             "messages": [{"role": message.role, "content": message.contenu} for message in messages],
             "temperature": self._config.temperature if temperature is None else temperature,
-            "max_tokens": self._config.max_tokens if max_tokens is None else max_tokens,
         }
+        cle_limite_tokens = "max_completion_tokens" if self._config.base_url.host == "api.groq.com" else "max_tokens"
+        corps[cle_limite_tokens] = self._config.max_tokens if max_tokens is None else max_tokens
         if mode_json:
             corps["response_format"] = {"type": "json_object"}
         if flux:

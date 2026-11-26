@@ -29,14 +29,13 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 5"] } },
   ],
   webServer: {
-    // Un build de production évite la compilation à la demande de `next dev` : les navigations
-    // des 440 tests deviennent rapides et reproductibles (le build sert aussi `next start`).
+    // Un build dédié évite de partager le cache avec Docker et reste compatible avec `next start`.
     command: `npx next build && npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 900_000,
     // Les tests interceptent eux-mêmes les appels HTTP : pas de données simulées côté app.
     // Le preset est forcé : un frontend/.env.local local ne peut pas mettre le build en mode demo.
-    env: { NEXT_PUBLIC_MODE: "reel", NEXT_DIST_DIR: ".next-e2e" },
+    env: { NEXT_OUTPUT_STANDALONE: "false", NEXT_PUBLIC_MODE: "reel", NEXT_DIST_DIR: ".next-e2e" },
   },
 });

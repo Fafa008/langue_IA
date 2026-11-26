@@ -3,6 +3,8 @@
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import DbSession, UtilisateurConnecte
 from app.models import Question, Reponse, Role
@@ -124,10 +126,11 @@ def _reponse_out(reponse: Reponse) -> ReponseOut:
 
 @router.get("/diagnostic/langues", response_model=list[LangueDiagnosticOut])
 def lister_langues(db: DbSession, utilisateur: UtilisateurConnecte) -> list[LangueDiagnosticOut]:
-    """Langues proposées sur l'écran d'accueil du test, avec leur échelle et leur disponibilité."""
+    """Langues choisies par l'apprenant à l'inscription, avec leur échelle et leur disponibilité."""
     if utilisateur.role != Role.APPRENANT:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Droits insuffisants.")
 
+    codes_inscrits = {langue.code for langue in utilisateur.apprenant.langues} if utilisateur.apprenant else set()
     return [
         LangueDiagnosticOut(
             code=item.langue.code,
@@ -138,6 +141,7 @@ def lister_langues(db: DbSession, utilisateur: UtilisateurConnecte) -> list[Lang
             disponible=item.niveau_depart is not None,
         )
         for item in lister_langues_service(db)
+        if item.langue.code in codes_inscrits
     ]
 
 
@@ -162,6 +166,7 @@ def lister_questions(
 @router.post(
     "/diagnostic/tentatives",
     response_model=TentativeOut,
+    response_model_exclude_none=True,
     status_code=status.HTTP_201_CREATED,
 )
 def creer_tentative(
@@ -169,7 +174,7 @@ def creer_tentative(
     db: DbSession,
     utilisateur: UtilisateurConnecte,
 ) -> TentativeOut:
-    """Crée une tentative de diagnostic pour le premier niveau ayant des questions disponibles."""
+    """Crée une tentative et fige jusqu'à 20 questions issues des niveaux ouverts."""
     if utilisateur.role != Role.APPRENANT:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Droits insuffisants.")
 
@@ -177,10 +182,24 @@ def creer_tentative(
         tentative = creer_tentative_service(db, utilisateur.id_user, donnees.code_langue)
     except ErreurDiagnostic as erreur:
         raise _convertir_erreur(erreur) from None
+    questions_par_id = {
+        question.id_question: question
+        for question in db.scalars(
+            select(Question)
+            .options(selectinload(Question.niveau))
+            .where(Question.id_question.in_(tentative.questions_ids))
+        ).all()
+    }
+    if len(questions_par_id) != len(tentative.questions_ids):
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Une question de la tentative est indisponible.")
     return TentativeOut(
         id_tentative=tentative.id_test,
         code_langue=tentative.langue.code,
         code_niveau=tentative.niveau.code,
+        questions=[
+            _question_out(questions_par_id[id_question], questions_par_id[id_question].niveau.code)
+            for id_question in tentative.questions_ids
+        ],
     )
 
 

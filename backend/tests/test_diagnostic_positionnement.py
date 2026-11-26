@@ -10,6 +10,7 @@ from app.models import Langue, Niveau, Question, StatutDiagnostic, TypeExercice
 from app.models import TestDiagnostic as TentativeDiagnostic
 from app.schemas.ia import ReponsePositionnementIA
 from app.services import analyse_diagnostic
+from app.services.scoring import _est_correct
 from tests.conftest import creer_utilisateur, entete
 
 COMPETENCES = ("lecture", "ecoute", "ecrit", "oral")
@@ -112,6 +113,20 @@ def test_expose_les_champs_du_positionnement_sans_correction(db: Session, client
     assert question["type_reponse"] == "texte"
     assert "reponses" not in question
     assert "élève" not in reponse.text
+
+
+def test_normalise_ponctuation_et_casse_des_transcriptions_orales(db: Session):
+    question = _creer_exercice_enrichi(
+        db,
+        competence="oral",
+        format_exercice="parler",
+        type_reponse="texte",
+        reponse_correcte="I live in London.",
+    )
+
+    assert _est_correct(question, "  i live in london! ")
+    assert not _est_correct(question, "I live in Paris.")
+    assert not _est_correct(question, None)
 
 
 def test_score_sur_100_et_dossier_factuel_par_exercice(db: Session, client, ia_positionnement: list):

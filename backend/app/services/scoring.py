@@ -1,5 +1,6 @@
 """Calcul déterministe du score et du niveau de référence d'un diagnostic."""
 
+import unicodedata
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
 from typing import get_args
@@ -64,7 +65,7 @@ def _questions_a_corriger(exercices: list[Question]) -> list[Question]:
     """Retient les exercices notables d'une tentative.
 
     Les exercices enrichis du test 4 compétences ajoutent aux QCM les réponses textuelles corrigées
-    exactement et comptent la production orale comme fausse tant que la STT n'existe pas (phase 4).
+    exactement ; les réponses orales y sont corrigées à partir de leur transcription texte.
     Sans exercice enrichi, le comportement historique (QCM seuls) est conservé.
     """
     candidats = [
@@ -96,28 +97,42 @@ def _questions_a_corriger(exercices: list[Question]) -> list[Question]:
 
 
 def _est_correct(question: Question, reponse_fournie: str | None) -> bool:
-    """Une question orale sans transcription reste fausse : aucun score n'est inventé."""
+    """Les réponses orales sont des transcriptions texte, jamais des fichiers audio."""
     if question.type_reponse == "audio":
         return False
+    if question.format_exercice == "parler" and reponse_fournie is not None:
+        return _normaliser_transcription(reponse_fournie) == _normaliser_transcription(question.reponse_correcte or "")
     return reponse_fournie is not None and reponse_fournie == question.reponse_correcte
+
+
+def _normaliser_transcription(texte: str) -> str:
+    """Ignore la casse, la ponctuation et les espaces ajoutés par la reconnaissance vocale."""
+    normalise = unicodedata.normalize("NFC", texte).casefold()
+    return " ".join("".join(caractere if caractere.isalnum() else " " for caractere in normalise).split())
+
+
+def _questions_de_tentative(db: Session, tentative: TestDiagnostic) -> list[Question]:
+    requete = select(Question)
+    if tentative.questions_ids:
+        requete = requete.where(Question.id_question.in_(tentative.questions_ids))
+    else:
+        requete = requete.where(
+            Question.id_langue == tentative.id_langue,
+            Question.id_niveau == tentative.id_niveau,
+        )
+    return list(db.scalars(requete.order_by(Question.id_question)).all())
 
 
 def resultat_detaille(db: Session, id_tentative: int) -> tuple[list[dict], list[dict]]:
     """Détail par compétence et dossier factuel de la tentative déjà clôturée.
 
-    Le temps de réponse n'est pas encore transmis par le client : il vaut 0 tant que la phase 4
-    n'a pas branché la mesure côté frontend. Aucune transcription ni confiance STT n'est inventée.
+    Le temps de réponse n'est pas transmis par le client et vaut 0. La transcription est déjà
+    enregistrée comme réponse texte ; aucune confiance STT n'est disponible avec la reconnaissance navigateur.
     """
-    exercices = db.scalars(
-        select(Question)
-        .where(
-            TestDiagnostic.id_test == id_tentative,
-            Question.id_langue == TestDiagnostic.id_langue,
-            Question.id_niveau == TestDiagnostic.id_niveau,
-        )
-        .order_by(Question.id_question)
-    ).all()
-    questions = _questions_a_corriger(list(exercices))
+    tentative = db.get(TestDiagnostic, id_tentative)
+    if tentative is None:
+        raise ValueError(f"Tentative de diagnostic introuvable : {id_tentative}")
+    questions = _questions_a_corriger(_questions_de_tentative(db, tentative))
     if not any(question.format_exercice in FORMATS_CONNUS for question in questions):
         # Banque historique : l'analyse IA reste la seule source du détail par compétence.
         return [], []
@@ -177,16 +192,8 @@ def terminer_tentative(
     if tentative.statut != StatutDiagnostic.EN_COURS:
         raise ErreurScoring(CodeErreurScoring.TENTATIVE_TERMINEE)
 
-    exercices = db.scalars(
-        select(Question)
-        .where(
-            Question.id_langue == tentative.id_langue,
-            Question.id_niveau == tentative.id_niveau,
-        )
-        .order_by(Question.id_question)
-    ).all()
     # D1/D3 : le scoring ne retient que les exercices publiés et proposables au diagnostic.
-    questions = _questions_a_corriger(list(exercices))
+    questions = _questions_a_corriger(_questions_de_tentative(db, tentative))
     if not questions:
         raise ErreurScoring(CodeErreurScoring.QUESTIONS_NON_CONFIGUREES)
 

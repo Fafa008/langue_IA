@@ -49,6 +49,8 @@ class TestEnregistrerReponse:
         autre_question = Question(
             enonce="Question A2",
             competence="lecture",
+            type_reponse="choix",
+            choix=["is", "are"],
             langue=premiere_question.langue,
             niveau=db.scalar(select(Niveau).where(Niveau.code == "A2")),
         )
@@ -66,6 +68,8 @@ class TestEnregistrerReponse:
         assert donnees["id_tentative"] > 0
         assert donnees["code_langue"] == "en"
         assert donnees["code_niveau"] == "A1"
+        assert len(donnees["questions"]) == 2
+        assert {question["niveau"] for question in donnees["questions"]} == {"A1", "A2"}
         questions = client.get(
             "/api/v1/diagnostic/questions",
             headers=entete(apprenant),
@@ -74,6 +78,16 @@ class TestEnregistrerReponse:
         assert questions.status_code == 200
         assert [question["id_question"] for question in questions.json()] == [str(premiere_question.id_question)]
         assert "bonne_reponse" not in questions.text
+        reponse_a2 = client.post(
+            "/api/v1/diagnostic/reponse",
+            headers=entete(apprenant),
+            json={
+                "id_tentative": donnees["id_tentative"],
+                "id_question": str(autre_question.id_question),
+                "reponse_fournie": "is",
+            },
+        )
+        assert reponse_a2.status_code == 201
         tentative = db.get(TentativeDiagnostic, donnees["id_tentative"])
         assert tentative is not None
         assert tentative.id_apprenant == apprenant.id_user
@@ -168,6 +182,26 @@ class TestEnregistrerReponse:
                 "id_tentative": tentative.id_test,
                 "id_question": str(question.id_question),
                 "reponse_fournie": "est",
+            },
+        )
+
+        assert reponse.status_code == 422
+
+    def test_refuse_une_question_non_incluse_dans_la_tentative(self, client, db: Session):
+        apprenant = creer_utilisateur(db)
+        tentative = _creer_tentative(db, apprenant)
+        question_selectionnee = _creer_question(db)
+        question_exterieure = _creer_question(db)
+        tentative.questions_ids = [question_selectionnee.id_question]
+        db.commit()
+
+        reponse = client.post(
+            "/api/v1/diagnostic/reponse",
+            headers=entete(apprenant),
+            json={
+                "id_tentative": tentative.id_test,
+                "id_question": str(question_exterieure.id_question),
+                "reponse_fournie": "is",
             },
         )
 

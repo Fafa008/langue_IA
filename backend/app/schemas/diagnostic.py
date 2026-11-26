@@ -36,7 +36,7 @@ class LangueDiagnosticOut(BaseModel):
     libelle: str
     cadre: Literal["CECRL", "HSK"]
     niveaux: list[str] = Field(description="Niveaux ouverts pour la langue, du plus bas au plus haut")
-    nombre_questions: int = Field(description="Questions posées pendant le test (0 si aucune)")
+    nombre_questions: int = Field(description="Questions multi-niveaux proposées (maximum 20)")
     disponible: bool = Field(description="Faux tant qu'aucune question n'est disponible : « Bientôt disponible »")
 
 
@@ -71,11 +71,12 @@ class TentativeCreate(BaseModel):
 
 
 class TentativeOut(BaseModel):
-    """Tentative persistée et niveau initial choisi."""
+    """Tentative persistée, niveau initial et questions figées pour ce test."""
 
     id_tentative: int
     code_langue: str
     code_niveau: str
+    questions: list[QuestionOut]
 
 
 class CompetenceResultatOut(BaseModel):
