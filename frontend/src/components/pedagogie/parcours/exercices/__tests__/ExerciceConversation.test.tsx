@@ -106,7 +106,7 @@ describe("US72/US74-FE — chat avec le tuteur IA", () => {
     expect(screen.getByText(/1\/3 échanges/)).toBeInTheDocument();
   });
 
-  it("affiche la traduction et l'explication françaises hors du fil, dans un panneau à gauche", async () => {
+  it("affiche la traduction et l'explication françaises hors du fil, dans le panneau latéral", async () => {
     rendre();
 
     fireEvent.change(screen.getByPlaceholderText(/Écrivez ou dictez/), { target: { value: "Je m'appelle Rova" } });

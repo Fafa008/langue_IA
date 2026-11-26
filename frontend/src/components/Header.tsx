@@ -14,7 +14,7 @@ const links = [
   { label: "Accueil", href: "/" },
   { label: "À propos", href: "/#apropos" },
   { label: "Langues", href: "/#langues" },
-  { label: "Parcours", href: "/#ateliers" },
+  { label: "Parcours", href: "/#parcours" },
   { label: "Contact", href: "/#contact" },
 ];
 

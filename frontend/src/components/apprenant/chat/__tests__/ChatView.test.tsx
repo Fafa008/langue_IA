@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import ChatView from "@/components/apprenant/chat/ChatView";
 import { ApiError } from "@/lib/api-client";
 import { mockFetch } from "@/test/fetch-mock";
@@ -105,6 +105,23 @@ describe("US73/US74-FE — page du chat : scénario et langue du parcours", () =
     const conversation = screen.getByRole("region", { name: "Conversation" });
     expect(within(conversation).getByRole("log")).toBeInTheDocument();
     expect(within(conversation).queryByRole("button", { name: /Terminer et évaluer/ })).not.toBeInTheDocument();
+  });
+
+  it("garde les conversations précédentes en mémoire et permet de les consulter en lecture seule", async () => {
+    afficherChat();
+    fireEvent.change(screen.getByPlaceholderText(/Écrivez ou dictez/), { target: { value: "hier j'ai allé au cinéma" } });
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
+
+    await screen.findByRole("button", { name: /hier j'ai allé au cinéma/ });
+    await screen.findByText("je suis allé(e)");
+    await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent(/Très bien|D'accord|Intéressant/));
+
+    fireEvent.click(screen.getByRole("button", { name: /Nouvelle conversation/ }));
+    fireEvent.click(screen.getByRole("button", { name: /hier j'ai allé au cinéma/ }));
+
+    expect(within(screen.getByRole("log")).getByText("hier j'ai allé au cinéma")).toBeInTheDocument();
+    expect(within(screen.getByTestId("corrections-marge")).getByText("je suis allé(e)")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Écrivez ou dictez/)).not.toBeInTheDocument();
   });
 
   it("sans parcours, affiche le détail du backend et un accès au test de positionnement", () => {

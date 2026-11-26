@@ -91,5 +91,5 @@ export function useExerciceChatbot() {
 
 /** Ferme la session chatbot (historique et quota supprimés côté backend). */
 export function useFermerSessionChatbot() {
-  return useMutation({ mutationFn: () => parcoursPersonnaliseService.fermerSession() });
+  return useMutation({ mutationFn: (identifiantSession: string) => parcoursPersonnaliseService.fermerSession(identifiantSession) });
 }

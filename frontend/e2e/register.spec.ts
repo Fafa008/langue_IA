@@ -46,18 +46,20 @@ async function mockApi(page: Page, url: string, status: number, body: unknown) {
   return requests;
 }
 
-const chooseLangue = (page: Page, libelle: string) =>
-  page.locator("label", { has: page.getByRole("checkbox") }).filter({ hasText: libelle }).click();
+const chooseLangue = async (page: Page, libelle: string) => {
+  await page.getByRole("button", { name: "Choisir les langues souhaitées" }).click();
+  await page.getByRole("checkbox", { name: libelle }).check();
+};
 const formuleSelect = (page: Page) => page.getByLabel("Formule d'abonnement");
 const ID_FORMULE = { Simple: "1", Luxe: "2", Premium: "3" } as const;
 const chooseFormule = (page: Page, libelle: keyof typeof ID_FORMULE) => formuleSelect(page).selectOption(ID_FORMULE[libelle]);
 
-async function fillRequiredFields(page: Page) {
+async function fillRequiredFields(page: Page, withLanguage = true) {
   await page.getByLabel("Prénom", { exact: true }).fill("rova marie");
   await page.getByLabel("Nom", { exact: true }).fill("rakoto");
   await page.getByLabel("Adresse e-mail").fill("Rova@Exemple.com");
   await page.getByLabel("Date de naissance").fill("2000-05-12");
-  await chooseLangue(page, "Français");
+  if (withLanguage) await chooseLangue(page, "Français");
   await chooseFormule(page, "Simple");
   await page.getByLabel("Mot de passe", { exact: true }).fill("Langue2026");
   await page.getByLabel("Confirmer le mot de passe").fill("Langue2026");
@@ -78,6 +80,22 @@ test.describe("Inscription d'un apprenant", () => {
 
     await chooseFormule(page, "Premium");
     await expect(page.getByText("6 mois · 24 h de cours · 6 ateliers · toutes les langues")).toBeVisible();
+  });
+
+  test("préselectionne la langue passée dans l'URL", async ({ page }) => {
+    await page.goto("/register?lang=zh");
+
+    await page.getByRole("button", { name: "Choisir les langues souhaitées" }).click();
+    await expect(page.getByRole("checkbox", { name: "Mandarin" })).toBeChecked();
+    await expect(page.getByRole("checkbox", { name: "Français" })).not.toBeChecked();
+  });
+
+  test("place le focus sur le sélecteur si aucune langue n'est choisie", async ({ page }) => {
+    await fillRequiredFields(page, false);
+    await submit(page);
+
+    await expect(page.getByText("Choisissez au moins une langue.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Choisir les langues souhaitées" })).toBeFocused();
   });
 
   test("affiche les erreurs de validation et n'appelle pas l'API si le formulaire est vide", async ({ page }) => {

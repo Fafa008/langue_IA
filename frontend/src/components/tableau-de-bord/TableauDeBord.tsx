@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useSession } from "@/hooks/useSession";
 import { ACCUEIL_PAR_ROLE, NAVIGATION } from "@/lib/navigation";
 import { ROLE_LABELS } from "@/lib/roles";
+import TableauDeBordApprenant from "./TableauDeBordApprenant";
+import TableauDeBordFormateur from "./TableauDeBordFormateur";
 
 const SOUS_TITRES = {
   APPRENANT: "Retrouvez votre parcours, vos ateliers et vos inscriptions.",
@@ -18,6 +20,8 @@ const SOUS_TITRES = {
 export default function TableauDeBord() {
   const { utilisateur } = useSession();
   if (!utilisateur) return null;
+  if (utilisateur.role === "APPRENANT") return <TableauDeBordApprenant prenom={utilisateur.prenom} />;
+  if (utilisateur.role === "FORMATEUR") return <TableauDeBordFormateur prenom={utilisateur.prenom} />;
 
   const rubriques = NAVIGATION[utilisateur.role].filter((item) => item.href !== ACCUEIL_PAR_ROLE[utilisateur.role]);
 

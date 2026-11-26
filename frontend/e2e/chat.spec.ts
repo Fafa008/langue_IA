@@ -114,17 +114,30 @@ async function intercepterChatbot(page: Page, requetes: RequetesChat, secondaire
 }
 
 test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
-  test("le fil de discussion occupe toute la largeur disponible du conteneur", async ({ page }) => {
+  test("affiche l'historique, le fil et les corrections sans chevauchement", async ({ page }, testInfo) => {
     await loginAs(page, APPRENANT);
     await intercepterParcours(page);
     await page.goto("/espace/apprenant/chat");
 
     const main = await page.locator("main").boundingBox();
+    const historique = await page.getByRole("complementary", { name: "History" }).boundingBox();
     const fil = await page.getByRole("log").boundingBox();
+    const corrections = await page.getByTestId("corrections-marge").boundingBox();
     expect(main).not.toBeNull();
+    expect(historique).not.toBeNull();
     expect(fil).not.toBeNull();
-    // Sans panneau de traduction, le fil ne doit pas se retrouver coincé dans une colonne latérale étroite.
-    expect(fil!.width).toBeGreaterThan(main!.width * 0.85);
+    expect(corrections).not.toBeNull();
+    await expect(page.getByRole("region", { name: "Conversation" })).toBeVisible();
+
+    expect(historique!.x).toBeGreaterThanOrEqual(main!.x);
+    expect(corrections!.x + corrections!.width).toBeLessThanOrEqual(main!.x + main!.width);
+    if (testInfo.project.name === "desktop") {
+      expect(historique!.x + historique!.width).toBeLessThanOrEqual(fil!.x);
+      expect(fil!.x + fil!.width).toBeLessThanOrEqual(corrections!.x);
+    } else {
+      expect(historique!.y + historique!.height).toBeLessThanOrEqual(fil!.y);
+      expect(fil!.y + fil!.height).toBeLessThanOrEqual(corrections!.y);
+    }
   });
 
   test("affiche la correction et la traduction des routes dédiées, pas les champs groupés", async ({ page }) => {
@@ -203,8 +216,9 @@ test.describe("Chat apprenant — routes séparées US-IA-CHAT-05", () => {
 
     await expect(page.getByRole("log")).toContainText(REPONSE_TUTEUR);
     await expect(page.getByTestId("traduction-explication")).toHaveCount(0);
-    await expect(page.getByTestId("corrections-marge")).toHaveCount(0);
-    await expect(page.getByRole("status").filter({ hasText: "could not be loaded" })).toBeVisible();
+    const corrections = page.getByTestId("corrections-marge");
+    await expect(corrections).toBeVisible();
+    await expect(corrections.getByRole("status").filter({ hasText: "could not be loaded" })).toBeVisible();
     expect(requetes.traduction).toHaveLength(1);
   });
 

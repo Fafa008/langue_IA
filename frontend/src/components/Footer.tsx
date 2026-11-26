@@ -19,7 +19,7 @@ export default function Footer() {
             <Link href="#contact" className="hover:underline">Contact</Link>
           </nav>
           <p className="text-small text-white/70">
-            © 2025 Digithèque. Tous droits réservés.
+            © 2026 Digithèque. Tous droits réservés.
           </p>
         </div>
       </div>

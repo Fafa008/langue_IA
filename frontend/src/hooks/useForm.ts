@@ -15,8 +15,8 @@ function focusFirstInvalidField(form: HTMLFormElement) {
   // Attend l'affichage des erreurs, qui pose les attributs aria-invalid
   requestAnimationFrame(() => {
     const invalid = form.querySelector<HTMLElement>('[aria-invalid="true"]');
-    // Pour un groupe (fieldset), on cible sa première case
-    const target = invalid?.matches("fieldset") ? invalid.querySelector<HTMLElement>("input") : invalid;
+    // Pour un groupe (fieldset), on cible son premier contrôle interactif
+    const target = invalid?.matches("fieldset") ? invalid.querySelector<HTMLElement>("input, button") : invalid;
     target?.focus();
   });
 }

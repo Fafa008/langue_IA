@@ -1,48 +1,75 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import ExerciceConversation from "@/components/pedagogie/parcours/exercices/ExerciceConversation";
+import { MessageSquare, Plus } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import ExerciceConversation, { type MessageEnChat } from "@/components/pedagogie/parcours/exercices/ExerciceConversation";
 import { useFermerSessionChatbot, useParcoursPersonnalise } from "@/hooks/useParcoursPersonnalise";
 import { ApiError } from "@/lib/api-client";
 import { libellesChat } from "@/lib/libellesChat";
 import { messageErreurParcours } from "@/lib/parcours-personnalise";
 import { ROUTES } from "@/lib/routes";
-import { nouvelleSessionChatbot } from "@/lib/session-chatbot";
+import { nouvelleSessionChatbot, sessionChatbotCourante } from "@/lib/session-chatbot";
 import { messageInitialChat, SCENARIOS_CHAT } from "@/lib/scenariosChat";
 import type { MessageChatbot } from "@/types/parcours-personnalise";
 import RapportConversation from "./RapportConversation";
 
+type StatutConversationMemoire = "active" | "archivee" | "terminee";
+
+interface ConversationMemoire {
+  id: number;
+  scenarioId: string;
+  statut: StatutConversationMemoire;
+  messages: MessageEnChat[];
+  rapport?: MessageChatbot[];
+}
+
+function titreConversation(conversation: ConversationMemoire): string {
+  const premierMessage = conversation.messages.find((message) => message.role === "apprenant")?.contenu.trim();
+  if (!premierMessage) {
+    return SCENARIOS_CHAT.find((scenario) => scenario.id === conversation.scenarioId)?.libelle ?? "";
+  }
+  return premierMessage.length > 38 ? `${premierMessage.slice(0, 38)}…` : premierMessage;
+}
+
 /**
- * US72/US73/US74-FE — Page du chat avec le tuteur IA : la langue vient du parcours de l'apprenant, jamais d'un
- * choix manuel. Les libellés de l'interface et le message d'ouverture sont dans cette langue ; la traduction et
- * l'explication françaises restent dans un panneau hors du fil. Chaque conversation ouvre et ferme sa session backend.
+ * L'historique reste en mémoire pendant la visite de la page : il n'est pas persisté dans le navigateur.
+ * La conversation active et ses corrections restent celles du tuteur IA existant.
  */
 export default function ChatView() {
-  const [scenarioId, setScenarioId] = useState(SCENARIOS_CHAT[0].id);
-  const [rapport, setRapport] = useState<MessageChatbot[] | null>(null);
-  const [cleConversation, setCleConversation] = useState(0);
+  const [conversations, setConversations] = useState<ConversationMemoire[]>([
+    { id: 0, scenarioId: SCENARIOS_CHAT[0].id, statut: "active", messages: [] },
+  ]);
+  const [conversationSelectionneeId, setConversationSelectionneeId] = useState(0);
+  const prochainId = useRef(1);
   const fermerSession = useFermerSessionChatbot();
   const parcours = useParcoursPersonnalise();
 
-  const scenario = SCENARIOS_CHAT.find((s) => s.id === scenarioId) ?? SCENARIOS_CHAT[0];
+  const conversation = conversations.find((item) => item.id === conversationSelectionneeId) ?? conversations[0];
+  const scenario = SCENARIOS_CHAT.find((item) => item.id === conversation.scenarioId) ?? SCENARIOS_CHAT[0];
   const langue = parcours.data?.langue.code ?? "fr";
   const libelles = libellesChat(langue);
 
-  /** Change de scénario : la session précédente est fermée avant d'en ouvrir une nouvelle. */
-  function changerContexte(Changer: () => void) {
-    fermerSession.mutate();
-    nouvelleSessionChatbot();
-    setRapport(null);
-    setCleConversation((cle) => cle + 1);
-    Changer();
-  }
+  const actualiserHistorique = useCallback((messages: MessageEnChat[]) => {
+    setConversations((items) =>
+      items.map((item) => item.id === conversationSelectionneeId && item.statut === "active" ? { ...item, messages } : item),
+    );
+  }, [conversationSelectionneeId]);
 
-  function recommencer() {
-    fermerSession.mutate();
+  /** Une seule session backend reste active ; les échanges précédents sont consultables en lecture seule. */
+  function nouvelleConversation(scenarioId = conversation.scenarioId) {
+    if (conversations.some((item) => item.statut === "active")) {
+      fermerSession.mutate(sessionChatbotCourante());
+    }
     nouvelleSessionChatbot();
-    setRapport(null);
-    setCleConversation((cle) => cle + 1);
+    const id = prochainId.current++;
+    setConversations((items) => [
+      ...items
+        .filter((item) => item.statut !== "active" || item.messages.some((message) => message.role === "apprenant"))
+        .map((item) => item.statut === "active" ? { ...item, statut: "archivee" as const } : item),
+      { id, scenarioId, statut: "active", messages: [] },
+    ]);
+    setConversationSelectionneeId(id);
   }
 
   if (parcours.isError) {
@@ -74,6 +101,7 @@ export default function ChatView() {
   }
 
   const libelleLangue = parcours.data.langue.libelle;
+  const estEnLectureSeule = conversation.statut !== "active";
 
   return (
     <div className="w-full space-y-5">
@@ -105,13 +133,13 @@ export default function ChatView() {
         <label className="block">
           <span className="mb-2 block text-sm font-semibold text-content">{libelles.scenario}</span>
           <select
-            value={scenarioId}
-            onChange={(e) => changerContexte(() => setScenarioId(e.target.value))}
+            value={conversation.scenarioId}
+            onChange={(e) => nouvelleConversation(e.target.value)}
             className="input w-full"
           >
-            {SCENARIOS_CHAT.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.libelle}
+            {SCENARIOS_CHAT.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.libelle}
               </option>
             ))}
           </select>
@@ -132,55 +160,87 @@ export default function ChatView() {
         {libelles.avertissement}
       </p>
 
-      {/* Conversation : occupe toute la largeur disponible dans l'espace apprenant */}
-      {rapport ? (
-        <RapportConversation
-          messages={rapport}
-          scenario={scenario.libelle}
-          langue={libelleLangue}
-          onRecommencer={recommencer}
-        />
-      ) : (
-        <section
-          className="overflow-hidden rounded-card border border-primary/10 bg-surface shadow-card"
-          aria-label={libelles.conversation}
-        >
-          <div className="border-b border-primary/10 bg-primary/5 px-5 py-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white">
-                ✦
-              </span>
-              <div>
-                <p className="font-semibold text-content">{libelles.titre}</p>
-                <p className="text-xs text-content-secondary">{scenario.libelle}</p>
-              </div>
-            </div>
+      <section className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <aside aria-label={libelles.historique} className="card h-fit space-y-3 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold text-content">{libelles.historique}</h2>
+            <button
+              type="button"
+              onClick={() => nouvelleConversation()}
+              className="btn-secondary inline-flex min-h-10 items-center gap-1 px-3 py-2 text-small"
+            >
+              <Plus size={16} aria-hidden />
+              {libelles.nouvelleConversation}
+            </button>
           </div>
+          <p className="text-xs text-content-secondary">{libelles.historiqueTemporaire}</p>
+          <ul className="flex max-h-72 gap-2 overflow-x-auto lg:flex-col lg:overflow-x-visible lg:overflow-y-auto">
+            {[...conversations].reverse().map((item) => {
+              const scenarioItem = SCENARIOS_CHAT.find((option) => option.id === item.scenarioId) ?? SCENARIOS_CHAT[0];
+              const selectionnee = item.id === conversation.id;
+              return (
+                <li key={item.id} className="min-w-52 lg:min-w-0">
+                  <button
+                    type="button"
+                    aria-current={selectionnee ? "page" : undefined}
+                    onClick={() => setConversationSelectionneeId(item.id)}
+                    className={`flex min-h-12 w-full items-start gap-2 rounded-btn px-3 py-2 text-left text-small transition-colors ${
+                      selectionnee ? "bg-primary/10 text-primary" : "text-content-secondary hover:bg-background"
+                    }`}
+                  >
+                    <MessageSquare size={16} aria-hidden className="mt-0.5 shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{titreConversation(item)}</span>
+                      <span className="block truncate text-xs">
+                        {scenarioItem.libelle}
+                        {item.statut === "active" ? ` · ${libelles.conversationEnCours}` : ""}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </aside>
 
-          <div className="p-3 sm:p-5">
-            <ExerciceConversation
-              key={`${scenario.id}-${cleConversation}`}
-              contenu={{
-                format: "conversation",
-                consigne: libelles.consigne,
-                sujet: scenario.sujet,
-                messageInitial: messageInitialChat(scenario, langue),
-                echangesMinimum: 3,
-              }}
-              langue={langue}
-              enCours={false}
-              verrouille={false}
-              modeVocalParTours
-              libelleTerminer={libelles.terminerRapport}
-              onSoumettre={(reponse) => {
-                if (reponse.format !== "conversation") return;
-                fermerSession.mutate();
-                setRapport(reponse.messages);
-              }}
+        <section aria-label={libelles.conversation} className="min-w-0 space-y-4">
+          <ExerciceConversation
+            key={conversation.id}
+            contenu={{
+              format: "conversation",
+              consigne: libelles.consigne,
+              sujet: scenario.sujet,
+              messageInitial: messageInitialChat(scenario, langue),
+              echangesMinimum: 3,
+            }}
+            langue={langue}
+            enCours={false}
+            verrouille={estEnLectureSeule}
+            lectureSeule={estEnLectureSeule}
+            messagesInitiales={conversation.messages.length ? conversation.messages : undefined}
+            onMessagesChange={estEnLectureSeule ? undefined : actualiserHistorique}
+            modeVocalParTours
+            libelleTerminer={libelles.terminerRapport}
+            onSoumettre={(reponse) => {
+              if (reponse.format !== "conversation") return;
+              fermerSession.mutate(sessionChatbotCourante());
+              setConversations((items) =>
+                items.map((item) =>
+                  item.id === conversation.id ? { ...item, statut: "terminee", rapport: reponse.messages } : item,
+                ),
+              );
+            }}
+          />
+          {conversation.rapport && (
+            <RapportConversation
+              messages={conversation.rapport}
+              scenario={scenario.libelle}
+              langue={libelleLangue}
+              onRecommencer={() => nouvelleConversation(conversation.scenarioId)}
             />
-          </div>
+          )}
         </section>
-      )}
+      </section>
     </div>
   );
 }

@@ -450,7 +450,8 @@ describe("service HTTP (prêt pour le backend)", () => {
     await http.chatbot("Salut", []);
     const premiereSession = apiRequest.mock.calls[0][1].body.identifiant_session as string;
 
-    await http.fermerSession();
+    nouvelleSessionChatbot();
+    await http.fermerSession(premiereSession);
     expect(apiRequest).toHaveBeenCalledWith(`/api/v1/chatbot/session/${premiereSession}`, { method: "DELETE" });
 
     nouvelleSessionChatbot();

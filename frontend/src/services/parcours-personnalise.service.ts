@@ -63,8 +63,8 @@ export interface ParcoursPersonnaliseService {
   traduireChatbot(idMessage: string, message: string): Promise<TraductionSepareeChatbot>;
   /** Exercice ciblé généré depuis une erreur, enregistré en brouillon par le backend. */
   exerciceChatbot(typeErreur: TypeErreurChatbot, erreur: string): Promise<ExerciceCibleChatbot>;
-  /** Ferme la session en cours : le backend supprime l'historique et le quota (le journal reste anonyme). */
-  fermerSession(): Promise<void>;
+  /** Ferme la session indiquée : le backend supprime l'historique et le quota (le journal reste anonyme). */
+  fermerSession(identifiantSession: string): Promise<void>;
 }
 
 const parLecon = (a: ExerciceParcours, b: ExerciceParcours) =>
@@ -145,8 +145,8 @@ export const httpParcoursPersonnaliseService: ParcoursPersonnaliseService = {
     });
     return toExerciceCibleChatbot(dto);
   },
-  async fermerSession() {
-    await apiRequest<void>(ENDPOINTS.chatbot.fermerSession(sessionChatbotCourante()), { method: "DELETE" });
+  async fermerSession(identifiantSession) {
+    await apiRequest<void>(ENDPOINTS.chatbot.fermerSession(identifiantSession), { method: "DELETE" });
   },
 };
 

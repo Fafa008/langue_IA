@@ -8,6 +8,10 @@
 export interface LibellesChat {
   espaceApprenant: string;
   titre: string;
+  historique: string;
+  nouvelleConversation: string;
+  historiqueTemporaire: string;
+  conversationEnCours: string;
   conversation: string;
   journal: string;
   scenario: string;
@@ -34,6 +38,7 @@ export interface LibellesChat {
   correctionTraductionEnCours: string;
   secondairesIndisponibles: string;
   correctionsMarge: string;
+  correctionsVides: string;
   traductionFr: string;
   explication: string;
   exerciceCible: string;
@@ -51,13 +56,17 @@ export interface LibellesChat {
 const FR: LibellesChat = {
   espaceApprenant: "Espace apprenant",
   titre: "Tuteur IA",
+  historique: "Historique",
+  nouvelleConversation: "Nouvelle conversation",
+  historiqueTemporaire: "Conservé uniquement tant que cette page reste ouverte.",
+  conversationEnCours: "En cours",
   conversation: "Conversation",
   journal: "Conversation avec le tuteur IA",
   scenario: "Scénario",
   contexte: "Contexte :",
   langueParcours: "langue de votre parcours",
   avertissement:
-    "Avant votre premier message : vos échanges et les 20 derniers tours sont transmis au service IA pour produire une réponse. N’y saisissez aucune donnée personnelle (adresse e-mail, numéro de téléphone, etc.). L’historique est supprimé à la fin de la conversation ; le journal ne conserve aucun texte brut.",
+    "Avant votre premier message : vos échanges et les 20 derniers tours sont transmis au service IA pour produire une réponse. N’y saisissez aucune donnée personnelle (adresse e-mail, numéro de téléphone, etc.). L’historique du service est supprimé à la fin de chaque conversation. La liste affichée à gauche reste en mémoire uniquement tant que cette page est ouverte ; elle n’est ni enregistrée ni conservée dans le journal, qui ne garde aucun texte brut.",
   chargement: "Chargement de votre parcours…",
   faireTest: "Faire le test de positionnement",
   consigne: "Discutez avec le tuteur IA, à l'écrit ou à la voix.",
@@ -77,7 +86,8 @@ const FR: LibellesChat = {
   tuteurEcrit: "Le tuteur IA écrit…",
   correctionTraductionEnCours: "Correction et traduction en cours…",
   secondairesIndisponibles: "La correction et la traduction n'ont pas pu être chargées ; la réponse du tuteur reste disponible.",
-  correctionsMarge: "Corrections en marge",
+  correctionsMarge: "Corrections de l’IA",
+  correctionsVides: "Les corrections apparaîtront ici après votre premier message.",
   traductionFr: "Traduction en français",
   explication: "Explication",
   exerciceCible: "Exercice ciblé",
@@ -95,13 +105,17 @@ const FR: LibellesChat = {
 const EN: LibellesChat = {
   espaceApprenant: "Learner area",
   titre: "AI tutor",
+  historique: "History",
+  nouvelleConversation: "New conversation",
+  historiqueTemporaire: "Kept only while this page remains open.",
+  conversationEnCours: "In progress",
   conversation: "Conversation",
   journal: "Conversation with the AI tutor",
   scenario: "Scenario",
   contexte: "Context:",
   langueParcours: "your course language",
   avertissement:
-    "Before your first message: your exchanges and the last 20 turns are sent to the AI service to produce a reply. Do not enter personal details (email address, phone number, etc.). The history is deleted at the end of the conversation; logs keep no raw text.",
+    "Before your first message: your exchanges and the last 20 turns are sent to the AI service to produce a reply. Do not enter personal details (email address, phone number, etc.). The service history is deleted at the end of each conversation. The list shown here stays in memory only while this page is open; it is not saved or kept in logs, which contain no raw text.",
   chargement: "Loading your course…",
   faireTest: "Take the placement test",
   consigne: "Talk with the AI tutor, in writing or by voice.",
@@ -121,7 +135,8 @@ const EN: LibellesChat = {
   tuteurEcrit: "The AI tutor is writing…",
   correctionTraductionEnCours: "Correction and translation in progress…",
   secondairesIndisponibles: "Correction and translation could not be loaded; the tutor's reply is still available.",
-  correctionsMarge: "Corrections in the margin",
+  correctionsMarge: "AI corrections",
+  correctionsVides: "Corrections will appear here after your first message.",
   traductionFr: "French translation",
   explication: "Explanation",
   exerciceCible: "Targeted exercise",
@@ -139,13 +154,17 @@ const EN: LibellesChat = {
 const IT: LibellesChat = {
   espaceApprenant: "Area apprendente",
   titre: "Tutore IA",
+  historique: "Cronologia",
+  nouvelleConversation: "Nuova conversazione",
+  historiqueTemporaire: "Conservata solo finché questa pagina resta aperta.",
+  conversationEnCours: "In corso",
   conversation: "Conversazione",
   journal: "Conversazione con il tutore IA",
   scenario: "Scenario",
   contexte: "Contesto:",
   langueParcours: "lingua del tuo percorso",
   avertissement:
-    "Prima del primo messaggio: i tuoi scambi e gli ultimi 20 turni sono inviati al servizio IA per produrre una risposta. Non inserire dati personali (e-mail, numero di telefono, ecc.). La cronologia viene eliminata a fine conversazione; i log non conservano testi grezzi.",
+    "Prima del primo messaggio: i tuoi scambi e gli ultimi 20 turni sono inviati al servizio IA per produrre una risposta. Non inserire dati personali (e-mail, numero di telefono, ecc.). La cronologia del servizio viene eliminata al termine di ogni conversazione. L’elenco mostrato qui resta in memoria solo finché questa pagina è aperta; non viene salvato né conservato nei log, che non contengono testi grezzi.",
   chargement: "Caricamento del percorso…",
   faireTest: "Svolgi il test di posizionamento",
   consigne: "Parla con il tutore IA, per scritto o a voce.",
@@ -165,7 +184,8 @@ const IT: LibellesChat = {
   tuteurEcrit: "Il tutore IA sta scrivendo…",
   correctionTraductionEnCours: "Correzione e traduzione in corso…",
   secondairesIndisponibles: "Correzione e traduzione non disponibili; la risposta del tutore resta visibile.",
-  correctionsMarge: "Correzioni a margine",
+  correctionsMarge: "Correzioni dell’IA",
+  correctionsVides: "Le correzioni appariranno qui dopo il primo messaggio.",
   traductionFr: "Traduzione in francese",
   explication: "Spiegazione",
   exerciceCible: "Esercizio mirato",
@@ -183,13 +203,17 @@ const IT: LibellesChat = {
 const DE: LibellesChat = {
   espaceApprenant: "Lernbereich",
   titre: "KI-Tutor",
+  historique: "Verlauf",
+  nouvelleConversation: "Neues Gespräch",
+  historiqueTemporaire: "Nur solange diese Seite geöffnet ist gespeichert.",
+  conversationEnCours: "Läuft",
   conversation: "Gespräch",
   journal: "Gespräch mit dem KI-Tutor",
   scenario: "Szenario",
   contexte: "Kontext:",
   langueParcours: "Sprache deines Kurses",
   avertissement:
-    "Vor deiner ersten Nachricht: Deine Unterhaltungen und die letzten 20 Runden werden an den KI-Dienst gesendet, um eine Antwort zu erzeugen. Gib keine persönlichen Daten ein (E-Mail-Adresse, Telefonnummer usw.). Der Verlauf wird am Ende des Gesprächs gelöscht; Protokolle enthalten keinen Rohtext.",
+    "Vor deiner ersten Nachricht: Deine Unterhaltungen und die letzten 20 Runden werden an den KI-Dienst gesendet, um eine Antwort zu erzeugen. Gib keine persönlichen Daten ein (E-Mail-Adresse, Telefonnummer usw.). Der Verlauf des Dienstes wird am Ende jedes Gesprächs gelöscht. Die hier angezeigte Liste bleibt nur gespeichert, solange diese Seite geöffnet ist; sie wird weder dauerhaft gespeichert noch in Protokollen mit Rohtext festgehalten.",
   chargement: "Kurs wird geladen…",
   faireTest: "Einstufungstest ablegen",
   consigne: "Sprich mit dem KI-Tutor, schriftlich oder mündlich.",
@@ -209,7 +233,8 @@ const DE: LibellesChat = {
   tuteurEcrit: "Der KI-Tutor schreibt…",
   correctionTraductionEnCours: "Korrektur und Übersetzung laufen…",
   secondairesIndisponibles: "Korrektur und Übersetzung nicht verfügbar; die Antwort des Tutors bleibt sichtbar.",
-  correctionsMarge: "Korrekturen am Rand",
+  correctionsMarge: "KI-Korrekturen",
+  correctionsVides: "Korrekturen erscheinen hier nach deiner ersten Nachricht.",
   traductionFr: "Französische Übersetzung",
   explication: "Erklärung",
   exerciceCible: "Gezielte Übung",
@@ -227,13 +252,17 @@ const DE: LibellesChat = {
 const ZH: LibellesChat = {
   espaceApprenant: "学习区",
   titre: "AI 导师",
+  historique: "历史记录",
+  nouvelleConversation: "新对话",
+  historiqueTemporaire: "仅在此页面打开期间保留。",
+  conversationEnCours: "进行中",
   conversation: "对话",
   journal: "与 AI 导师的对话",
   scenario: "场景",
   contexte: "场景：",
   langueParcours: "课程语言",
   avertissement:
-    "发送第一条消息前：你的对话及最近 20 轮内容会发送给 AI 服务以生成回复。请勿输入个人信息（电子邮箱、电话号码等）。对话结束后历史记录将被删除；日志不保存原文。",
+    "发送第一条消息前：你的对话及最近 20 轮内容会发送给 AI 服务以生成回复。请勿输入个人信息（电子邮箱、电话号码等）。AI 服务会在每次对话结束后删除历史记录。此处显示的列表仅在页面打开期间保留于内存中，不会保存到浏览器，也不会写入不保存原文的日志。",
   chargement: "正在加载课程…",
   faireTest: "参加水平测试",
   consigne: "与 AI 导师交流，可以打字或语音。",
@@ -253,7 +282,8 @@ const ZH: LibellesChat = {
   tuteurEcrit: "AI 导师正在输入…",
   correctionTraductionEnCours: "正在批改和翻译…",
   secondairesIndisponibles: "批改和翻译暂不可用；导师的回复仍然可见。",
-  correctionsMarge: "批改建议",
+  correctionsMarge: "AI 批改",
+  correctionsVides: "发送第一条消息后，批改内容会显示在这里。",
   traductionFr: "法语翻译",
   explication: "解释",
   exerciceCible: "针对性练习",
